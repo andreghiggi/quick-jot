@@ -239,14 +239,15 @@ export function PDVV2Sidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() =>
-                      openCashDrawer(company!.id, {
+                    onClick={() => {
+                      if (!company?.id) return;
+                      openCashDrawer(company.id, {
                         enabled: true,
                         model: storeSettings.drawerModel,
                         pin: storeSettings.drawerPin,
                         pulse: storeSettings.drawerPulse,
-                      })
-                    }
+                      });
+                    }}
                   >
                     <DoorOpen className="w-4 h-4" />
                     <span>Abrir Gaveta</span>

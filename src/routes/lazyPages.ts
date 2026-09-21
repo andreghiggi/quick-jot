@@ -37,7 +37,6 @@ export const ABCReport = lazy(() => import('@/pages/ABCReport'));
 export const SalesCampaigns = lazy(() => import('@/pages/SalesCampaigns'));
 export const Customers = lazy(() => import('@/pages/Customers'));
 export const Suppliers = lazy(() => import('@/pages/Suppliers'));
-export const PDVV2 = lazy(() => import('@/pages/PDVV2'));
 export const PDVV2ComandasHistorico = lazy(() => import('@/pages/PDVV2ComandasHistorico'));
 export const CouponsPage = lazy(() => import('@/pages/Coupons'));
 export const MesaQR = lazy(() => import('@/pages/MesaQR'));

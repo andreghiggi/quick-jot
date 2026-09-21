@@ -6,6 +6,7 @@ interface Props {
 
 interface State {
   error: Error | null;
+  componentStack: string;
 }
 
 /**
@@ -50,14 +51,15 @@ function isChunkLoadError(error: unknown): boolean {
 }
 
 export class AppErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
+  state: State = { error: null, componentStack: "" };
 
   static getDerivedStateFromError(error: Error): State {
-    return { error };
+    return { error, componentStack: "" };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[app] erro de renderização", error, info.componentStack);
+    this.setState({ componentStack: info.componentStack });
     if (isChunkLoadError(error) && !hasReloaded()) {
       markReload();
       window.location.reload();
@@ -65,7 +67,7 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   render() {
-    const { error } = this.state;
+    const { error, componentStack } = this.state;
     if (!error) return this.props.children;
 
     return (
@@ -76,8 +78,8 @@ export class AppErrorBoundary extends Component<Props, State> {
             O sistema continua funcionando. Recarregue a página para tentar de novo. Se continuar,
             informe o suporte com a mensagem abaixo.
           </p>
-          <pre className="text-xs text-left text-muted-foreground bg-muted rounded p-2 overflow-auto max-h-32">
-            {error.message}
+          <pre className="text-xs text-left text-muted-foreground bg-muted rounded p-2 whitespace-pre-wrap break-words overflow-auto max-h-32">
+            {[error.name, error.message, componentStack.trim().split("\n")[0]].filter(Boolean).join(" · ")}
           </pre>
           <button
             type="button"
