@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '21/09/2026',
+    version: '1.73.0-beta',
+    type: 'feature',
+    description: 'Painel Admin: novo botão "Ativar acesso" em cada loja. Ele cria a conta de entrada da loja (e-mail e senha, mínimo 6 caracteres) já vinculada como administradora — resolve as lojas cadastradas antes que ficavam sem login. Se o e-mail já existir, apenas a senha é atualizada. O botão "Nova Empresa" também passa a criar loja e login juntos, com e-mail e senha obrigatórios. Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.',
+  },
+  {
+    date: '21/09/2026',
     version: '1.72.5-beta',
     type: 'fix',
     description: 'Bon Appetit: corrigida a queda da Dashboard poucos segundos após abrir. Pedidos com a situação "Cancelado" não tinham aparência definida e derrubavam a tela inteira quando a lista de pedidos terminava de carregar. Agora o pedido cancelado é exibido normalmente, reconhecido pela própria situação, e qualquer situação desconhecida passa a aparecer de forma neutra sem quebrar Dashboard, PDV ou abas. Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.',

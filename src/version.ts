@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.72.5-beta";
+export const VERSION = "1.73.0-beta";
 export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Pedido cancelado não derruba mais a tela";
+export const CODENAME = "Ativar acesso da loja";
 
 
 
@@ -22,6 +22,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.73.0-beta",
+    date: "2026-09-21",
+    codename: "Ativar acesso da loja",
+    changes: [
+      "Novo botão 'Ativar acesso' em cada loja do Painel Admin: cria de fato a conta de entrada da loja (e-mail e senha), já vinculada como administradora.",
+      "Se o e-mail já existir, apenas a senha é atualizada.",
+      "O botão 'Nova Empresa' passa a criar a loja e o login juntos, com e-mail e senha obrigatórios.",
+      "Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.72.5-beta",
     date: "2026-09-21",

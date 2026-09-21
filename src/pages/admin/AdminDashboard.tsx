@@ -25,6 +25,7 @@ import {
   EyeOff,
   Pencil,
   Lock,
+  KeyRound,
 } from 'lucide-react';
 
 interface Company {
@@ -58,6 +59,12 @@ export default function AdminDashboard() {
   const [editCredentialsCompanyId, setEditCredentialsCompanyId] = useState<string | null>(null);
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
+
+  // Ativar acesso (cria/atualiza o login da loja)
+  const [activateCompany, setActivateCompany] = useState<Company | null>(null);
+  const [activateEmail, setActivateEmail] = useState('');
+  const [activatePassword, setActivatePassword] = useState('');
+  const [isActivating, setIsActivating] = useState(false);
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
 
   // Block license dialog
@@ -237,6 +244,58 @@ export default function AdminDashboard() {
       toast.error('Erro ao salvar credenciais');
     } finally {
       setIsSavingCredentials(false);
+    }
+  }
+
+  async function handleActivateAccess() {
+    if (!activateCompany) return;
+    const email = activateEmail.trim();
+    const password = activatePassword.trim();
+    if (!email) {
+      toast.error('E-mail é obrigatório');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    setIsActivating(true);
+    try {
+      const { data: userResponse, error: userErr } = await supabase.functions.invoke(
+        'create-company-user',
+        {
+          body: {
+            company_id: activateCompany.id,
+            email,
+            password,
+            full_name: activateCompany.name,
+          },
+        },
+      );
+
+      if (userErr || (userResponse as any)?.error) {
+        console.error('create-company-user error:', userErr || userResponse);
+        toast.error(
+          (userResponse as any)?.error || 'Não foi possível ativar o acesso. Tente novamente.',
+        );
+        return;
+      }
+
+      await supabase
+        .from('companies')
+        .update({ login_email: email, initial_password: password } as any)
+        .eq('id', activateCompany.id);
+
+      toast.success('Acesso ativado! A loja já pode entrar com esse e-mail e senha.');
+      setActivateCompany(null);
+      setActivateEmail('');
+      setActivatePassword('');
+      fetchCompanies();
+    } catch (error: any) {
+      console.error('Erro ao ativar acesso:', error);
+      toast.error('Erro ao ativar acesso');
+    } finally {
+      setIsActivating(false);
     }
   }
 
@@ -495,6 +554,20 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              title="Criar ou atualizar o login desta loja"
+                              onClick={() => {
+                                setActivateCompany(comp);
+                                setActivateEmail(comp.login_email || '');
+                                setActivatePassword('');
+                              }}
+                            >
+                              <KeyRound className="w-3 h-3" />
+                              Ativar acesso
+                            </Button>
                             <Link to={`/admin/empresa/${comp.id}/modulos`}>
                               <Button variant="outline" size="sm" className="gap-1">
                                 <ExternalLink className="w-3 h-3" />
@@ -578,6 +651,47 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Ativar acesso */}
+      <Dialog open={!!activateCompany} onOpenChange={(open) => { if (!open) setActivateCompany(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ativar acesso — {activateCompany?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="activate-email">Login (E-mail) *</Label>
+              <Input
+                id="activate-email"
+                type="email"
+                placeholder="loja@email.com"
+                value={activateEmail}
+                onChange={(e) => setActivateEmail(e.target.value)}
+                disabled={isActivating}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="activate-password">Senha * (mínimo 6 caracteres)</Label>
+              <Input
+                id="activate-password"
+                type="text"
+                placeholder="Senha de entrada da loja"
+                value={activatePassword}
+                onChange={(e) => setActivatePassword(e.target.value)}
+                disabled={isActivating}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cria a conta de entrada desta loja. Se o e-mail já existir, apenas a senha é atualizada.
+              </p>
+            </div>
+            <Button onClick={handleActivateAccess} className="w-full" disabled={isActivating}>
+              {isActivating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Ativar acesso
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <BlockLicenseDialog
         open={!!blockStore}
