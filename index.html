@@ -119,8 +119,9 @@
 
         watchdog = window.setTimeout(function () {
           var root = document.getElementById('root');
+          var splash = document.getElementById('boot-splash');
           var text = root ? (root.innerText || '').replace(/v\d+\.\d+\.\d+[^\n]*/g, '').trim() : '';
-          if (!root || !text) showBootError('A tela principal não apresentou conteúdo');
+          if (!root || splash || !text) showBootError('A tela principal não apresentou conteúdo');
         }, 12000);
       })();
     </script>
