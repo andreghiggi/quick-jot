@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.72.1-beta";
+export const VERSION = "1.72.2-beta";
 export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Proteção contra tela branca";
+export const CODENAME = "Fim da tela branca";
 
 
 
