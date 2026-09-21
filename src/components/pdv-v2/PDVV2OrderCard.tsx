@@ -153,8 +153,8 @@ export function PDVV2OrderCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-lg">#{order.dailyNumber}</span>
-              <Badge variant={STATUS_VARIANT[order.status]}>
-                {STATUS_LABEL[order.status]}
+              <Badge variant={statusVariantOf(order.status)}>
+                {statusLabelOf(order.status)}
               </Badge>
               {/* Tipo de entrega visual extra (apenas cardapio) */}
               {isCardapio && (

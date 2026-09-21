@@ -77,13 +77,32 @@ const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textCo
     textColor: 'text-gray-600 dark:text-gray-400',
     borderColor: 'border-gray-300 dark:border-gray-600',
   },
+  canceled: {
+    label: 'Cancelado',
+    bgColor: 'bg-destructive/10',
+    textColor: 'text-destructive',
+    borderColor: 'border-destructive/40',
+  },
 };
+
+/**
+ * Rede de segurança: qualquer situação de pedido fora da lista conhecida
+ * (dados antigos, importações ou valores criados no futuro) passa a ser
+ * exibida de forma neutra em vez de derrubar a tela inteira.
+ */
+const FALLBACK_STATUS_CONFIG = {
+  label: 'Situação desconhecida',
+  bgColor: 'bg-muted',
+  textColor: 'text-muted-foreground',
+  borderColor: 'border-border',
+} as const;
 
 const nextStatusLabel: Record<OrderStatus, string> = {
   pending: 'Preparar',
   preparing: 'Pronto',
   ready: 'Entregar',
   delivered: '',
+  canceled: '',
 };
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
