@@ -90,12 +90,12 @@ const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textCo
  * (dados antigos, importações ou valores criados no futuro) passa a ser
  * exibida de forma neutra em vez de derrubar a tela inteira.
  */
-const FALLBACK_STATUS_CONFIG = {
+const FALLBACK_STATUS_CONFIG: { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus } = {
   label: 'Situação desconhecida',
   bgColor: 'bg-muted',
   textColor: 'text-muted-foreground',
   borderColor: 'border-border',
-} as const;
+};
 
 const nextStatusLabel: Record<OrderStatus, string> = {
   pending: 'Preparar',
