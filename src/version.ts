@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.72.1-beta";
+export const VERSION = "1.72.2-beta";
 export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Proteção contra tela branca";
+export const CODENAME = "Fim da tela branca";
 
 
 
@@ -22,6 +22,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.72.2-beta",
+    date: "2026-09-21",
+    codename: "Fim da tela branca",
+    changes: [
+      "Se uma tela falhar, aparece uma mensagem com botão \"Recarregar\" em vez de tela branca.",
+      "Logo após uma atualização, o navegador que ainda tem a versão antiga recarrega sozinho uma vez e abre a versão nova.",
+      "Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.",
+    ],
+  },
   {
     version: "1.72.1-beta",
     date: "2026-09-21",
