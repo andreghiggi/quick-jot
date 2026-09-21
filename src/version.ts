@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.72.3-beta";
+export const VERSION = "1.72.4-beta";
 export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Abertura sempre visível";
+export const CODENAME = "PDV compatível com Safari";
 
 
 
@@ -22,6 +22,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.72.4-beta",
+    date: "2026-09-21",
+    codename: "PDV compatível com Safari",
+    changes: [
+      "O PDV principal deixa de depender do carregamento separado que falhava em alguns iPhones e passa a abrir junto com o sistema.",
+      "A abertura da gaveta não tenta mais usar uma loja ainda não identificada durante a entrada.",
+      "Se outra tela falhar, a mensagem técnica passa a aparecer completa para permitir diagnóstico assertivo.",
+      "Nenhum dado, pagamento, impressão, TEF ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.72.3-beta",
     date: "2026-09-21",

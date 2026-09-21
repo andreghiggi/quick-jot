@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '21/09/2026',
+    version: '1.72.4-beta',
+    type: 'fix',
+    description: 'Bon Appetit: corrigida a falha de abertura do PDV em alguns iPhones. A tela principal deixa de depender do carregamento separado que o Safari não conseguia resolver e a abertura da gaveta aguarda a identificação segura da loja. Mensagens futuras também aparecem completas para diagnóstico. Nenhum dado, pagamento, impressão, TEF ou documento fiscal foi alterado.',
+  },
+  {
+    date: '21/09/2026',
     version: '1.72.3-beta',
     type: 'fix',
     description: 'Abertura sempre visível: além da proteção interna, o sistema agora tem uma tela de recuperação independente. Se a página não apresentar conteúdo, aparece o botão "Recarregar"; carregamentos e redirecionamentos mostram seu estado, e arquivos técnicos antigos são limpos apenas quando falham após uma atualização. Sessão e dados da loja são preservados. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',
