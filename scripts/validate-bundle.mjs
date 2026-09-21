@@ -21,7 +21,9 @@ console.log(`Validando ${name} (${(js.length / 1024 / 1024).toFixed(2)} MB)`);
 
 const errors = [];
 
-if (/iwmrtxdzlkasuzutxvhh|iwmrtxdzlkasuzutxvhh\.supabase\.co/.test(js)) {
+// O project id pode aparecer como identificador interno sem representar o
+// endpoint usado pelo cliente. Bloqueie somente a URL antiga completa.
+if (/https:\/\/iwmrtxdzlkasuzutxvhh\.supabase\.co/.test(js)) {
   errors.push('contém URL Lovable Cloud (indisponível) — use api.comandatech.com.br');
 }
 
