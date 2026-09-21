@@ -63,6 +63,7 @@ jobs:
         run: |
           tar -C dist -czf /tmp/comandatech-dist.tar.gz .
           scp -i ~/.ssh/deploy_key /tmp/comandatech-dist.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/comandatech-dist.tar.gz
+          scp -i ~/.ssh/deploy_key scripts/validate-prod-bundle.mjs root@${{ secrets.VPS_HOST }}:/tmp/validate-prod-bundle.mjs
           ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e
             echo "==> Preparing static deploy"
