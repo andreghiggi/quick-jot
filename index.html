@@ -60,11 +60,46 @@
     </div>
     <script>
       (function () {
-        window.addEventListener('error', function (ev) {
+        // Esta tela de erro só pode aparecer quando o aplicativo NÃO conseguiu
+        // iniciar (a mensagem "Carregando ComandaTech…" ainda está no lugar).
+        // Antes, qualquer erro da página — inclusive de uma imagem, extensão ou
+        // script externo — apagava a aplicação já aberta e o operador via tela
+        // de erro com o sistema funcionando.
+        var shown = false;
+
+        function appStarted() {
+          var splash = document.getElementById('boot-splash');
+          if (!splash) return true; // React já substituiu o conteúdo inicial
           var root = document.getElementById('root');
-          if (!root || root.querySelector('form')) return;
+          return !!(root && root.children.length > 1);
+        }
+
+        function showBootError(reason) {
+          if (shown || appStarted()) return;
+          shown = true;
+          console.error('[boot] falha ao iniciar o aplicativo', reason);
+          var root = document.getElementById('root');
+          if (!root) return;
           root.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:2rem;max-width:32rem;margin:4rem auto;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px"><strong>Erro ao carregar o app</strong><p style="margin:1rem 0 0">Tente Ctrl+Shift+R ou abra em aba anônima. Se persistir, contate o suporte.</p></div>';
-        });
+        }
+
+        window.addEventListener(
+          'error',
+          function (ev) {
+            var target = ev.target;
+            var isResource =
+              target && target !== window && (target.tagName === 'SCRIPT' || target.tagName === 'LINK');
+            // Só consideramos falhas de carregamento do próprio aplicativo.
+            if (isResource) {
+              var src = target.src || target.href || '';
+              if (src.indexOf('/assets/') === -1 && src.indexOf('/src/') === -1) return;
+              showBootError(src);
+              return;
+            }
+            showBootError(ev.error || ev.message);
+          },
+          true,
+        );
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
