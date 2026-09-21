@@ -111,7 +111,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   
-  const config = statusConfig[order.status];
+  const config = statusConfig[order.status] ?? FALLBACK_STATUS_CONFIG;
   const [confirming, setConfirming] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
@@ -264,7 +264,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
-  const isFinalized = order.status === 'delivered' || (order.status as string) === 'cancelled';
+  const isFinalized =
+    order.status === 'delivered' ||
+    order.status === 'canceled' ||
+    (order.status as string) === 'cancelled';
   const finalizedDateTime = createdAt.toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit',
@@ -631,8 +634,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     printWindow.document.close();
   }
 
-  // Detecta se o pedido foi cancelado/estornado (qualquer pagamento — TEF, PIX etc.)
-  const isCancelled = !!order.notes?.includes('[CANCELADA]');
+  // Detecta se o pedido foi cancelado/estornado (qualquer pagamento — TEF, PIX etc.).
+  // A situação gravada no pedido é a fonte principal; a marcação nas observações
+  // continua valendo para pedidos antigos que não têm a situação atualizada.
+  const isCancelled =
+    order.status === 'canceled' ||
+    (order.status as string) === 'cancelled' ||
+    !!order.notes?.includes('[CANCELADA]');
 
   // Editar Pedido (rollout PDV V2): pendente/preparando, cardápio/balcão,
   // sem cobrança/NFC-e/TEF, não cancelado. Disponível para qualquer loja
