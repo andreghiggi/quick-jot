@@ -83,7 +83,7 @@ jobs:
             echo "==> Reloading Nginx"
             systemctl reload nginx
             echo "==> Smoke test produção"
-            if ! (cd /var/www/comandatech && node scripts/validate-prod-bundle.mjs); then
+            if ! node /tmp/validate-prod-bundle.mjs; then
               echo "==> Smoke test falhou; restaurando bundle anterior"
               if [ -d "$previous" ]; then
                 rsync -a --delete "$previous/" /var/www/comandatech/dist/
