@@ -1,30 +1,32 @@
 # Fazer o login da Terra Viva funcionar
 
-## O que está acontecendo
+## Por que ela não entra
 
-A loja Terra Viva Floricultura foi cadastrada antes do ajuste no botão "Nova Empresa".
-Naquele momento o cadastro criava apenas a loja, sem criar a conta de acesso.
-Por isso o e-mail terraviva@gmail.com não entra: a loja existe, mas a conta de login nunca foi criada.
+A Terra Viva foi cadastrada antes do ajuste do botão "Nova Empresa".
+Naquele momento o cadastro criava só a loja e guardava o e-mail e a senha como anotação — a conta de acesso nunca chegou a ser criada.
+Por isso o e-mail terraviva@gmail.com não entra: a loja existe, a conta de entrada não.
 
-O ajuste já feito (criar loja + conta juntos, e "Editar credenciais" trocar a senha de verdade) ainda não está no ar para os clientes.
+Na linha dela aparecem só "Módulos", "Bloquear" e "Acessar" porque o botão de credenciais some quando já existe senha anotada — sobra apenas o lapisinho de anotação, que não cria acesso nenhum.
 
-## Como resolver
+## O que será feito
 
-1. Conferir, no servidor que os clientes usam, se a rotina que cria a conta de acesso está instalada e respondendo. Se não estiver, instalá-la.
-2. Publicar a versão com o ajuste do botão "Nova Empresa" e do "Editar credenciais" (nenhuma mudança em pedidos, caixa, impressão, TEF ou notas).
-3. No Painel Admin > Lojas Diretas, abrir "Editar credenciais" da Terra Viva, informar o e-mail e uma senha nova (mínimo 6 caracteres) e salvar. Isso cria a conta de acesso e já a liga à loja como administradora.
-4. Testar o login com esse e-mail e senha e confirmar que a loja abre normalmente (cardápio, pedidos, configurações).
-5. Repetir o passo 3 para as outras lojas da lista que também foram criadas antes do ajuste, se você quiser que elas passem a acessar.
+1. Colocar na linha de cada loja um botão sempre visível: **Ativar acesso**.
+   Ele abre uma janelinha com o e-mail já preenchido, pede a senha (mínimo 6 caracteres) e, ao salvar, cria de fato a conta de entrada da loja, já ligada a ela como administradora. Se o e-mail já existir, apenas ajusta a senha.
+2. Publicar essa mudança para os clientes (nenhuma alteração em pedidos, caixa, cardápio, impressão, TEF ou notas).
+3. Usar o botão na Terra Viva, com o e-mail terraviva@gmail.com e a senha que você escolher.
+4. Testar a entrada com esse e-mail e senha e confirmar que a loja abre normalmente.
+
+O botão "Nova Empresa" você testa depois, como pediu — a parte dele já está pronta e vai junto na mesma publicação.
 
 ## Cuidados
 
-- Nada de outras lojas é alterado: nenhum pedido, caixa, venda, impressão, TEF ou nota fiscal é tocado.
-- Se a publicação der qualquer problema, o sistema volta sozinho para a versão atual.
+- Nenhuma outra loja é alterada: nada de pedidos, vendas, caixa, impressão, TEF ou notas fiscais é tocado.
+- Se a publicação apresentar problema, o sistema volta sozinho para a versão atual.
 
 ## Detalhes técnicos
 
-- Edge function `create-company-user` já existe no repositório: valida super_admin/reseller dono, cria o usuário com `email_confirm: true`, faz upsert em `profiles`, vincula em `company_users` (is_owner) e atribui `company_admin` em `user_roles`. Se o e-mail já existir, apenas atualiza a senha.
-- `src/pages/admin/AdminDashboard.tsx` já invoca essa função em `handleCreateCompany` e em `handleSaveCredentials`; falta apenas o deploy.
-- Verificar na VPS se a função está deployada e se `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_ANON_KEY` estão configurados lá; sem isso a criação de acesso falha.
-- Deploy via workflow `deploy-vps.yml` (build + validate-bundle + rsync com rollback automático).
-- Nenhuma alteração de schema é necessária.
+- `src/pages/admin/AdminDashboard.tsx`: adicionar botão "Ativar acesso" na coluna de ações de cada linha, abrindo o diálogo já existente (`editCredentialsCompanyId`) com `login_email` pré-preenchido; reaproveita `handleSaveCredentials`, que já invoca `create-company-user`.
+- Edge function `create-company-user` já existe: valida super_admin/reseller dono, `createUser` com `email_confirm: true`, upsert em `profiles`, vínculo em `company_users` (is_owner) e papel `company_admin` em `user_roles`; se o e-mail existir, faz `updateUserById` com a nova senha.
+- Confirmar que a função está deployada no ambiente de produção (VPS) e com `SUPABASE_SERVICE_ROLE_KEY`/`SUPABASE_ANON_KEY` definidos lá; sem isso a ativação falha.
+- Publicação pelo workflow `deploy-vps.yml` (build + validação de bundle + rollback automático).
+- Nenhuma mudança de schema.
