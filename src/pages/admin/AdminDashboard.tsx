@@ -652,6 +652,47 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Ativar acesso */}
+      <Dialog open={!!activateCompany} onOpenChange={(open) => { if (!open) setActivateCompany(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ativar acesso — {activateCompany?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="activate-email">Login (E-mail) *</Label>
+              <Input
+                id="activate-email"
+                type="email"
+                placeholder="loja@email.com"
+                value={activateEmail}
+                onChange={(e) => setActivateEmail(e.target.value)}
+                disabled={isActivating}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="activate-password">Senha * (mínimo 6 caracteres)</Label>
+              <Input
+                id="activate-password"
+                type="text"
+                placeholder="Senha de entrada da loja"
+                value={activatePassword}
+                onChange={(e) => setActivatePassword(e.target.value)}
+                disabled={isActivating}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cria a conta de entrada desta loja. Se o e-mail já existir, apenas a senha é atualizada.
+              </p>
+            </div>
+            <Button onClick={handleActivateAccess} className="w-full" disabled={isActivating}>
+              {isActivating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Ativar acesso
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       <BlockLicenseDialog
         open={!!blockStore}
         onClose={() => setBlockStore(null)}
