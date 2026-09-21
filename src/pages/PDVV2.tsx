@@ -384,6 +384,7 @@ export default function PDVV2() {
       preparing: 'ready',
       ready: 'delivered',
       delivered: null,
+      canceled: null,
     };
     const target = next[order.status];
     if (target) {
