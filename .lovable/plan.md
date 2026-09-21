@@ -10,15 +10,22 @@ A nova imagem mostra exatamente essa falha na escolha da cor. O trecho publicado
 
 Isso explica exatamente o comportamento informado: a Dashboard aparece, os pedidos terminam de carregar e então a tela cai. Sempre funcionou porque essa falha antiga só aparece quando a lista atual contém uma situação que a tela ainda não sabe desenhar; o primeiro pedido assim expôs o defeito. Não é cache, aparelho, internet, banco fora do ar ou carregamento separado do PDV.
 
-## Solução de menor risco
+## Como será corrigido
 
-1. Ensinar a tela a reconhecer e mostrar corretamente pedidos cancelados.
-2. Considerar cancelado tanto pela situação do pedido quanto pela marcação já existente nas observações.
-3. Adicionar uma proteção: se algum pedido antigo tiver outra situação inesperada, ele será mostrado de forma neutra, sem derrubar a tela.
-4. Ajustar a lista de situações aceitas para que o mesmo erro não volte em futuras alterações.
-5. Testar a abertura autenticada da Bon Appetit com os pedidos reais em Safari/iPhone e Chromium, apenas visualizando as telas.
-6. Publicar a correção na VPS com retorno automático se a validação falhar.
-7. Confirmar no endereço de produção que a Bon Appetit abre e registrar a correção em Novidades.
+1. **Ensinar a tela a exibir pedido cancelado.** Ele passa a ter nome e aparência próprios, como já acontece com pendente, em preparo, pronto e entregue.
+2. **Reconhecer o cancelamento pela situação do pedido**, e não apenas pela observação escrita. Hoje, um pedido cancelado sem essa observação é exatamente o que derruba a tela.
+3. **Rede de segurança definitiva.** Se aparecer qualquer outra situação desconhecida, hoje ou no futuro, o pedido será mostrado de forma neutra em cinza. A tela nunca mais poderá cair por causa disso.
+4. **Aplicar o mesmo cuidado nas demais listas de pedidos** (Dashboard, PDV e abas), para não corrigir só um ponto.
+
+### Por que isso resolve de fato
+
+A queda acontece em um único momento: escolher a aparência do pedido. Com o item 3, esse momento deixa de ter qualquer possibilidade de falta de informação — não existe mais situação sem aparência. Os itens 1 e 2 fazem o cancelado aparecer corretamente, em vez de apenas não quebrar.
+
+### Validação antes de liberar
+
+5. Abrir a Bon Appetit autenticada, com os 87 pedidos cancelados reais, em iPhone/Safari e no computador, apenas visualizando.
+6. Confirmar que a Dashboard permanece aberta e que os pedidos cancelados aparecem identificados.
+7. Publicar com retorno automático à versão anterior se a verificação falhar, conferir em produção e registrar em Novidades.
 
 ## Limites de segurança
 
