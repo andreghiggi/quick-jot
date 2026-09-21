@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.72.0-beta";
-export const RELEASE_DATE = "2026-09-20"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Produção unificada e retorno rápido";
+export const VERSION = "1.72.1-beta";
+export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Proteção contra tela branca";
 
 
 
@@ -22,6 +22,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.72.1-beta",
+    date: "2026-09-21",
+    codename: "Proteção contra tela branca",
+    changes: [
+      "Enquanto o sistema confere as permissões da loja, aparece o indicador de carregamento no lugar de tela vazia.",
+      "Se alguma verificação não responder em poucos segundos, a tela é liberada com a última informação conhecida e o aviso fica registrado.",
+      "A entrada no sistema deixa de ficar presa indefinidamente quando os dados do usuário demoram a chegar.",
+      "Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.",
+    ],
+  },
   {
     version: "1.72.0-beta",
     date: "2026-09-20",
