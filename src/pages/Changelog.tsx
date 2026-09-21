@@ -16,7 +16,7 @@ const changelog: ChangelogEntry[] = [
     date: '21/09/2026',
     version: '1.72.1-beta',
     type: 'fix',
-    description: 'Proteção contra tela branca: enquanto o sistema confere as permissões da loja, aparece o indicador de carregamento em vez de uma tela vazia. Se alguma verificação não responder em poucos segundos, a tela é liberada com a última informação conhecida e o aviso fica registrado para análise. A entrada no sistema também deixa de ficar presa quando os dados do usuário demoram a chegar. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',
+    description: 'Correção do aviso "Erro ao carregar o app": essa tela aparecia mesmo com o sistema funcionando, porque qualquer erro da página (imagem, extensão do navegador ou script externo) apagava o aplicativo já aberto. Agora ela só aparece quando o sistema realmente não conseguiu iniciar. Também: enquanto o sistema confere as permissões da loja aparece o indicador de carregamento em vez de tela vazia, e se alguma verificação não responder em poucos segundos a tela é liberada com a última informação conhecida. A entrada deixa de ficar presa quando os dados do usuário demoram. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',
   },
   {
     date: '20/09/2026',

@@ -27,6 +27,7 @@ export const RELEASES: Release[] = [
     date: "2026-09-21",
     codename: "Proteção contra tela branca",
     changes: [
+      "O aviso \"Erro ao carregar o app\" só aparece quando o sistema realmente não inicia; erros de imagens, extensões ou scripts externos não apagam mais a tela.",
       "Enquanto o sistema confere as permissões da loja, aparece o indicador de carregamento no lugar de tela vazia.",
       "Se alguma verificação não responder em poucos segundos, a tela é liberada com a última informação conhecida e o aviso fica registrado.",
       "A entrada no sistema deixa de ficar presa indefinidamente quando os dados do usuário demoram a chegar.",
