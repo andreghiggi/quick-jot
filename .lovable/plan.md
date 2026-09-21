@@ -8,7 +8,7 @@ A Dashboard aparece por cerca de um segundo porque sua estrutura termina de abri
 
 A nova imagem mostra exatamente essa falha na escolha da cor. O trecho publicado confirma que a quebra acontece ao montar o cartão do pedido. A consulta somente de leitura confirmou **87 pedidos cancelados na Bon Appetit**; nenhum deles será alterado.
 
-Isso explica exatamente o comportamento informado: a Dashboard aparece, os pedidos terminam de carregar e então a tela cai. Não é cache, aparelho, internet, banco fora do ar ou carregamento separado do PDV.
+Isso explica exatamente o comportamento informado: a Dashboard aparece, os pedidos terminam de carregar e então a tela cai. Sempre funcionou porque essa falha antiga só aparece quando a lista atual contém uma situação que a tela ainda não sabe desenhar; o primeiro pedido assim expôs o defeito. Não é cache, aparelho, internet, banco fora do ar ou carregamento separado do PDV.
 
 ## Solução de menor risco
 
