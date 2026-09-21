@@ -33,7 +33,7 @@ const Index = () => {
   }, [orders, todayStr]);
 
   const activeOrders = useMemo(() => {
-    return todayOrders.filter(o => o.status !== 'delivered');
+    return todayOrders.filter(o => o.status !== 'delivered' && o.status !== 'canceled');
   }, [todayOrders]);
 
   const pendingCount = activeOrders.filter(o => o.status === 'pending').length;

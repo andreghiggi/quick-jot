@@ -38,6 +38,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   preparing: 'Preparando',
   ready: 'Pronto',
   delivered: 'Entregue',
+  canceled: 'Cancelado',
 };
 
 const STATUS_VARIANT: Record<OrderStatus, 'default' | 'secondary' | 'outline'> = {
@@ -45,7 +46,17 @@ const STATUS_VARIANT: Record<OrderStatus, 'default' | 'secondary' | 'outline'> =
   preparing: 'secondary',
   ready: 'default',
   delivered: 'outline',
+  canceled: 'outline',
 };
+
+/** Rede de segurança: situação desconhecida nunca pode derrubar a tela. */
+function statusLabelOf(status: OrderStatus): string {
+  return STATUS_LABEL[status] ?? 'Situação desconhecida';
+}
+
+function statusVariantOf(status: OrderStatus): 'default' | 'secondary' | 'outline' {
+  return STATUS_VARIANT[status] ?? 'outline';
+}
 
 function originBadge(origin?: string) {
   switch (origin) {
@@ -142,8 +153,8 @@ export function PDVV2OrderCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-lg">#{order.dailyNumber}</span>
-              <Badge variant={STATUS_VARIANT[order.status]}>
-                {STATUS_LABEL[order.status]}
+              <Badge variant={statusVariantOf(order.status)}>
+                {statusLabelOf(order.status)}
               </Badge>
               {/* Tipo de entrega visual extra (apenas cardapio) */}
               {isCardapio && (

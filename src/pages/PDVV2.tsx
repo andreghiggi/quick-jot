@@ -246,8 +246,12 @@ export default function PDVV2() {
       preparing: 0,
       ready: 0,
       delivered: 0,
+      canceled: 0,
     };
-    for (const o of dashboardOrders) c[o.status as OrderStatus]++;
+    for (const o of dashboardOrders) {
+      const key = o.status as OrderStatus;
+      if (typeof c[key] === 'number') c[key]++;
+    }
     return c;
   }, [dashboardOrders]);
 
@@ -384,6 +388,7 @@ export default function PDVV2() {
       preparing: 'ready',
       ready: 'delivered',
       delivered: null,
+      canceled: null,
     };
     const target = next[order.status];
     if (target) {

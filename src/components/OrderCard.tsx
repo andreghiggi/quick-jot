@@ -77,6 +77,24 @@ const statusConfig: Record<OrderStatus, { label: string; bgColor: string; textCo
     textColor: 'text-gray-600 dark:text-gray-400',
     borderColor: 'border-gray-300 dark:border-gray-600',
   },
+  canceled: {
+    label: 'Cancelado',
+    bgColor: 'bg-destructive/10',
+    textColor: 'text-destructive',
+    borderColor: 'border-destructive/40',
+  },
+};
+
+/**
+ * Rede de segurança: qualquer situação de pedido fora da lista conhecida
+ * (dados antigos, importações ou valores criados no futuro) passa a ser
+ * exibida de forma neutra em vez de derrubar a tela inteira.
+ */
+const FALLBACK_STATUS_CONFIG: { label: string; bgColor: string; textColor: string; borderColor: string; next?: OrderStatus } = {
+  label: 'Situação desconhecida',
+  bgColor: 'bg-muted',
+  textColor: 'text-muted-foreground',
+  borderColor: 'border-border',
 };
 
 const nextStatusLabel: Record<OrderStatus, string> = {
@@ -84,6 +102,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   preparing: 'Pronto',
   ready: 'Entregar',
   delivered: '',
+  canceled: '',
 };
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
@@ -92,7 +111,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   
-  const config = statusConfig[order.status];
+  const config = statusConfig[order.status] ?? FALLBACK_STATUS_CONFIG;
   const [confirming, setConfirming] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
@@ -245,7 +264,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
   const timeAgo = formatTimeAgo(createdAt);
-  const isFinalized = order.status === 'delivered' || (order.status as string) === 'cancelled';
+  const isFinalized =
+    order.status === 'delivered' ||
+    order.status === 'canceled' ||
+    (order.status as string) === 'cancelled';
   const finalizedDateTime = createdAt.toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit',
@@ -612,8 +634,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     printWindow.document.close();
   }
 
-  // Detecta se o pedido foi cancelado/estornado (qualquer pagamento — TEF, PIX etc.)
-  const isCancelled = !!order.notes?.includes('[CANCELADA]');
+  // Detecta se o pedido foi cancelado/estornado (qualquer pagamento — TEF, PIX etc.).
+  // A situação gravada no pedido é a fonte principal; a marcação nas observações
+  // continua valendo para pedidos antigos que não têm a situação atualizada.
+  const isCancelled =
+    order.status === 'canceled' ||
+    (order.status as string) === 'cancelled' ||
+    !!order.notes?.includes('[CANCELADA]');
 
   // Editar Pedido (rollout PDV V2): pendente/preparando, cardápio/balcão,
   // sem cobrança/NFC-e/TEF, não cancelado. Disponível para qualquer loja
