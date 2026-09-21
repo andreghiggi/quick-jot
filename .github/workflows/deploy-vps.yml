@@ -59,6 +59,30 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Atualizar config Nginx da API (imagens públicas) com rollback
+        run: |
+          scp -i ~/.ssh/deploy_key deploy/nginx/api.comandatech.com.br.conf root@${{ secrets.VPS_HOST }}:/tmp/api.comandatech.com.br.conf
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -e
+            target=/etc/nginx/sites-available/api.comandatech.com.br.conf
+            if [ ! -f "$target" ]; then
+              echo "AVISO: $target não existe; pulando atualização do Nginx"
+              exit 0
+            fi
+            backup="/root/nginx-backups/api.conf.$(date -u +%Y%m%dT%H%M%SZ)"
+            mkdir -p /root/nginx-backups
+            cp -a "$target" "$backup"
+            cp -a /tmp/api.comandatech.com.br.conf "$target"
+            if ! nginx -t; then
+              echo "==> Config inválida; restaurando anterior"
+              cp -a "$backup" "$target"
+              nginx -t
+              exit 1
+            fi
+            systemctl reload nginx
+            echo "==> Nginx da API atualizado (backup em $backup)"
+          ENDSSH
+
       - name: Deploy dist to VPS with immediate rollback
         run: |
           tar -C dist -czf /tmp/comandatech-dist.tar.gz .

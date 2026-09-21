@@ -94,8 +94,9 @@ export async function uploadCompressedImage(
       .getPublicUrl(finalPath);
 
     return { publicUrl };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading image:', error);
-    return null;
+    // Propaga o motivo real (permissão, tamanho, servidor fora) em vez de esconder.
+    throw new Error(error?.message || 'Falha ao enviar a imagem');
   }
 }
