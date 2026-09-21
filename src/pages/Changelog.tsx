@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '21/09/2026',
+    version: '1.72.2-beta',
+    type: 'fix',
+    description: 'Fim da tela branca ao abrir o sistema: se alguma tela falhar, agora aparece uma mensagem clara com o botão "Recarregar" em vez de tela vazia. Além disso, logo depois de uma atualização, o navegador que ainda guardava a versão antiga recarrega sozinho uma vez e abre a versão nova. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',
+  },
+  {
+    date: '21/09/2026',
     version: '1.72.1-beta',
     type: 'fix',
     description: 'Correção do aviso "Erro ao carregar o app": essa tela aparecia mesmo com o sistema funcionando, porque qualquer erro da página (imagem, extensão do navegador ou script externo) apagava o aplicativo já aberto. Agora ela só aparece quando o sistema realmente não conseguiu iniciar. Também: enquanto o sistema confere as permissões da loja aparece o indicador de carregamento em vez de tela vazia, e se alguma verificação não responder em poucos segundos a tela é liberada com a última informação conhecida. A entrada deixa de ficar presa quando os dados do usuário demoram. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',
