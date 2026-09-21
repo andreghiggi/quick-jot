@@ -116,24 +116,56 @@ export default function AdminDashboard() {
       toast.error('Nome da empresa é obrigatório');
       return;
     }
+    if (!newCompanyEmail.trim()) {
+      toast.error('E-mail de login é obrigatório');
+      return;
+    }
+    if (newCompanyPassword.trim().length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
 
     const slug = newCompanySlug.trim() || generateSlug(newCompanyName);
 
     setIsCreating(true);
     try {
-      const { error } = await supabase
+      const { data: newCompany, error } = await supabase
         .from('companies')
         .insert({
           name: newCompanyName.trim(),
           slug,
           phone: newCompanyPhone.trim() || null,
-          login_email: newCompanyEmail.trim() || null,
-          initial_password: newCompanyPassword.trim() || null,
-        } as any);
+          login_email: newCompanyEmail.trim(),
+          initial_password: newCompanyPassword.trim(),
+          active: true,
+        } as any)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success('Empresa criada com sucesso!');
+      // Cria o usuário de acesso e vincula à empresa (sem isso o login nunca funciona)
+      const { data: userResponse, error: userErr } = await supabase.functions.invoke(
+        'create-company-user',
+        {
+          body: {
+            company_id: newCompany.id,
+            email: newCompanyEmail.trim(),
+            password: newCompanyPassword.trim(),
+            full_name: newCompanyName.trim(),
+          },
+        },
+      );
+
+      if (userErr || (userResponse as any)?.error) {
+        console.error('create-company-user error:', userErr || userResponse);
+        toast.error(
+          'Empresa criada, mas o login NÃO foi ativado. Use "Editar credenciais" para reenviar o e-mail e a senha.',
+        );
+      } else {
+        toast.success('Empresa criada e login ativado!');
+      }
+
       setIsDialogOpen(false);
       setNewCompanyName('');
       setNewCompanySlug('');
@@ -159,6 +191,10 @@ export default function AdminDashboard() {
       toast.error('E-mail é obrigatório');
       return;
     }
+    if (editPassword.trim() && editPassword.trim().length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
     setIsSavingCredentials(true);
     try {
       const { error } = await supabase
@@ -169,7 +205,29 @@ export default function AdminDashboard() {
         })
         .eq('id', editCredentialsCompanyId);
       if (error) throw error;
-      toast.success('Credenciais salvas!');
+
+      if (editPassword.trim()) {
+        const { data: userResponse, error: userErr } = await supabase.functions.invoke(
+          'create-company-user',
+          {
+            body: {
+              company_id: editCredentialsCompanyId,
+              email: editEmail.trim(),
+              password: editPassword.trim(),
+              full_name: companies.find((c) => c.id === editCredentialsCompanyId)?.name || editEmail.trim(),
+            },
+          },
+        );
+        if (userErr || (userResponse as any)?.error) {
+          console.error('create-company-user error:', userErr || userResponse);
+          toast.error('Anotação salva, mas o acesso não foi atualizado. Tente novamente.');
+          return;
+        }
+        toast.success('Credenciais salvas e acesso atualizado!');
+      } else {
+        toast.success('Credenciais salvas!');
+      }
+
       setEditCredentialsCompanyId(null);
       setEditEmail('');
       setEditPassword('');
@@ -247,7 +305,7 @@ export default function AdminDashboard() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="company-email">Login (E-mail)</Label>
+            <Label htmlFor="company-email">Login (E-mail) *</Label>
             <Input
               id="company-email"
               type="email"
@@ -258,7 +316,7 @@ export default function AdminDashboard() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="company-password">Senha Inicial</Label>
+            <Label htmlFor="company-password">Senha Inicial * (mín. 6 caracteres)</Label>
             <Input
               id="company-password"
               placeholder="Senha inicial da loja"
