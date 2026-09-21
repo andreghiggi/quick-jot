@@ -18,6 +18,30 @@ interface State {
  */
 const RELOAD_FLAG = "comandatech:chunk-reload";
 
+function hasReloaded(): boolean {
+  try {
+    return sessionStorage.getItem(RELOAD_FLAG) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markReload(): void {
+  try {
+    sessionStorage.setItem(RELOAD_FLAG, "1");
+  } catch {
+    // O navegador pode bloquear sessionStorage; a tela de erro continua acessível.
+  }
+}
+
+function clearReloadMark(): void {
+  try {
+    sessionStorage.removeItem(RELOAD_FLAG);
+  } catch {
+    // Sem storage, basta recarregar normalmente.
+  }
+}
+
 function isChunkLoadError(error: unknown): boolean {
   const message = error instanceof Error ? `${error.name} ${error.message}` : String(error ?? "");
   return /Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(
@@ -34,8 +58,8 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[app] erro de renderização", error, info.componentStack);
-    if (isChunkLoadError(error) && !sessionStorage.getItem(RELOAD_FLAG)) {
-      sessionStorage.setItem(RELOAD_FLAG, "1");
+    if (isChunkLoadError(error) && !hasReloaded()) {
+      markReload();
       window.location.reload();
     }
   }
@@ -58,7 +82,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           <button
             type="button"
             onClick={() => {
-              sessionStorage.removeItem(RELOAD_FLAG);
+               clearReloadMark();
               window.location.reload();
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"

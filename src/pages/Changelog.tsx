@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '21/09/2026',
+    version: '1.72.3-beta',
+    type: 'fix',
+    description: 'Abertura sempre visível: além da proteção interna, o sistema agora tem uma tela de recuperação independente. Se a página não apresentar conteúdo, aparece o botão "Recarregar"; carregamentos e redirecionamentos mostram seu estado, e arquivos técnicos antigos são limpos apenas quando falham após uma atualização. Sessão e dados da loja são preservados. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',
+  },
+  {
+    date: '21/09/2026',
     version: '1.72.2-beta',
     type: 'fix',
     description: 'Fim da tela branca ao abrir o sistema: se alguma tela falhar, agora aparece uma mensagem clara com o botão "Recarregar" em vez de tela vazia. Além disso, logo depois de uma atualização, o navegador que ainda guardava a versão antiga recarrega sozinho uma vez e abre a versão nova. Nenhuma regra de venda, caixa, cardápio, impressão, TEF ou fiscal foi alterada.',

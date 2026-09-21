@@ -66,6 +66,7 @@
         // script externo — apagava a aplicação já aberta e o operador via tela
         // de erro com o sistema funcionando.
         var shown = false;
+        var watchdog;
 
         function appStarted() {
           var splash = document.getElementById('boot-splash');
@@ -75,12 +76,19 @@
         }
 
         function showBootError(reason) {
-          if (shown || appStarted()) return;
+          if (shown) return;
           shown = true;
           console.error('[boot] falha ao iniciar o aplicativo', reason);
-          var root = document.getElementById('root');
-          if (!root) return;
-          root.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:2rem;max-width:32rem;margin:4rem auto;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px"><strong>Erro ao carregar o app</strong><p style="margin:1rem 0 0">Tente Ctrl+Shift+R ou abra em aba anônima. Se persistir, contate o suporte.</p></div>';
+          if (watchdog) window.clearTimeout(watchdog);
+          var existing = document.getElementById('boot-error');
+          if (existing) return;
+          var errorBox = document.createElement('div');
+          errorBox.id = 'boot-error';
+          errorBox.setAttribute('role', 'alert');
+          errorBox.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,sans-serif;background:#fafafa;color:#171717';
+          errorBox.innerHTML = '<div style="width:100%;max-width:360px;padding:24px;text-align:center;background:#fff;border:1px solid #e5e5e5;border-radius:8px"><strong style="display:block;font-size:18px">Não foi possível abrir o sistema</strong><p style="margin:12px 0 20px;color:#525252;font-size:14px;line-height:1.5">Recarregue para buscar a versão atual. Seus dados não serão apagados.</p><button type="button" style="width:100%;border:0;border-radius:6px;padding:12px;background:#ef4444;color:#fff;font-weight:600;cursor:pointer">Recarregar</button></div>';
+          errorBox.getElementsByTagName('button')[0].onclick = function () { window.location.reload(); };
+          document.body.appendChild(errorBox);
         }
 
         window.addEventListener(
@@ -96,10 +104,25 @@
               showBootError(src);
               return;
             }
-            showBootError(ev.error || ev.message);
+            window.setTimeout(function () {
+              if (!appStarted()) showBootError(ev.error || ev.message);
+            }, 0);
           },
           true,
         );
+
+        window.addEventListener('unhandledrejection', function (ev) {
+          window.setTimeout(function () {
+            if (!appStarted()) showBootError(ev.reason || 'Falha inesperada ao iniciar');
+          }, 0);
+        });
+
+        watchdog = window.setTimeout(function () {
+          var root = document.getElementById('root');
+          var splash = document.getElementById('boot-splash');
+          var text = root ? (root.innerText || '').replace(/v\d+\.\d+\.\d+[^\n]*/g, '').trim() : '';
+          if (!root || splash || !text) showBootError('A tela principal não apresentou conteúdo');
+        }, 12000);
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
