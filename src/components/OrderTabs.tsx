@@ -30,9 +30,18 @@ export function OrderTabs({ filteredOrders, hideAllTab = false }: OrderTabsProps
   const tabs = hideAllTab ? allTabs.filter(t => t.value !== 'all') : allTabs;
   const defaultTab = hideAllTab ? 'pending' : 'all';
 
+  // Cancelado pela situação do pedido OU pela marcação antiga nas observações.
+  function isCancelledOrder(order: Order) {
+    return (
+      order.status === 'canceled' ||
+      (order.status as string) === 'cancelled' ||
+      !!order.notes?.includes('[CANCELADA]')
+    );
+  }
+
   function getOrders(filter: OrderStatus | 'all' | 'cancelled') {
-    if (filter === 'cancelled') return displayOrders.filter((o) => !!o.notes?.includes('[CANCELADA]'));
-    const nonCancelled = displayOrders.filter((o) => !o.notes?.includes('[CANCELADA]'));
+    if (filter === 'cancelled') return displayOrders.filter(isCancelledOrder);
+    const nonCancelled = displayOrders.filter((o) => !isCancelledOrder(o));
     if (filter === 'all') return nonCancelled;
     return nonCancelled.filter((order) => order.status === filter);
   }
