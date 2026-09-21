@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /** Valida dist/ antes de publicar — URL VPS + anon key presente. */
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const distAssets = resolve('dist/assets');
 let jsPath = process.argv[2];
 
 if (!jsPath) {
-  const files = readdirSync(distAssets).filter((f) => /^index-.*\.js$/.test(f));
-  if (!files.length) {
-    console.error('FAIL: nenhum index-*.js em dist/assets');
+  const html = readFileSync(resolve('dist/index.html'), 'utf8');
+  const entry = html.match(/\/assets\/(index-[^"']+\.js)/)?.[1];
+  if (!entry) {
+    console.error('FAIL: entrada principal não encontrada em dist/index.html');
     process.exit(1);
   }
-  jsPath = resolve(distAssets, files.sort().pop());
+  jsPath = resolve(distAssets, entry);
 }
 
 const js = readFileSync(jsPath, 'utf8');
