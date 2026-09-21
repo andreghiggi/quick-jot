@@ -4,11 +4,11 @@
 
 **Do I know what the issue is? Sim.**
 
-A tela recebe um pedido em uma situação que ela própria grava como **cancelado**, mas só sabe mostrar pedidos pendentes, em preparo, prontos ou entregues. Ao tentar escolher a cor do pedido cancelado, não encontra essa informação e derruba a tela inteira.
+A Dashboard aparece por cerca de um segundo porque sua estrutura termina de abrir antes da lista de pedidos. Assim que os pedidos chegam, a tela recebe a situação **cancelado**, mas só sabe mostrar pedidos pendentes, em preparo, prontos ou entregues. Ao tentar escolher a cor do pedido cancelado, não encontra essa informação e derruba a tela inteira.
 
-A nova imagem mostra exatamente essa falha. O trecho publicado também confirma que a quebra acontece ao montar o cartão de um pedido cuja situação não tem aparência definida.
+A nova imagem mostra exatamente essa falha na escolha da cor. O trecho publicado confirma que a quebra acontece ao montar o cartão do pedido. A consulta somente de leitura confirmou **87 pedidos cancelados na Bon Appetit**; nenhum deles será alterado.
 
-Isso explica por que o site abre, mas a área da Bon Appetit cai depois de entrar: o problema aparece quando os pedidos dessa loja são carregados. Não é cache, aparelho, internet, banco fora do ar ou carregamento separado do PDV.
+Isso explica exatamente o comportamento informado: a Dashboard aparece, os pedidos terminam de carregar e então a tela cai. Não é cache, aparelho, internet, banco fora do ar ou carregamento separado do PDV.
 
 ## Solução de menor risco
 
