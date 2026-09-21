@@ -305,7 +305,7 @@ export default function AdminDashboard() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="company-email">Login (E-mail)</Label>
+            <Label htmlFor="company-email">Login (E-mail) *</Label>
             <Input
               id="company-email"
               type="email"
@@ -316,7 +316,7 @@ export default function AdminDashboard() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="company-password">Senha Inicial</Label>
+            <Label htmlFor="company-password">Senha Inicial * (mín. 6 caracteres)</Label>
             <Input
               id="company-password"
               placeholder="Senha inicial da loja"
