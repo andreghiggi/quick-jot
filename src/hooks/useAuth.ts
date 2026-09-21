@@ -123,12 +123,22 @@ export function useAuth() {
     fetchUserIdRef.current = userId;
     setUserDataReady(false);
 
+    // Sem este limite, uma consulta que nunca responde mantém a tela presa no
+    // carregamento (tela branca para o operador). Ao estourar, liberamos a UI.
+    const readyTimeoutMs = 8000;
+    const readyTimer = window.setTimeout(() => {
+      console.warn(`[auth] dados do usuário sem resposta após ${readyTimeoutMs}ms — liberando a tela`);
+      fetchUserIdRef.current = null;
+      setUserDataReady(true);
+    }, readyTimeoutMs);
+
     try {
       await fetchUserDataInner(userId);
     } catch (error) {
       console.error('Error fetching user data:', error);
       fetchUserIdRef.current = null;
     } finally {
+      window.clearTimeout(readyTimer);
       setUserDataReady(true);
     }
   }
