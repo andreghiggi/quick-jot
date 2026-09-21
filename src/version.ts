@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.72.4-beta";
+export const VERSION = "1.72.5-beta";
 export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "PDV compatível com Safari";
+export const CODENAME = "Pedido cancelado não derruba mais a tela";
 
 
 
@@ -22,6 +22,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.72.5-beta",
+    date: "2026-09-21",
+    codename: "Pedido cancelado não derruba mais a tela",
+    changes: [
+      "Corrigida a queda da Dashboard segundos após abrir: pedidos com a situação 'Cancelado' não tinham aparência definida e derrubavam a tela inteira.",
+      "Pedido cancelado passa a ser exibido normalmente, identificado pela situação do pedido e não apenas pela observação escrita.",
+      "Rede de segurança: qualquer situação desconhecida de pedido é mostrada de forma neutra, sem quebrar Dashboard, PDV ou abas de pedidos.",
+      "Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.72.4-beta",
     date: "2026-09-21",
