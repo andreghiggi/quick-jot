@@ -521,6 +521,9 @@ def montar_linhas_estilizadas(texto, colunas=32):
     import re as _re
     import textwrap as _tw
 
+    texto = sanitizar_icones(texto or "")
+
+
     # Colunas efetivas por estilo (fontes maiores cabem menos caracteres)
     fator = {
         "titulo": 0.72,
