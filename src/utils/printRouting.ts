@@ -480,6 +480,7 @@ export async function enqueueReceiptJob(params: {
   const receiptStation = (stations as { id: string }[] | null)?.[0]?.id ?? null;
 
   const { error } = await supabase.from('print_queue').insert({
+    id: sourceOrderId ?? undefined,
     company_id: companyId,
     html_content: html,
     label,
@@ -488,6 +489,7 @@ export async function enqueueReceiptJob(params: {
     printed: false,
     source_order_id: sourceOrderId ?? null,
   } as never);
+  if (error && sourceOrderId && error.code === '23505') return;
   if (error) throw error;
 }
 
