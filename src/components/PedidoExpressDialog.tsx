@@ -1458,12 +1458,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       const isReceiptPilot = company?.id === REI_DO_ACAI_ID || company?.id === BON_APPETIT_ID;
 
       // Comanda de produção: opcional. O Rei não cria este papel no piloto.
-      // quando o pedido é finalizado na hora — lá recibo + comanda saem sempre.
+      // Na Bon Appetit, a opção ligada também vale para pedidos finalizados na hora.
       if (
         settings.autoPrintProductionTicket &&
         company?.id &&
         company.id !== REI_DO_ACAI_ID &&
-        (!override?.finalizeNow || company.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8')
+        (
+          !override?.finalizeNow ||
+          company.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8' ||
+          company.id === BON_APPETIT_ID
+        )
       ) {
 
         // Enfileira comanda de produção (mesmo padrão do Waiter).
