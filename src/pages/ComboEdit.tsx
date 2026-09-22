@@ -129,7 +129,7 @@ export default function ComboEdit() {
       setImageUrl(result.publicUrl);
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao enviar imagem');
+      toast.error((err as any)?.message || 'Erro ao enviar imagem');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

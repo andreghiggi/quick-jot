@@ -737,11 +737,16 @@ export default function OptionalGroups() {
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
                                   if (!file) return;
-                                  const path = `optional-items/${item.id}.webp`;
-                                  const result = await uploadCompressedImage(supabase, 'product-images', path, file, { upsert: true });
-                                  if (!result) { toast.error('Erro ao enviar imagem'); return; }
-                                  await updateItem(item.id, { image_url: result.publicUrl + '?t=' + Date.now() });
-                                  toast.success('Imagem atualizada!');
+                                  try {
+                                    const path = `optional-items/${item.id}.webp`;
+                                    const result = await uploadCompressedImage(supabase, 'product-images', path, file, { upsert: true });
+                                    if (!result) throw new Error('Erro ao enviar imagem');
+                                    await updateItem(item.id, { image_url: result.publicUrl + '?t=' + Date.now() });
+                                    toast.success('Imagem atualizada!');
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast.error((err as any)?.message || 'Erro ao enviar imagem');
+                                  }
                                 }}
                               />
                               <ImageIcon className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />

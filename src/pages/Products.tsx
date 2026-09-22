@@ -164,7 +164,7 @@ export default function Products() {
       return result.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Erro ao enviar imagem');
+      toast.error((error as any)?.message || 'Erro ao enviar imagem');
       return null;
     } finally {
       setIsUploading(false);
