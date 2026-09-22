@@ -856,7 +856,7 @@ def extrair_blocos_v2(html_content):
                 spans = [node.text() for node in child.children if node.tag == "span"]
                 blocos.append({"text": spans[0] if spans else "TOTAL", "style": "total", "align": "left", "right": spans[1] if len(spans) > 1 else ""})
             elif "[CLIENTE]" in text:
-                blocos.append(block(text, "inverse"))
+                blocos.append(block(prefixo_cliente(text), "inverse"))
             elif "[ENDERECO]" in text:
                 blocos.append(block(text, "inverse"))
             elif text.upper().startswith("PRONTO AT") or _re.match(r"^\d{1,2}:\d{2}\s*pronto", text, _re.I):
