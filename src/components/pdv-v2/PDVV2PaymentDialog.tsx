@@ -558,13 +558,14 @@ export function PDVV2PaymentDialog({
       }
       return;
     }
-    // Demais empresas: se a venda sair com NFC-e (ou TEF), abrir popup de CPF antes
+    // Demais empresas: o CPF/CNPJ é informado opcionalmente na própria tela de
+    // cobrança (campo "Informar CPF/CNPJ"), sem pop-up que interrompa o fluxo.
     if ((effectiveDocumentMode === 'sale_with_nfce' || isTef) && fiscalEnabled) {
-      setPendingDocMode('sale_with_nfce');
-      setCpfChoiceOpen(true);
+      await finalizeConfirm('sale_with_nfce', false, prechargedTefRef.current ?? undefined);
       return;
     }
     await finalizeConfirm(fiscalEnabled ? effectiveDocumentMode : 'sale_only');
+
   }
 
   return (
