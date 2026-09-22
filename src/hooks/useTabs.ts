@@ -68,9 +68,13 @@ export function useTabs(options: UseTabsOptions = {}) {
         }, 1500);
       };
 
-      // Subscribe to realtime changes
+      // Subscribe to realtime changes — nome único por tela (nome fixo era
+      // recusado com duas telas abertas e a comanda parava de atualizar sozinha).
+      const channelId = `tabs-changes-${companyId}-${Math.random().toString(36).slice(2, 10)}`;
+      let ready = false;
+
       const channel = supabase
-        .channel('tabs-changes')
+        .channel(channelId)
         .on(
           'postgres_changes',
           {
@@ -99,10 +103,26 @@ export function useTabs(options: UseTabsOptions = {}) {
             scheduleItemsRefetch();
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          ready = status === 'SUBSCRIBED';
+        });
+
+      // Rede de segurança: se a escuta cair, recarrega sozinho a cada 15s.
+      const pollInterval = window.setInterval(() => {
+        if (!ready) void fetchTabs();
+      }, 15000);
+
+      const onWake = () => {
+        if (document.visibilityState === 'visible') scheduleItemsRefetch();
+      };
+      document.addEventListener('visibilitychange', onWake);
+      window.addEventListener('online', onWake);
 
       return () => {
         if (itemsRefetchTimer) clearTimeout(itemsRefetchTimer);
+        document.removeEventListener('visibilitychange', onWake);
+        window.removeEventListener('online', onWake);
+        window.clearInterval(pollInterval);
         supabase.removeChannel(channel);
       };
     } else {
