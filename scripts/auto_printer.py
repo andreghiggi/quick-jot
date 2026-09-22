@@ -496,6 +496,9 @@ def montar_linhas_estilizadas(texto, colunas=32):
         "obs": 0.90,
         "normal": 1.0,
         "rodape": 1.0,
+        "loja": 0.90,
+        "grupo": 0.90,
+        "sep": 1.0,
     }
 
     saida = []
