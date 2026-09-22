@@ -1325,12 +1325,35 @@ def main(company_id, company_name):
         return
 
     log(f"Versão do script: {SCRIPT_VERSION}", "OK")
+
+    if not COMPANY_ID:
+        print("!" * 60)
+        print("  ATENCAO: o identificador da loja nao foi encontrado.")
+        print("  Baixe o pacote de impressao novamente pelo painel.")
+        print("!" * 60)
+        log("COMPANY_ID vazio — layout completo indisponivel", "AVISO")
+    elif COMPANY_ID in GDI_COMPANY_IDS:
+        try:
+            _import_win32ui()
+        except Exception as ui_err:
+            print("!" * 60)
+            print("  ATENCAO: MODO SIMPLES DE IMPRESSAO")
+            print("  O complemento do Windows (pywin32/win32ui) esta com problema,")
+            print("  entao o recibo sai sem o layout completo.")
+            print("  Para corrigir, abra o Prompt de Comando como administrador e rode:")
+            print("    python -m pip install --upgrade --force-reinstall pywin32")
+            print("    python -m pywin32_postinstall -install")
+            print("  Depois reinicie o computador.")
+            print("!" * 60)
+            log(f"win32ui indisponivel no start: {ui_err}", "AVISO")
+
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
     print(f"  Log: {LOG_FILE}")
     print("=" * 50)
     print()
+
     
     STORE_NAME = company_name
 
