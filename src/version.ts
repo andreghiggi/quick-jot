@@ -23,6 +23,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.73.1-beta",
+    date: "2026-09-21",
+    codename: "Fotos novas voltam a aparecer",
+    changes: [
+      "Corrigida a entrega das imagens no servidor: fotos enviadas agora em categorias, subcategorias, produtos, combos, adicionais e banner voltam a aparecer.",
+      "As fotos antigas continuam sendo servidas normalmente.",
+      "Quando o envio falhar, a tela passa a mostrar o motivo real em vez de um aviso genérico.",
+      "Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.",
+    ],
+  },
+  {
     version: "1.73.0-beta",
     date: "2026-09-21",
     codename: "Ativar acesso da loja",
