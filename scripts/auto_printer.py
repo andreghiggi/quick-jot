@@ -596,6 +596,25 @@ def montar_linhas_estilizadas(texto, colunas=32):
             add(">> " + linha.lstrip("> ").upper(), "add")
             continue
 
+        # Adicionais no formato "+ ITEM"
+        if linha.startswith("+"):
+            add("+ " + linha.lstrip("+ ").upper(), "add")
+            continue
+
+        # Titulo de grupo de opcionais ("Escolha a base:", "Adicionais Premium:")
+        if linha.endswith(":") and not _re.match(
+            r"^(TEL|FONE|PAGAMENTO|SUBTOTAL|TOTAL|TAXA|DESCONTO|TROCO|ENDERECO|CLIENTE|OBS)",
+            upper,
+        ):
+            add(linha.rstrip(":").strip(), "grupo")
+            continue
+
+        # Nome da loja (primeira linha util do cupom)
+        if primeira_linha_util:
+            primeira_linha_util = False
+            add(upper, "loja")
+            continue
+
         add(linha, "normal")
 
     saida.append(("", "espaco"))
