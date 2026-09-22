@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.73.0-beta";
+export const VERSION = "1.73.1-beta";
 export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Ativar acesso da loja";
+export const CODENAME = "Fotos novas voltam a aparecer";
 
 
 
