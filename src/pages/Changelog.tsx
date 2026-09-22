@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '21/09/2026',
+    version: '1.73.1-beta',
+    type: 'fix',
+    description: 'Fotos novas voltaram a aparecer em categorias, subcategorias, produtos, combos, adicionais e banner. O envio funcionava, mas o servidor não encontrava a imagem recém-gravada (novo formato de pasta do serviço de arquivos) e a foto sumia; agora as imagens novas e as antigas são entregues corretamente. Além disso, quando o envio falhar, a tela mostra o motivo real em vez de apenas "Erro ao enviar imagem". Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.',
+  },
+  {
+    date: '21/09/2026',
     version: '1.73.0-beta',
     type: 'feature',
     description: 'Painel Admin: novo botão "Ativar acesso" em cada loja. Ele cria a conta de entrada da loja (e-mail e senha, mínimo 6 caracteres) já vinculada como administradora — resolve as lojas cadastradas antes que ficavam sem login. Se o e-mail já existir, apenas a senha é atualizada. O botão "Nova Empresa" também passa a criar loja e login juntos, com e-mail e senha obrigatórios. Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.',
