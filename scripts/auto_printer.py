@@ -1279,12 +1279,18 @@ def _imprimir_html(html_content, station_id=None):
             hJob = win32print.StartDocPrinter(hPrinter, 1, ("ComandaTech Print", None, "RAW"))
             win32print.StartPagePrinter(hPrinter)
             
-            # Converte para bytes usando CP850 (comum em impressoras térmicas no BR) ou Latin-1
-            # Tenta CP850 primeiro para melhores caracteres de borda se houver
-            try:
-                raw_data = texto_puro.encode('cp850', 'replace')
-            except:
-                raw_data = texto_puro.encode('latin-1', 'replace')
+            raw_data = None
+            if usar_escpos:
+                colunas = 42 if str(PAPER_SIZE).startswith("80") else 32
+                raw_data = montar_escpos(texto_puro, colunas=colunas)
+                if raw_data:
+                    log(f"Layout ESC/POS aplicado ({colunas} colunas)", "IMPRESSORA")
+            if not raw_data:
+                try:
+                    raw_data = texto_puro.encode('cp850', 'replace')
+                except:
+                    raw_data = texto_puro.encode('latin-1', 'replace')
+
                 
             win32print.WritePrinter(hPrinter, raw_data)
             win32print.EndPagePrinter(hPrinter)
