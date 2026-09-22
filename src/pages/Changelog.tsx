@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '22/09/2026',
+    version: '1.74.0-beta',
+    type: 'feature',
+    description: 'PDV V2: novo botão opcional "+ Informar CPF/CNPJ" na própria tela de cobrança, logo acima de confirmar o pagamento, com opção de remover. Sem informar nada, a venda segue igual e a nota sai sem destinatário — nada trava a emissão. Os pop-ups de CPF que interrompiam o fluxo deixaram de aparecer, inclusive quando o pagamento é feito na maquininha. Programa de impressão v1.7.9: quando o complemento gráfico do Windows estiver indisponível, o recibo passa a sair com negrito, centralização e faixa invertida usando os recursos da própria impressora, em vez de texto plano, e o programa avisa em destaque na abertura quando estiver no modo simples. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
+    date: '22/09/2026',
     version: '1.73.2-beta',
     type: 'fix',
     description: 'Impressão piloto no Rei do Açaí e Bon Appetit: o recibo obrigatório foi separado da comanda de produção. O Rei passa a receber somente o recibo V2/V39 completo em 58 mm, enquanto a Bon Appetit recebe o recibo completo e mantém sua comanda de produção em 80 mm. A opção Comanda de produção controla apenas o papel da cozinha. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
