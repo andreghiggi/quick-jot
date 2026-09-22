@@ -177,7 +177,7 @@ function resolveOrigemLabel(payload: PrintPayload): string {
 function resolvePaymentHtml(notes: string | undefined): string {
   if (!notes) return '';
   const payMatch = notes.match(/Pagamento:\s*([^(|]+)/i);
-  const trocoMatch = notes.match(/Troco para R\$\s*([^)]+)/i);
+  const trocoMatch = notes.match(/Troco para:?\s*R\$\s*([^)\n|]+)/i);
   const pixMatch = notes.match(/Chave PIX:\s*([^)]+)\)/i);
   let html = '';
   const payName = payMatch ? payMatch[1].trim() : extractPaymentName(notes);

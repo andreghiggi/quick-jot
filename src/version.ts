@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.4-beta";
+export const VERSION = "1.74.5-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo térmico: faixa do cliente (v1.8.2)";
+export const CODENAME = "Troco no recibo do Pedido Express";
 
 
 
@@ -23,6 +23,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.5-beta",
+    date: "2026-09-22",
+    codename: "Troco no recibo do Pedido Express",
+    changes: [
+      "Recibo volta a imprimir a linha 'TROCO PARA: R$ ...' quando o pedido é lançado pelo Pedido Express com troco em dinheiro (a observação gravada com dois-pontos não era reconhecida pelo gerador do recibo).",
+      "Reimpressão pelo card do pedido na Dashboard também passa a reconhecer as duas grafias do troco.",
+      "Correção pontual de leitura do texto: nenhum valor, cálculo, TEF, NFC-e, caixa ou impressão de outras lojas foi alterado.",
+    ],
+  },
   {
     version: "1.74.4-beta",
     date: "2026-09-22",
