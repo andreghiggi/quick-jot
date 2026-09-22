@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '22/09/2026',
+    version: '1.74.5-beta',
+    type: 'fix',
+    description: 'Troco no recibo: pedidos lançados pelo Pedido Express com pagamento em dinheiro e troco voltam a imprimir a linha "TROCO PARA: R$ ..." no recibo (a observação era gravada com dois-pontos e o gerador do recibo não a reconhecia). A reimpressão pelo card do pedido na Dashboard também passa a reconhecer as duas grafias. Correção pontual: nenhum valor, cálculo, pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado, e nenhuma outra loja é impactada.',
+  },
+  {
+    date: '22/09/2026',
     version: '1.74.4-beta',
     type: 'fix',
     description: 'Programa de impressão v1.8.2: a faixa preta do recibo volta a mostrar "CLIENTE: Nome do cliente", igual ao layout padrão, e nomes longos passam a quebrar em duas linhas dentro da faixa sem cortar letras. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
