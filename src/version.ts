@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.3-beta";
+export const VERSION = "1.74.4-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo térmico no layout padrão (v1.8.1)";
+export const CODENAME = "Recibo térmico: faixa do cliente (v1.8.2)";
 
 
 
