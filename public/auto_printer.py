@@ -95,7 +95,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.0"
+SCRIPT_VERSION = "1.8.1"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -698,9 +698,11 @@ def extrair_blocos_v2(html_content):
             return set(self.attrs.get("class", "").split())
 
         def text(self):
-            values = list(self.parts)
-            for child in self.children:
-                values.append(child.text())
+            # `parts` guarda texto e filhos NA ORDEM do documento: sem isso
+            # "<span>Tel:</span> 9999" virava "9999 Tel:".
+            values = []
+            for part in self.parts:
+                values.append(part.text() if isinstance(part, Node) else part)
             return _re.sub(r"\s+", " ", _html.unescape(" ".join(values))).strip()
 
     class TreeParser(HTMLParser):
@@ -720,8 +722,10 @@ def extrair_blocos_v2(html_content):
                 return
             node = Node(tag, attrs, self.current)
             self.current.children.append(node)
+            self.current.parts.append(node)
             if tag not in self.VOID:
                 self.current = node
+
 
         def handle_endtag(self, tag):
             if tag in ("style", "script", "head", "title"):
@@ -881,26 +885,33 @@ def extrair_blocos_v2(html_content):
         if order_nodes:
             blocos.append(block(order_nodes[0].text(), "order", "center"))
         for origem in by_class("origem"):
-            blocos.append(block(origem[0].text(), "type", "center"))
+            blocos.append(block(origem.text(), "type", "center"))
         for date_node in by_class("date"):
-            blocos.append(block(date_node[0].text(), "datetime", "center"))
+            blocos.append(block(date_node.text(), "datetime", "center"))
         for ready in by_class("ready-inline"):
-            blocos.append(block(normalizar_ready(ready[0].text()), "ready", "center"))
+            blocos.append(block(normalizar_ready(ready.text()), "ready", "center"))
+
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
-        for node in nodes:
+        # Somente nos folha (<p>) evitam duplicar o mesmo texto vindo dos pais.
+        folhas = [
+            node for node in nodes
+            if node.tag == "p" and not any(child.text() for child in node.children if child.tag != "span")
+        ]
+        for node in folhas:
             text = node.text()
             if "[CLIENTE]" in text:
                 blocos.append(block(text, "inverse"))
             elif _re.search(r"\bTEL\s*:", text, _re.I):
                 blocos.append(block(text, "normal"))
-            elif "PAGAMENTO" in text.upper():
+            elif "PAGAMENTO" in text.upper() or "TROCO" in text.upper() or "CHAVE PIX" in text.upper():
                 blocos.append(block(text.upper(), "ready"))
 
         for badge in by_class("delivery-badge"):
-            blocos.append(block(badge[0].text(), "type", "center"))
-        for node in nodes:
+            blocos.append(block(badge.text(), "type", "center"))
+
+        for node in folhas:
             if "[ENDERECO]" in node.text():
                 blocos.append(block(node.text(), "inverse"))
 
@@ -912,7 +923,15 @@ def extrair_blocos_v2(html_content):
             name_node = next((n for n in walk(item) if "item-name" in n.classes()), None)
             detail_node = next((n for n in walk(item) if "item-detail" in n.classes()), None)
             if name_node:
-                blocos.append(block(name_node.text(), "item_qty", "left"))
+                # Valor do item na MESMA linha do nome (alinhado a direita).
+                blocos.append({
+                    "text": clean_marker(name_node.text()),
+                    "style": "item_qty",
+                    "align": "left",
+                    "right": clean_marker(detail_node.text()) if detail_node else "",
+                })
+            elif detail_node:
+                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(detail_node.text())})
             for sub in walk(item):
                 classes = sub.classes()
                 if "add-group-label" in classes:
@@ -921,8 +940,7 @@ def extrair_blocos_v2(html_content):
                     blocos.append(block(sub.text(), "additional"))
                 elif "item-notes" in classes:
                     blocos.append(block(sub.text(), "description"))
-            if detail_node:
-                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(detail_node.text())})
+
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
@@ -1194,7 +1212,7 @@ def montar_escpos(texto, colunas=32):
             # faixa preenchida ate a largura do papel
             conteudo = f" {linha} ".center(colunas)[:colunas]
         elif estilo == "grupo":
-            conteudo = f"\xfe {linha}"  # quadrado cheio do CP850
+            conteudo = f"■ {linha}"  # quadrado cheio (0xFE no CP850)
         elif estilo == "sep":
             conteudo = "-" * colunas
 
@@ -1209,6 +1227,124 @@ def montar_escpos(texto, colunas=32):
 
     out += b"\n\n\n\n"
     return bytes(out)
+
+
+def montar_escpos_blocos(blocos, colunas=32):
+    """
+    Converte os blocos semanticos de extrair_blocos_v2() em bytes ESC/POS.
+
+    Diferente de montar_escpos() (que le texto plano), aqui a hierarquia do
+    recibo e preservada: rotulo a esquerda + valor a direita na MESMA linha,
+    linhas tracejadas, faixa invertida do cliente e adicionais em negrito.
+    Nao depende de win32ui/GDI: usa apenas recursos nativos da impressora.
+    """
+    if not blocos:
+        return None
+
+    import textwrap as _tw
+
+    out = bytearray()
+    out += ESC + b"@"                 # reset
+    out += ESC + b"t" + bytes([2])    # CP850 (acentos corretos)
+
+    def align(n):
+        out.extend(ESC + b"a" + bytes([n]))
+
+    def bold(on):
+        out.extend(ESC + b"E" + bytes([1 if on else 0]))
+
+    def size(n):
+        out.extend(GS + b"!" + bytes([n]))
+
+    def inverse(on):
+        out.extend(GS + b"B" + bytes([1 if on else 0]))
+
+    def underline(on):
+        out.extend(ESC + b"-" + bytes([1 if on else 0]))
+
+    def emitir(texto):
+        out.extend(_escpos_encode(texto) + b"\n")
+
+    def reset_estilos():
+        underline(False)
+        inverse(False)
+        bold(False)
+        size(0x00)
+        align(0)
+
+    # estilo -> (align, bold, size, inverse, underline, colunas efetivas)
+    ESTILOS = {
+        "store":       (1, True,  0x00, False, False, colunas),
+        "title":       (1, True,  0x11, False, False, max(8, colunas // 2)),
+        "order":       (1, True,  0x11, False, False, max(8, colunas // 2)),
+        "type":        (1, True,  0x00, False, False, colunas),
+        "datetime":    (1, False, 0x00, False, False, colunas),
+        "ready":       (0, True,  0x00, False, False, colunas),
+        "inverse":     (0, True,  0x00, True,  False, colunas - 2),
+        "code":        (1, False, 0x00, False, False, colunas),
+        "item_qty":    (0, True,  0x00, False, False, colunas),
+        "item":        (0, True,  0x00, False, False, colunas),
+        "description": (0, False, 0x00, False, False, colunas),
+        "group":       (0, True,  0x00, False, True,  colunas - 2),
+        "additional":  (0, True,  0x00, False, False, colunas - 2),
+        "total":       (0, True,  0x00, False, False, colunas),
+        "footer":      (1, False, 0x00, False, False, colunas),
+        "normal":      (0, False, 0x00, False, False, colunas),
+    }
+
+    for bloco in blocos:
+        estilo = bloco.get("style", "normal")
+        texto = sanitizar_icones(bloco.get("text", "") or "").strip()
+        direita = sanitizar_icones(bloco.get("right", "") or "").strip()
+
+
+        if estilo == "sep":
+            reset_estilos()
+            emitir("-" * colunas)
+            continue
+
+        if not texto and not direita:
+            out.extend(b"\n")
+            continue
+
+        al, neg, tam, inv, sub, largura = ESTILOS.get(estilo, ESTILOS["normal"])
+        align(al)
+        bold(neg)
+        size(tam)
+        if inv:
+            inverse(True)
+        if sub:
+            underline(True)
+
+        if estilo == "group":
+            texto = "■ " + texto.lstrip("■ ").strip()
+
+        if estilo == "inverse":
+            # Faixa preenchida ocupando a largura do papel.
+            emitir(f" {texto} ".center(colunas)[:colunas])
+        elif direita:
+            # Rotulo a esquerda e valor a direita NA MESMA LINHA.
+            espaco = colunas - len(direita) - 1
+            if espaco >= 4 and len(texto) <= espaco:
+                emitir(texto.ljust(colunas - len(direita)) + direita)
+            else:
+                # Nome comprido: quebra em varias linhas e o valor fica
+                # alinhado a direita na ultima linha, sem cortar o produto.
+                partes = _tw.wrap(texto, max(8, colunas)) if texto else []
+                for parte in partes:
+                    emitir(parte)
+                emitir(direita.rjust(colunas)[:colunas])
+
+        else:
+            for parte in (_tw.wrap(texto, max(8, largura)) or [texto]):
+                emitir(parte)
+
+        reset_estilos()
+
+    out += b"\n\n\n\n"
+    return bytes(out)
+
+
 
 
 
@@ -1338,19 +1474,22 @@ def _imprimir_html(html_content, station_id=None):
         texto_puro += "\n\n\n\n\n"
 
         # ------------------------------------------------------------------
-        # MODO GRAFICO (GDI) - exclusivo para lojas em GDI_COMPANY_IDS
-        # Corrige PDF de 0 bytes (Microsoft Print to PDF nao aceita RAW)
-        # e mantem o layout visual do V2 na POS 58mm.
+        # LAYOUT COMPLETO EM MODO TERMICO NATIVO (ESC/POS)
+        # A POS-58 reproduz faixa invertida, negrito, tracejado e acentos sem
+        # depender de win32ui/GDI. O GDI segue disponivel para drivers que nao
+        # aceitam RAW (ex.: Microsoft Print to PDF).
         # ------------------------------------------------------------------
         usar_escpos = False
         if COMPANY_ID in GDI_COMPANY_IDS and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
                 return True
-            log("Fallback para modo RAW apos falha no modo grafico", "AVISO")
-        elif COMPANY_ID in GDI_COMPANY_IDS and not win32ui_ok:
-            log("Modo GDI ignorado (win32ui/DLL) — usando ESC/POS estilizado", "AVISO")
+            log("Modo grafico indisponivel — usando layout termico nativo", "AVISO")
             usar_escpos = True
+        elif COMPANY_ID in GDI_COMPANY_IDS:
+            carregar_config_loja()
+            usar_escpos = True
+
 
 
         try:
@@ -1380,9 +1519,23 @@ def _imprimir_html(html_content, station_id=None):
             raw_data = None
             if usar_escpos:
                 colunas = 42 if str(PAPER_SIZE).startswith("80") else 32
-                raw_data = montar_escpos(texto_puro, colunas=colunas)
-                if raw_data:
-                    log(f"Layout ESC/POS aplicado ({colunas} colunas)", "IMPRESSORA")
+                # 1a opcao: blocos semanticos (valor alinhado a direita,
+                # tracejados, faixas) extraidos direto do HTML do recibo.
+                try:
+                    blocos_layout = extrair_blocos_v2(html_content) if "<" in html_content else []
+                except Exception as bloco_err:
+                    blocos_layout = []
+                    log(f"Falha ao ler o layout do recibo: {bloco_err}", "AVISO")
+                if blocos_layout:
+                    raw_data = montar_escpos_blocos(blocos_layout, colunas=colunas)
+                    if raw_data:
+                        log(f"Layout completo aplicado ({colunas} colunas)", "IMPRESSORA")
+                # 2a opcao: texto plano estilizado (compatibilidade).
+                if not raw_data:
+                    raw_data = montar_escpos(texto_puro, colunas=colunas)
+                    if raw_data:
+                        log(f"Layout ESC/POS simples aplicado ({colunas} colunas)", "IMPRESSORA")
+
             if not raw_data:
                 try:
                     raw_data = texto_puro.encode('cp850', 'replace')
@@ -1431,19 +1584,15 @@ def main(company_id, company_name):
         print("!" * 60)
         log("COMPANY_ID vazio — layout completo indisponivel", "AVISO")
     elif COMPANY_ID in GDI_COMPANY_IDS:
+        # A impressora termica reproduz o layout completo por conta propria
+        # (ESC/POS). O modo grafico do Windows e apenas um extra opcional,
+        # entao a ausencia dele nao e mais tratada como problema.
         try:
             _import_win32ui()
+            log("Modo grafico do Windows disponivel", "OK")
         except Exception as ui_err:
-            print("!" * 60)
-            print("  ATENCAO: MODO SIMPLES DE IMPRESSAO")
-            print("  O complemento do Windows (pywin32/win32ui) esta com problema,")
-            print("  entao o recibo sai sem o layout completo.")
-            print("  Para corrigir, abra o Prompt de Comando como administrador e rode:")
-            print("    python -m pip install --upgrade --force-reinstall pywin32")
-            print("    python -m pywin32_postinstall -install")
-            print("  Depois reinicie o computador.")
-            print("!" * 60)
-            log(f"win32ui indisponivel no start: {ui_err}", "AVISO")
+            log(f"Layout completo pelo modo termico nativo ({ui_err})", "INFO")
+
 
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")

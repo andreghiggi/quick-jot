@@ -7,9 +7,10 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.2-beta";
+export const VERSION = "1.74.3-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo no layout padrão + cancelamento instantâneo";
+export const CODENAME = "Recibo térmico no layout padrão (v1.8.1)";
+
 
 
 
@@ -23,6 +24,20 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.74.3-beta",
+    date: "2026-09-22",
+    codename: "Recibo térmico no layout padrão (v1.8.1)",
+    changes: [
+      "Programa de impressão v1.8.1: o recibo sai no layout padrão direto pela impressora térmica, sem depender de complemento do Windows.",
+      "Subtotal, total, entrega e telefone deixam de quebrar em duas linhas: rótulo à esquerda e valor à direita na mesma linha.",
+      "Preço do produto volta para a linha do próprio produto, e não depois dos adicionais.",
+      "Linhas tracejadas de separação restauradas entre cabeçalho, cliente, itens e totais.",
+      "Aviso de erro na abertura do programa removido: ele não se aplica às impressoras térmicas.",
+      "Nenhum pedido, venda, caixa, TEF ou documento fiscal foi alterado.",
+    ],
+  },
+  {
+
     version: "1.74.1-beta",
     date: "2026-09-22",
     codename: "Atualização automática das telas",
