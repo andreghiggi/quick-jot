@@ -15,33 +15,32 @@ O programinha que fica rodando no PC da loja pode imprimir de dois jeitos:
 - **Jeito bonito (desenho):** ele "pinta" o papel. É assim que aparecem a caixa em volta do cabeçalho, o texto branco no fundo preto, o negrito e as linhas tracejadas.
 - **Jeito simples (texto):** ele manda só as letras, sem nenhum enfeite. É exatamente o que está saindo hoje no Rei do Açaí.
 
-Ele só usa o jeito bonito quando três coisas estão certas no computador:
-1. o programinha é a versão nova — **confirmado nas suas fotos: v1.7.8, ativo e monitorando**;
-2. o número de identificação da loja está gravado na pasta — **confirmado: o `company_id.txt` está com o código certo do Rei do Açaí**;
-3. o complemento do Windows que permite "pintar" o papel (o `win32ui`) está instalado e funcionando — **é o único item que ainda falta confirmar**.
+### Causa CONFIRMADA pelo registro que você mandou
+O registro do PC mostra, em toda impressão de hoje, sempre as mesmas duas linhas:
 
-Como os dois primeiros estão certos, a explicação que sobra é a terceira: o complemento do Windows falha, o programinha percebe isso e, para não deixar o pedido sem sair, imprime no jeito simples. Por isso sai tudo plano, sem caixa e sem inversão.
+- `win32ui indisponivel — usando modo RAW: DLL load failed while importing win32ui`
+- `Modo GDI ignorado (win32ui/DLL) — impressao RAW direta`
 
-### O que preciso que você me envie (passo a passo exato, com os arquivos que estão aí)
-Na pasta que você mostrou não existe o verificador, então é mais simples ainda:
+Traduzindo: o programinha está na versão certa (1.7.8), com o código da loja certo, a impressora certa (POS-58) e a configuração certa (58mm, layout V2). **O único problema é o complemento do Windows que permite "pintar" o papel: ele está quebrado nesse computador.** Sem ele o programinha imprime só texto puro — exatamente o papel da sua foto.
 
-1. Nessa pasta, clique com o botão direito no arquivo **`printer_log`** → **Abrir com** → **Bloco de Notas**.
-2. Aperte **Ctrl + End** para ir até o final (é o registro de hoje).
-3. Selecione as últimas ~50 linhas, **Ctrl + C**, e me cole aqui. Se preferir, **anexe o próprio arquivo `printer_log`** aqui no chat — funciona igual.
-4. Só isso. Eu procuro nele a linha **"Modo GDI ignorado"** e a mensagem de erro que vem junto.
+O registro também mostra, à parte, quedas de internet/DNS na loja (o programinha às vezes não acha o servidor). Isso não tem relação com o layout, mas vale anotar.
 
-Se quiser adiantar o outro caminho: abra o **Prompt de Comando**, digite `cd ` (com espaço), arraste a pasta para a janela, dê **Enter**, depois digite `python -c "import win32ui"` e **Enter**. Se não aparecer nada, está tudo certo; se aparecer erro vermelho, é esse o problema — me mande a tela.
+### O conserto no PC do Rei do Açaí (5 minutos, no acesso remoto)
+1. Clique em **Iniciar**, digite `cmd`, clique com o botão direito em **Prompt de Comando** e escolha **Executar como administrador**.
+2. Cole este comando e dê Enter:
+   `python -m pip install --upgrade --force-reinstall pywin32`
+3. Cole este e dê Enter:
+   `python -m pywin32_postinstall -install`
+4. **Reinicie o computador.**
+5. Abra o programinha (`iniciar_impressao`) e confira: não pode mais aparecer "Modo GDI ignorado".
+6. Faça **um pedido de teste** na loja e compare com o modelo da foto.
 
-### Passo a passo depois disso
-1. Se o complemento estiver falhando: baixar de novo o pacote em **Configurações → Impressão** e rodar o **`instalar_impressao.cmd` como administrador**, reiniciar o Windows e abrir o programinha de novo.
-2. Mandar **uma folha de teste** (não vamos reimprimir pedidos antigos).
-3. Comparar com o modelo da foto e confirmar.
+Se o passo 2 ou 3 der erro, me mande a tela — nesse caso o conserto é reinstalar o pacote de impressão pelo instalador.
 
+### Melhoria que vou aplicar no programinha (para nunca mais sair feio sem ninguém saber)
+- Quando o jeito bonito não estiver disponível, ele passa a usar os recursos da própria impressora para manter pelo menos **negrito, título centralizado e texto invertido** (comandos que a POS-58 entende), em vez de sair tudo plano.
+- E passa a mostrar um **aviso grande na tela ao abrir**, dizendo que está no modo simples e o que fazer.
 
-
-### Melhoria que vou aplicar no programinha
-- Quando o jeito bonito não estiver disponível, ele passa a usar os recursos da própria impressora para pelo menos manter **negrito e texto invertido**, em vez de sair tudo plano.
-- E avisa na tela, ao abrir, que está no jeito simples — assim ninguém mais descobre pelo papel.
 
 ## 2) PDV V2 — botão opcional "Informar CPF/CNPJ"
 
