@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '22/09/2026',
+    version: '1.74.1-beta',
+    type: 'fix',
+    description: 'Atualização automática restaurada em todas as lojas: pedidos novos, mesas criadas e itens de comanda voltam a aparecer sozinhos, sem precisar atualizar a página. A conexão de tempo real passa a ser renovada junto com a sessão do usuário (antes ficava muda depois de cerca de 1 hora aberta), as telas de mesas e comandas ganharam nome de canal único por tela e recarga de segurança a cada 15 segundos quando a conexão cai, e voltar para a aba ou recuperar a internet dispara atualização imediata. Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.',
+  },
+  {
+    date: '22/09/2026',
     version: '1.74.0-beta',
     type: 'feature',
     description: 'PDV V2: novo botão opcional "+ Informar CPF/CNPJ" na própria tela de cobrança, logo acima de confirmar o pagamento, com opção de remover. Sem informar nada, a venda segue igual e a nota sai sem destinatário — nada trava a emissão. Os pop-ups de CPF que interrompiam o fluxo deixaram de aparecer, inclusive quando o pagamento é feito na maquininha. Programa de impressão v1.7.9: quando o complemento gráfico do Windows estiver indisponível, o recibo passa a sair com negrito, centralização e faixa invertida usando os recursos da própria impressora, em vez de texto plano, e o programa avisa em destaque na abertura quando estiver no modo simples. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',

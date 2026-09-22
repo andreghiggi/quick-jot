@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.0-beta";
+export const VERSION = "1.74.1-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "CPF/CNPJ na tela de cobrança + impressão estilizada";
+export const CODENAME = "Atualização automática das telas";
 
 
 
@@ -22,6 +22,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.1-beta",
+    date: "2026-09-22",
+    codename: "Atualização automática das telas",
+    changes: [
+      "Pedidos, mesas e comandas voltam a aparecer sozinhos, sem precisar atualizar a página.",
+      "A conexão de tempo real passa a ser renovada junto com a sessão: antes ela ficava muda depois de cerca de 1 hora aberta.",
+      "Telas de mesas e comandas ganham rede de segurança: se a conexão cair, recarregam sozinhas a cada 15 segundos.",
+      "Ao voltar para a aba ou quando a internet retorna, a tela se atualiza na hora.",
+      "Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.74.0-beta",
     date: "2026-09-22",

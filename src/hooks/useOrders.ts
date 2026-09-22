@@ -140,19 +140,17 @@ export function useOrders(options: UseOrdersOptions = {}) {
   useEffect(() => {
     void fetchOrders();
 
-    // Subscribe to realtime updates
+    // Canal único por aba: nomes repetidos entre telas abertas fazem o servidor
+    // recusar a segunda escuta e a tela fica parada até recarregar.
+    const channelId = `orders-realtime-${companyId}-${Math.random().toString(36).slice(2, 10)}`;
+
+    // order_items NÃO está na publicação de tempo real do banco; escutar essa
+    // tabela derrubava a escuta inteira. O refetch por `orders` já traz os itens.
     const channel = supabase
-      .channel(`orders-realtime-${companyId}`)
+      .channel(channelId)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `company_id=eq.${companyId}` },
-        () => {
-          scheduleFetchOrders();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'order_items', filter: `company_id=eq.${companyId}` },
         () => {
           scheduleFetchOrders();
         }
@@ -168,8 +166,17 @@ export function useOrders(options: UseOrdersOptions = {}) {
         }, 15000)
       : null;
 
+    // Voltar para a aba ou a internet voltar: re-sincroniza na hora.
+    const onWake = () => {
+      if (document.visibilityState === 'visible') scheduleFetchOrders();
+    };
+    document.addEventListener('visibilitychange', onWake);
+    window.addEventListener('online', onWake);
+
     return () => {
       if (fetchDebounceRef.current) window.clearTimeout(fetchDebounceRef.current);
+      document.removeEventListener('visibilitychange', onWake);
+      window.removeEventListener('online', onWake);
       supabase.removeChannel(channel);
       if (pollInterval) window.clearInterval(pollInterval);
     };

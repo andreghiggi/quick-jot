@@ -26,10 +26,14 @@ export function useTables(options: UseTablesOptions = {}) {
   useEffect(() => {
     if (companyId) {
       fetchTables();
-      
-      // Subscribe to realtime changes
+
+      // Nome único por tela: canal com nome fixo era recusado quando duas telas
+      // abriam ao mesmo tempo e as mesas só apareciam depois de recarregar.
+      const channelId = `tables-changes-${companyId}-${Math.random().toString(36).slice(2, 10)}`;
+      let ready = false;
+
       const channel = supabase
-        .channel('tables-changes')
+        .channel(channelId)
         .on(
           'postgres_changes',
           {
@@ -42,9 +46,25 @@ export function useTables(options: UseTablesOptions = {}) {
             fetchTables();
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          ready = status === 'SUBSCRIBED';
+        });
+
+      // Rede de segurança: se a escuta cair, recarrega sozinho a cada 15s.
+      const pollInterval = window.setInterval(() => {
+        if (!ready) void fetchTables();
+      }, 15000);
+
+      const onWake = () => {
+        if (document.visibilityState === 'visible') void fetchTables();
+      };
+      document.addEventListener('visibilitychange', onWake);
+      window.addEventListener('online', onWake);
 
       return () => {
+        document.removeEventListener('visibilitychange', onWake);
+        window.removeEventListener('online', onWake);
+        window.clearInterval(pollInterval);
         supabase.removeChannel(channel);
       };
     } else {
