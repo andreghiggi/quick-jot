@@ -95,7 +95,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.7.9"
+SCRIPT_VERSION = "1.8.0"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -510,6 +510,7 @@ def montar_linhas_estilizadas(texto, colunas=32):
             saida.append((parte, estilo))
 
     linhas_src = texto.split("\n")
+    primeira_linha_util = True
     idx = 0
     while idx < len(linhas_src):
         linha = linhas_src[idx].strip()
