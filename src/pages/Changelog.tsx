@@ -14,6 +14,13 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '22/09/2026',
+    version: '1.74.3-beta',
+    type: 'fix',
+    description: 'Programa de impressão v1.8.1: o recibo passa a sair no layout padrão direto pela impressora térmica, sem depender de nenhum complemento do Windows. Subtotal, total, taxa de entrega e telefone deixam de quebrar em duas linhas (rótulo à esquerda, valor à direita na mesma linha), o preço do produto volta para a linha do próprio produto em vez de aparecer depois dos adicionais, as linhas tracejadas voltam a separar cabeçalho, cliente, itens e totais, e o aviso de erro que aparecia ao abrir o programa foi removido por não se aplicar às impressoras térmicas. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
+
+    date: '22/09/2026',
     version: '1.74.2-beta',
     type: 'fix',
     description: 'Programa de impressão v1.8.0: acentos corrigidos no recibo (a impressora passa a receber a tabela de caracteres correta), ícones que saíam como "?" foram substituídos por texto, itens, adicionais e títulos de grupo saem em negrito com marcador, linhas tracejadas voltaram a separar os blocos e o nome da loja sai em destaque no cabeçalho. Pedido cancelado agora some da tela na hora, sem precisar atualizar a página. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
