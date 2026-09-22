@@ -313,6 +313,7 @@ export function PDVV2PaymentDialog({
       setTefInstallments('2');
       setTefInstallmentType('adm');
       setCustomerDocument('');
+      setShowDocumentField(false);
       setPrechargedTef(null);
       prechargedTefRef.current = null;
       setInternalTefStatus('');
