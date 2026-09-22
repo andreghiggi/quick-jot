@@ -24,6 +24,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.74.4-beta",
+    date: "2026-09-22",
+    codename: "Recibo térmico: faixa do cliente (v1.8.2)",
+    changes: [
+      "Programa de impressão v1.8.2: faixa preta volta a mostrar 'CLIENTE: Nome', igual ao layout padrão.",
+      "Nomes longos de cliente agora quebram em duas linhas dentro da faixa, sem cortar letras.",
+      "Nenhum dado fiscal, caixa, TEF ou pedido foi alterado.",
+    ],
+  },
+  {
     version: "1.74.3-beta",
     date: "2026-09-22",
     codename: "Recibo térmico no layout padrão (v1.8.1)",
