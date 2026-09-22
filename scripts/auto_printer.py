@@ -598,6 +598,19 @@ def montar_linhas_estilizadas(texto, colunas=32):
             add(f">> {upper.strip('= ')} <<", "tipo")
             continue
 
+        # Modalidade descritiva ("PEDIDO EXPRESS", "RETIRADA NO LOCAL",
+        # "ENTREGA / DELIVERY") -> negrito, sem virar titulo gigante
+        if (
+            (upper.startswith("PEDIDO") and "#" not in linha)
+            or upper.startswith("RETIRADA")
+            or upper.startswith("ENTREGA")
+            or upper.startswith("DELIVERY")
+            or upper.startswith("MESA ")
+        ):
+            add(upper, "item")
+            continue
+
+
         # Numero do pedido / comanda
         if upper.startswith("PEDIDO") or upper.startswith("COMANDA #") or upper.startswith("#"):
             add(upper, "pedido")
