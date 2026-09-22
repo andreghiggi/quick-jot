@@ -18,6 +18,12 @@ export const GDI_COMPANY_IDS = new Set([
   'b2f97590-ff21-4951-95dc-e3e2b19d4ccb', // Rei do Açaí
 ]);
 
+/** Pilotos que recebem a estrutura completa V2/V39, independentemente do modo do driver. */
+const RICH_RECEIPT_COMPANY_IDS = new Set([
+  ...GDI_COMPANY_IDS,
+  '32b71649-461d-4cb6-b26c-12390b090feb', // Bon Appetit
+]);
+
 export function isGdiReceiptCompany(companyId: string): boolean {
   return GDI_COMPANY_IDS.has(companyId);
 }
@@ -36,6 +42,7 @@ interface PrintItem {
 
 interface PrintPayload {
   companyId: string;
+  sourceOrderId?: string;
   orderCode: string;
   dailyNumber: number;
   shortCode?: string;
@@ -562,7 +569,7 @@ function buildReceiptHTMLForCompany(payload: PrintPayload): string {
   if (payload.printLayout === 'v3') return buildReceiptHTMLv3(payload);
   if (
     payload.printLayout === 'v2' &&
-    isGdiReceiptCompany(payload.companyId)
+    RICH_RECEIPT_COMPANY_IDS.has(payload.companyId)
   ) {
     return buildReceiptHtmlV2Rich(payload);
   }
@@ -570,7 +577,7 @@ function buildReceiptHTMLForCompany(payload: PrintPayload): string {
   // Compat legado: callers que ainda não passam printLayout caem no comportamento antigo
   // (I9 forçado em V3). Será removido quando todos os callers passarem o campo.
   if (payload.companyId === I9_COMPANY_ID_V3) return buildReceiptHTMLv3(payload);
-  if (isGdiReceiptCompany(payload.companyId)) return buildReceiptHtmlV2Rich(payload);
+  if (RICH_RECEIPT_COMPANY_IDS.has(payload.companyId)) return buildReceiptHtmlV2Rich(payload);
   return buildReceiptHTML(payload);
 }
 
@@ -609,6 +616,7 @@ export async function printOnlineOrBalcao(payload: PrintPayload) {
     companyId: payload.companyId,
     html: buildReceiptHTMLForCompany(payload),
     label: `Recibo ${label}`,
+    sourceOrderId: payload.sourceOrderId,
   });
 }
 
@@ -618,6 +626,7 @@ export async function printOnlyReceipt(payload: PrintPayload) {
     companyId: payload.companyId,
     html: buildReceiptHTMLForCompany(payload),
     label: `Recibo ${label}`,
+    sourceOrderId: payload.sourceOrderId,
   });
 }
 

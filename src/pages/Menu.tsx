@@ -1472,6 +1472,7 @@ export default function Menu() {
                 ].filter(Boolean).join(' | ');
                 await printOnlyReceipt({
                   companyId: company.id,
+                  sourceOrderId: newOrder.id,
                   orderCode: (newOrder as any).order_code || '',
                   dailyNumber: newOrder.daily_number || 0,
                   shortCode: (newOrder as any).short_code || undefined,

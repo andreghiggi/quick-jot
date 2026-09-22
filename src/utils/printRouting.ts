@@ -457,7 +457,20 @@ export async function enqueueReceiptJob(params: {
   label: string;
   sourceOrderId?: string;
 }) {
-  const { companyId, html, label } = params;
+  const { companyId, html, label, sourceOrderId } = params;
+
+  if (sourceOrderId) {
+    const { data: existing, error: lookupError } = await supabase
+      .from('print_queue')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('source_order_id', sourceOrderId)
+      .eq('job_type', 'receipt')
+      .limit(1)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (existing) return;
+  }
   const { data: stations } = await supabase
     .from('print_stations' as never)
     .select('id')
@@ -473,6 +486,7 @@ export async function enqueueReceiptJob(params: {
     station_id: receiptStation,
     job_type: 'receipt',
     printed: false,
+    source_order_id: sourceOrderId ?? null,
   } as never);
   if (error) throw error;
 }
