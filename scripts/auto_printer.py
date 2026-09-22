@@ -612,8 +612,7 @@ def montar_linhas_estilizadas(texto, colunas=32):
             continue
 
         # Nome da loja (primeira linha util do cupom)
-        if primeira_linha_util:
-            primeira_linha_util = False
+        if eh_primeira:
             add(upper, "loja")
             continue
 
