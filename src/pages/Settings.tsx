@@ -139,7 +139,7 @@ export default function Settings() {
       return result.publicUrl;
     } catch (error) {
       console.error('Error uploading banner:', error);
-      toast({ title: 'Erro ao enviar banner', variant: 'destructive' });
+      toast({ title: 'Erro ao enviar banner', description: (error as any)?.message, variant: 'destructive' });
       return null;
     } finally {
       setIsBannerUploading(false);
