@@ -900,7 +900,8 @@ def extrair_blocos_v2(html_content):
                 blocos.append(block(text.upper(), "ready"))
 
         for badge in by_class("delivery-badge"):
-            blocos.append(block(badge[0].text(), "type", "center"))
+            blocos.append(block(badge.text(), "type", "center"))
+
         for node in nodes:
             if "[ENDERECO]" in node.text():
                 blocos.append(block(node.text(), "inverse"))
