@@ -1342,7 +1342,53 @@ export function PDVV2PaymentDialog({
               forceNFCe={isTef}
             />
           )}
+
+          {fiscalEnabled && (
+            <div className="rounded-md border p-3">
+              {!showDocumentField ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="px-0 text-primary"
+                  onClick={() => setShowDocumentField(true)}
+                >
+                  + Informar CPF/CNPJ (opcional)
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="cpf-cnpj-inline">CPF/CNPJ na nota (opcional)</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-1 py-0 text-xs text-muted-foreground"
+                      onClick={() => {
+                        setCustomerDocument('');
+                        setShowDocumentField(false);
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                  <Input
+                    id="cpf-cnpj-inline"
+                    inputMode="numeric"
+                    placeholder="Somente números"
+                    value={customerDocument}
+                    onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+                    maxLength={18}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Em branco = nota sem destinatário (consumidor não identificado).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
