@@ -769,11 +769,19 @@ def extrair_blocos_v2(html_content):
             return f"Pronto até: {m.group(1)}"
         return value
 
+    def prefixo_cliente(value):
+        """Garante o prefixo 'CLIENTE:' na faixa invertida do recibo."""
+        value = clean_marker(value)
+        if value and not _re.match(r"^\s*cliente\s*:", value, _re.I):
+            value = f"CLIENTE: {value}"
+        return value
+
     def block(text, style="normal", align="left", right=None):
         text = clean_marker(text)
         if text or right:
             return {"text": text, "style": style, "align": align, "right": clean_marker(right or "")}
         return None
+
 
 
     blocos = []
