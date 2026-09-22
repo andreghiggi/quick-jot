@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '22/09/2026',
+    version: '1.74.2-beta',
+    type: 'fix',
+    description: 'Programa de impressão v1.8.0: acentos corrigidos no recibo (a impressora passa a receber a tabela de caracteres correta), ícones que saíam como "?" foram substituídos por texto, itens, adicionais e títulos de grupo saem em negrito com marcador, linhas tracejadas voltaram a separar os blocos e o nome da loja sai em destaque no cabeçalho. Pedido cancelado agora some da tela na hora, sem precisar atualizar a página. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
+    date: '22/09/2026',
     version: '1.74.1-beta',
     type: 'fix',
     description: 'Atualização automática restaurada em todas as lojas: pedidos novos, mesas criadas e itens de comanda voltam a aparecer sozinhos, sem precisar atualizar a página. A conexão de tempo real passa a ser renovada junto com a sessão do usuário (antes ficava muda depois de cerca de 1 hora aberta), as telas de mesas e comandas ganharam nome de canal único por tela e recarga de segurança a cada 15 segundos quando a conexão cai, e voltar para a aba ou recuperar a internet dispara atualização imediata. Nenhum pedido, venda, caixa, impressão, TEF ou documento fiscal foi alterado.',
