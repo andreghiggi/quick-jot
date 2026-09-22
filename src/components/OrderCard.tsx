@@ -578,7 +578,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             }
             // Extract payment method and change info
             const pagamentoName = extractPaymentName(notes);
-            const trocoMatch = notes.match(/Troco para R\$\s*([^\)]+)/i);
+            const trocoMatch = notes.match(/Troco para:?\s*R\$\s*([^\)\n|]+)/i);
             const pixKeyMatch = notes.match(/Chave PIX:\s*([^)]+)\)/i);
             if (pagamentoName) extraInfo += `<p><span class="label">PAGAMENTO:</span> ${pagamentoName}</p>`;
             if (trocoMatch) extraInfo += `<p><span class="label">TROCO PARA:</span> R$ ${trocoMatch[1].trim()}</p>`;
