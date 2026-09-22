@@ -1225,6 +1225,120 @@ def montar_escpos(texto, colunas=32):
     return bytes(out)
 
 
+def montar_escpos_blocos(blocos, colunas=32):
+    """
+    Converte os blocos semanticos de extrair_blocos_v2() em bytes ESC/POS.
+
+    Diferente de montar_escpos() (que le texto plano), aqui a hierarquia do
+    recibo e preservada: rotulo a esquerda + valor a direita na MESMA linha,
+    linhas tracejadas, faixa invertida do cliente e adicionais em negrito.
+    Nao depende de win32ui/GDI: usa apenas recursos nativos da impressora.
+    """
+    if not blocos:
+        return None
+
+    import textwrap as _tw
+
+    out = bytearray()
+    out += ESC + b"@"                 # reset
+    out += ESC + b"t" + bytes([2])    # CP850 (acentos corretos)
+
+    def align(n):
+        out.extend(ESC + b"a" + bytes([n]))
+
+    def bold(on):
+        out.extend(ESC + b"E" + bytes([1 if on else 0]))
+
+    def size(n):
+        out.extend(GS + b"!" + bytes([n]))
+
+    def inverse(on):
+        out.extend(GS + b"B" + bytes([1 if on else 0]))
+
+    def underline(on):
+        out.extend(ESC + b"-" + bytes([1 if on else 0]))
+
+    def emitir(texto):
+        out.extend(_escpos_encode(texto) + b"\n")
+
+    def reset_estilos():
+        underline(False)
+        inverse(False)
+        bold(False)
+        size(0x00)
+        align(0)
+
+    # estilo -> (align, bold, size, inverse, underline, colunas efetivas)
+    ESTILOS = {
+        "store":       (1, True,  0x00, False, False, colunas),
+        "title":       (1, True,  0x11, False, False, max(8, colunas // 2)),
+        "order":       (1, True,  0x11, False, False, max(8, colunas // 2)),
+        "type":        (1, True,  0x00, False, False, colunas),
+        "datetime":    (1, False, 0x00, False, False, colunas),
+        "ready":       (0, True,  0x00, False, False, colunas),
+        "inverse":     (0, True,  0x00, True,  False, colunas - 2),
+        "code":        (1, False, 0x00, False, False, colunas),
+        "item_qty":    (0, True,  0x00, False, False, colunas),
+        "item":        (0, True,  0x00, False, False, colunas),
+        "description": (0, False, 0x00, False, False, colunas),
+        "group":       (0, True,  0x00, False, True,  colunas - 2),
+        "additional":  (0, True,  0x00, False, False, colunas - 2),
+        "total":       (0, True,  0x00, False, False, colunas),
+        "footer":      (1, False, 0x00, False, False, colunas),
+        "normal":      (0, False, 0x00, False, False, colunas),
+    }
+
+    for bloco in blocos:
+        estilo = bloco.get("style", "normal")
+        texto = sanitizar_icones(bloco.get("text", "") or "")
+        direita = sanitizar_icones(bloco.get("right", "") or "")
+
+        if estilo == "sep":
+            reset_estilos()
+            emitir("-" * colunas)
+            continue
+
+        if not texto and not direita:
+            out.extend(b"\n")
+            continue
+
+        al, neg, tam, inv, sub, largura = ESTILOS.get(estilo, ESTILOS["normal"])
+        align(al)
+        bold(neg)
+        size(tam)
+        if inv:
+            inverse(True)
+        if sub:
+            underline(True)
+
+        if estilo == "group":
+            texto = "\xfe " + texto.lstrip("\xfe ").lstrip("■ ").strip()
+
+        if estilo == "inverse":
+            # Faixa preenchida ocupando a largura do papel.
+            emitir(f" {texto} ".center(colunas)[:colunas])
+        elif direita:
+            # Rotulo a esquerda e valor a direita NA MESMA LINHA.
+            espaco = colunas - len(direita)
+            if espaco < 4:
+                if texto:
+                    emitir(texto[:colunas])
+                emitir(direita.rjust(colunas)[:colunas])
+            else:
+                esquerda = texto[: espaco - 1]
+                emitir(esquerda.ljust(espaco) + direita)
+        else:
+            for parte in (_tw.wrap(texto, max(8, largura)) or [texto]):
+                emitir(parte)
+
+        reset_estilos()
+
+    out += b"\n\n\n\n"
+    return bytes(out)
+
+
+
+
 
 def _imprimir_html(html_content, station_id=None):
     """
