@@ -910,7 +910,7 @@ def extrair_blocos_v2(html_content):
         for node in folhas:
             text = node.text()
             if "[CLIENTE]" in text:
-                blocos.append(block(text, "inverse"))
+                blocos.append(block(prefixo_cliente(text), "inverse"))
             elif _re.search(r"\bTEL\s*:", text, _re.I):
                 blocos.append(block(text, "normal"))
             elif "PAGAMENTO" in text.upper() or "TROCO" in text.upper() or "CHAVE PIX" in text.upper():
