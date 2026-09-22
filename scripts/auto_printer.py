@@ -526,6 +526,8 @@ def montar_linhas_estilizadas(texto, colunas=32):
                 idx += 1
 
         upper = linha.upper()
+        eh_primeira = primeira_linha_util
+        primeira_linha_util = False
 
         # Rodape antigo ("--- FIM ---") e removido: o padrao e adicionado no final
         if _re.match(r"^-{2,}\s*FIM.*$", upper):
