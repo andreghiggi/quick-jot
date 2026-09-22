@@ -23,6 +23,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: "1.74.0-beta",
+    date: "2026-09-22",
+    codename: "CPF/CNPJ na tela de cobrança + impressão estilizada",
+    changes: [
+      "PDV V2: novo botão opcional '+ Informar CPF/CNPJ' na própria tela de cobrança, acima de confirmar o pagamento. Sem informar nada, a venda segue igual e a nota sai sem destinatário.",
+      "Os pop-ups de CPF que interrompiam o fluxo deixaram de aparecer; o documento informado vale inclusive quando o pagamento é na maquininha.",
+      "Programa de impressão v1.7.9: quando o complemento gráfico do Windows estiver indisponível, o recibo passa a sair com negrito, centralização e faixa invertida pela própria impressora, em vez de texto plano.",
+      "O programa avisa na abertura, em destaque, quando estiver no modo simples e o que fazer para corrigir.",
+      "Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.",
+    ],
+  },
+  {
     version: "1.73.2-beta",
     date: "2026-09-22",
     codename: "Recibo obrigatório independente",
