@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.73.1-beta";
-export const RELEASE_DATE = "2026-09-21"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fotos novas voltam a aparecer";
+export const VERSION = "1.73.2-beta";
+export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Recibo obrigatório independente";
 
 
 
@@ -22,6 +22,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.73.2-beta",
+    date: "2026-09-22",
+    codename: "Recibo obrigatório independente",
+    changes: [
+      "Piloto isolado no Rei do Açaí e Bon Appetit: o recibo volta a ser obrigatório e independente da comanda de produção.",
+      "Rei do Açaí recebe somente o recibo V2/V39 completo; Bon Appetit recebe recibo e comanda de produção.",
+      "A opção Comanda de produção passa a controlar somente o papel da cozinha nas duas lojas piloto.",
+      "Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.73.1-beta",
     date: "2026-09-21",

@@ -1453,11 +1453,16 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         }
         }
       }
-      // Comanda de produção: fluxo padrão (não finalizado) e também na Amore Mio
+      const REI_DO_ACAI_ID = 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
+      const BON_APPETIT_ID = '32b71649-461d-4cb6-b26c-12390b090feb';
+      const isReceiptPilot = company?.id === REI_DO_ACAI_ID || company?.id === BON_APPETIT_ID;
+
+      // Comanda de produção: opcional. O Rei não cria este papel no piloto.
       // quando o pedido é finalizado na hora — lá recibo + comanda saem sempre.
       if (
         settings.autoPrintProductionTicket &&
         company?.id &&
+        company.id !== REI_DO_ACAI_ID &&
         (!override?.finalizeNow || company.id === 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8')
       ) {
 
@@ -1632,6 +1637,63 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           }
         } catch (e) {
           console.error('Erro ao enfileirar comanda de produção:', e);
+        }
+      }
+
+      // Recibo obrigatório e independente da comanda: piloto Rei do Açaí + Bon Appetit.
+      if (isReceiptPilot && company?.id && !receiptEnqueuedRef) {
+        try {
+          const groupedEnabled = settings.printLayout === 'v2' || settings.printLayout === 'v3';
+          const receiptItems = cart.map((item) => {
+            const groupedOptionals: { groupName: string; items: string }[] = [];
+            if (groupedEnabled && item.groupedOptionalNames?.length) {
+              for (const entry of item.groupedOptionalNames) {
+                const hasColon = entry.includes(':');
+                const groupName = hasColon ? entry.split(':')[0].trim() : 'Adicionais';
+                const items = (hasColon ? entry.split(':').slice(1).join(':') : entry)
+                  .split(',').map((value) => value.trim()).filter(Boolean).join(', ');
+                if (items) groupedOptionals.push({ groupName, items });
+              }
+            } else if (groupedEnabled && item.selectedOptionals.length > 0) {
+              groupedOptionals.push({
+                groupName: 'Adicionais',
+                items: item.selectedOptionals
+                  .map((optional) => optional.price > 0
+                    ? `${optional.name} R$${optional.price.toFixed(2).replace('.', ',')}`
+                    : optional.name)
+                  .join(', '),
+              });
+            }
+            return {
+              name: item.product.name,
+              quantity: item.quantity,
+              price: item.product.price + item.selectedOptionals.reduce((sum, optional) => sum + optional.price, 0),
+              notes: item.notes || undefined,
+              groupedOptionals: groupedOptionals.length > 0 ? groupedOptionals : undefined,
+            };
+          });
+          await printOnlyReceipt({
+            companyId: company.id,
+            orderCode: createdOrderCode,
+            dailyNumber: createdDailyNumber,
+            shortCode: createdShortCode,
+            customerName: customerName.trim(),
+            customerPhone: phoneDigits || undefined,
+            storeName: company.name,
+            orderOrigin: 'express',
+            deliveryFee: deliveryType === 'entrega' && deliveryFee > 0 ? deliveryFee : 0,
+            items: receiptItems,
+            total: effectiveTotal,
+            notes: `Pagamento: ${paymentName}`,
+            paperSize: settings.printerPaperSize,
+            printLayout: settings.printLayout,
+            estimatedWaitTime: settings.estimatedWaitTime,
+            deliveryAddress: deliveryType === 'entrega' && fullAddress ? fullAddress : null,
+          });
+          receiptEnqueuedRef = true;
+        } catch (receiptError) {
+          console.error('Erro ao enfileirar recibo obrigatório:', receiptError);
+          toast.error('Pedido criado, mas o recibo não foi enviado para impressão.');
         }
       }
 

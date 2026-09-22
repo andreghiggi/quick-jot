@@ -13,3 +13,5 @@
 - [ ] Piloto Lancheria da I9 (etapa 5) — depende do acesso e do responsável da loja
 - [ ] Liberação gradual das demais lojas (etapa 6)
 - [ ] Estabilização, contingência e relatório final (etapas 7-8)
+- [ ] Validar impressão piloto: Rei do Açaí com recibo V39 sem comanda; Bon Appetit com recibo + comanda
+- [ ] Após validação física dos pilotos, liberar recibo obrigatório independente da comanda para as demais lojas

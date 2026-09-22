@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '22/09/2026',
+    version: '1.73.2-beta',
+    type: 'fix',
+    description: 'Impressão piloto no Rei do Açaí e Bon Appetit: o recibo obrigatório foi separado da comanda de produção. O Rei passa a receber somente o recibo V2/V39 completo em 58 mm, enquanto a Bon Appetit recebe o recibo completo e mantém sua comanda de produção em 80 mm. A opção Comanda de produção controla apenas o papel da cozinha. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
     date: '21/09/2026',
     version: '1.73.1-beta',
     type: 'fix',

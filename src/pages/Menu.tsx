@@ -1350,8 +1350,13 @@ export default function Menu() {
           body: { companyId: company.id, orderId: newOrder.id },
         }).catch(err => console.error('Store notification failed:', err));
 
-        // Send production ticket to print queue if enabled
-        if (settings.autoPrintProductionTicket) {
+        // Recibo e comanda são independentes: o recibo é obrigatório; a opção
+        // controla somente a comanda de produção. Piloto isolado no Rei e Bon Appetit.
+        const REI_DO_ACAI_ID = 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
+        const BON_APPETIT_ID = '32b71649-461d-4cb6-b26c-12390b090feb';
+        const isReceiptPilot = company.id === REI_DO_ACAI_ID || company.id === BON_APPETIT_ID;
+        const shouldPrintProduction = settings.autoPrintProductionTicket && company.id !== REI_DO_ACAI_ID;
+        if (shouldPrintProduction || isReceiptPilot) {
           try {
             // V2+: envia adicionais agrupados para qualquer loja com Layout V2/V3 ativo.
             // Antes isso ainda estava preso na I9, então Margen recebia lista plana.
@@ -1423,37 +1428,35 @@ export default function Menu() {
               };
             });
 
-            const productionHtml = generateProductionTicketHTML({
-              tabNumber: newOrder.daily_number || 0,
-              customerName,
-              items: productionItems,
-              createdAt: new Date(),
-              paperSize: settings.printerPaperSize,
-              referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
-              layout: settings.printLayout,
-              companyId: company.id,
-              orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
-              // Lancheria I9: previsão = criação + (máximo do "Prazo estimado de entrega" − 10 min).
-              showReadyTime: true,
-              readyOffsetMinutes:
-                true
-                  ? computeReadyOffsetMinutes(settings.estimatedWaitTime, 30)
-                  : undefined,
-              deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
-            });
-
-            await supabase
-              .from('print_queue')
-              .insert({
-                company_id: company.id,
-                html_content: productionHtml,
-                label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
+            if (shouldPrintProduction) {
+              const productionHtml = generateProductionTicketHTML({
+                tabNumber: newOrder.daily_number || 0,
+                customerName,
+                items: productionItems,
+                createdAt: new Date(),
+                paperSize: settings.printerPaperSize,
+                referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
+                layout: settings.printLayout,
+                companyId: company.id,
+                orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
+                showReadyTime: true,
+                readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
+                deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
               });
+              const { error: productionError } = await supabase
+                .from('print_queue')
+                .insert({
+                  company_id: company.id,
+                  html_content: productionHtml,
+                  label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
+                  job_type: 'production',
+                });
+              if (productionError) throw productionError;
+            }
 
-            // Lojas GDI (Amore Mio, Rei do Açaí): além da comanda, o recibo V39
-            // também sai automaticamente (mesmo número/short_code, layout V2).
+            // Recibo obrigatório: piloto no Rei e Bon Appetit; preserva Amore Mio.
             const { printOnlyReceipt, isGdiReceiptCompany } = await import('@/utils/pdvV2Print');
-            if (isGdiReceiptCompany(company.id)) {
+            if (isReceiptPilot || isGdiReceiptCompany(company.id)) {
               try {
                 const receiptItems = cart.map((item, idx) => ({
                   name: item.product.name,
@@ -1492,7 +1495,7 @@ export default function Menu() {
               }
             }
           } catch (printErr) {
-            console.error('Production ticket print queue error:', printErr);
+            console.error('Erro ao criar os papéis obrigatórios do pedido:', printErr);
           }
         }
 
