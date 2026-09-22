@@ -1244,13 +1244,16 @@ def _imprimir_html(html_content, station_id=None):
         # Corrige PDF de 0 bytes (Microsoft Print to PDF nao aceita RAW)
         # e mantem o layout visual do V2 na POS 58mm.
         # ------------------------------------------------------------------
+        usar_escpos = False
         if COMPANY_ID in GDI_COMPANY_IDS and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
                 return True
             log("Fallback para modo RAW apos falha no modo grafico", "AVISO")
         elif COMPANY_ID in GDI_COMPANY_IDS and not win32ui_ok:
-            log("Modo GDI ignorado (win32ui/DLL) — impressao RAW direta", "AVISO")
+            log("Modo GDI ignorado (win32ui/DLL) — usando ESC/POS estilizado", "AVISO")
+            usar_escpos = True
+
 
         try:
             hPrinter = win32print.OpenPrinter(printer_name)
