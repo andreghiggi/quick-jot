@@ -95,7 +95,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.7.8"
+SCRIPT_VERSION = "1.7.9"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1032,6 +1032,88 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         return False
 
 
+# ==============================================================================
+# FALLBACK ESC/POS (quando o modo grafico GDI nao esta disponivel)
+# Mantem negrito, centralizacao e faixa invertida usando os recursos da
+# propria impressora termica, em vez de sair texto plano.
+# ISOLAMENTO: usado apenas para lojas de GDI_COMPANY_IDS sem win32ui.
+# ==============================================================================
+ESC = b"\x1b"
+GS = b"\x1d"
+
+
+def _escpos_encode(texto):
+    try:
+        return texto.encode("cp850", "replace")
+    except Exception:
+        return texto.encode("latin-1", "replace")
+
+
+def montar_escpos(texto, colunas=32):
+    """Converte o texto da comanda em bytes ESC/POS estilizados."""
+    try:
+        linhas = montar_linhas_estilizadas(texto, colunas=colunas)
+    except Exception as e:
+        log(f"Falha ao montar ESC/POS: {e}", "AVISO")
+        return None
+
+    if not linhas:
+        return None
+
+    out = bytearray()
+    out += ESC + b"@"  # reset
+
+    def align(n):
+        out.extend(ESC + b"a" + bytes([n]))
+
+    def bold(on):
+        out.extend(ESC + b"E" + bytes([1 if on else 0]))
+
+    def size(n):
+        out.extend(GS + b"!" + bytes([n]))
+
+    def inverse(on):
+        out.extend(GS + b"B" + bytes([1 if on else 0]))
+
+    for linha, estilo in linhas:
+        if estilo == "espaco" or not linha:
+            out += b"\n"
+            continue
+
+        if estilo in ("titulo", "pedido"):
+            align(1); bold(True); size(0x11)
+        elif estilo == "tipo":
+            align(1); bold(True); inverse(True); size(0x01)
+        elif estilo == "cliente":
+            align(0); bold(True); inverse(True); size(0x00)
+        elif estilo == "item":
+            align(0); bold(True); size(0x00)
+        elif estilo in ("pronto", "add"):
+            align(0); bold(True); size(0x00)
+        elif estilo == "rodape":
+            align(1); bold(False); size(0x00)
+        elif estilo == "datetime":
+            align(1); bold(False); size(0x00)
+        else:
+            align(0); bold(False); size(0x00)
+
+        conteudo = linha
+        if estilo in ("tipo", "cliente"):
+            # faixa preenchida ate a largura do papel
+            conteudo = f" {linha} ".center(colunas)[:colunas]
+
+        out += _escpos_encode(conteudo) + b"\n"
+
+        inverse(False)
+        bold(False)
+        size(0x00)
+        align(0)
+
+    out += b"\n\n\n\n"
+    return bytes(out)
+
+
+
 def _imprimir_html(html_content, station_id=None):
     """
     Envia HTML para a impressora térmica via Win32Print
@@ -1162,13 +1244,16 @@ def _imprimir_html(html_content, station_id=None):
         # Corrige PDF de 0 bytes (Microsoft Print to PDF nao aceita RAW)
         # e mantem o layout visual do V2 na POS 58mm.
         # ------------------------------------------------------------------
+        usar_escpos = False
         if COMPANY_ID in GDI_COMPANY_IDS and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
                 return True
             log("Fallback para modo RAW apos falha no modo grafico", "AVISO")
         elif COMPANY_ID in GDI_COMPANY_IDS and not win32ui_ok:
-            log("Modo GDI ignorado (win32ui/DLL) — impressao RAW direta", "AVISO")
+            log("Modo GDI ignorado (win32ui/DLL) — usando ESC/POS estilizado", "AVISO")
+            usar_escpos = True
+
 
         try:
             hPrinter = win32print.OpenPrinter(printer_name)
@@ -1194,12 +1279,18 @@ def _imprimir_html(html_content, station_id=None):
             hJob = win32print.StartDocPrinter(hPrinter, 1, ("ComandaTech Print", None, "RAW"))
             win32print.StartPagePrinter(hPrinter)
             
-            # Converte para bytes usando CP850 (comum em impressoras térmicas no BR) ou Latin-1
-            # Tenta CP850 primeiro para melhores caracteres de borda se houver
-            try:
-                raw_data = texto_puro.encode('cp850', 'replace')
-            except:
-                raw_data = texto_puro.encode('latin-1', 'replace')
+            raw_data = None
+            if usar_escpos:
+                colunas = 42 if str(PAPER_SIZE).startswith("80") else 32
+                raw_data = montar_escpos(texto_puro, colunas=colunas)
+                if raw_data:
+                    log(f"Layout ESC/POS aplicado ({colunas} colunas)", "IMPRESSORA")
+            if not raw_data:
+                try:
+                    raw_data = texto_puro.encode('cp850', 'replace')
+                except:
+                    raw_data = texto_puro.encode('latin-1', 'replace')
+
                 
             win32print.WritePrinter(hPrinter, raw_data)
             win32print.EndPagePrinter(hPrinter)
@@ -1234,12 +1325,35 @@ def main(company_id, company_name):
         return
 
     log(f"Versão do script: {SCRIPT_VERSION}", "OK")
+
+    if not COMPANY_ID:
+        print("!" * 60)
+        print("  ATENCAO: o identificador da loja nao foi encontrado.")
+        print("  Baixe o pacote de impressao novamente pelo painel.")
+        print("!" * 60)
+        log("COMPANY_ID vazio — layout completo indisponivel", "AVISO")
+    elif COMPANY_ID in GDI_COMPANY_IDS:
+        try:
+            _import_win32ui()
+        except Exception as ui_err:
+            print("!" * 60)
+            print("  ATENCAO: MODO SIMPLES DE IMPRESSAO")
+            print("  O complemento do Windows (pywin32/win32ui) esta com problema,")
+            print("  entao o recibo sai sem o layout completo.")
+            print("  Para corrigir, abra o Prompt de Comando como administrador e rode:")
+            print("    python -m pip install --upgrade --force-reinstall pywin32")
+            print("    python -m pywin32_postinstall -install")
+            print("  Depois reinicie o computador.")
+            print("!" * 60)
+            log(f"win32ui indisponivel no start: {ui_err}", "AVISO")
+
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
     print(f"  Log: {LOG_FILE}")
     print("=" * 50)
     print()
+
     
     STORE_NAME = company_name
 

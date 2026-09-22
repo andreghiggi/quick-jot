@@ -250,6 +250,7 @@ export function PDVV2PaymentDialog({
   const [tefInstallmentType, setTefInstallmentType] = useState<'adm' | 'loja'>('adm');
   // CPF/CNPJ do consumidor (opcional) — vai para o destinatário da NFC-e
   const [customerDocument, setCustomerDocument] = useState('');
+  const [showDocumentField, setShowDocumentField] = useState(false);
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
@@ -312,6 +313,7 @@ export function PDVV2PaymentDialog({
       setTefInstallments('2');
       setTefInstallmentType('adm');
       setCustomerDocument('');
+      setShowDocumentField(false);
       setPrechargedTef(null);
       prechargedTefRef.current = null;
       setInternalTefStatus('');
@@ -558,13 +560,14 @@ export function PDVV2PaymentDialog({
       }
       return;
     }
-    // Demais empresas: se a venda sair com NFC-e (ou TEF), abrir popup de CPF antes
+    // Demais empresas: o CPF/CNPJ é informado opcionalmente na própria tela de
+    // cobrança (campo "Informar CPF/CNPJ"), sem pop-up que interrompa o fluxo.
     if ((effectiveDocumentMode === 'sale_with_nfce' || isTef) && fiscalEnabled) {
-      setPendingDocMode('sale_with_nfce');
-      setCpfChoiceOpen(true);
+      await finalizeConfirm('sale_with_nfce', false, prechargedTefRef.current ?? undefined);
       return;
     }
     await finalizeConfirm(fiscalEnabled ? effectiveDocumentMode : 'sale_only');
+
   }
 
   return (
@@ -1341,7 +1344,53 @@ export function PDVV2PaymentDialog({
               forceNFCe={isTef}
             />
           )}
+
+          {fiscalEnabled && (
+            <div className="rounded-md border p-3">
+              {!showDocumentField ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="px-0 text-primary"
+                  onClick={() => setShowDocumentField(true)}
+                >
+                  + Informar CPF/CNPJ (opcional)
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="cpf-cnpj-inline">CPF/CNPJ na nota (opcional)</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-1 py-0 text-xs text-muted-foreground"
+                      onClick={() => {
+                        setCustomerDocument('');
+                        setShowDocumentField(false);
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                  <Input
+                    id="cpf-cnpj-inline"
+                    inputMode="numeric"
+                    placeholder="Somente números"
+                    value={customerDocument}
+                    onChange={(e) => setCustomerDocument(e.target.value.replace(/[^\d./-]/g, ''))}
+                    maxLength={18}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Em branco = nota sem destinatário (consumidor não identificado).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
