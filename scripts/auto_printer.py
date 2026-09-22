@@ -1317,7 +1317,7 @@ def montar_escpos_blocos(blocos, colunas=32):
             underline(True)
 
         if estilo == "group":
-            texto = "\xfe " + texto.lstrip("\xfe ").lstrip("■ ").strip()
+            texto = "■ " + texto.lstrip("■ ").strip()
 
         if estilo == "inverse":
             # Faixa preenchida ocupando a largura do papel.
