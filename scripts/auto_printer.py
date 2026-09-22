@@ -1032,6 +1032,88 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         return False
 
 
+# ==============================================================================
+# FALLBACK ESC/POS (quando o modo grafico GDI nao esta disponivel)
+# Mantem negrito, centralizacao e faixa invertida usando os recursos da
+# propria impressora termica, em vez de sair texto plano.
+# ISOLAMENTO: usado apenas para lojas de GDI_COMPANY_IDS sem win32ui.
+# ==============================================================================
+ESC = b"\x1b"
+GS = b"\x1d"
+
+
+def _escpos_encode(texto):
+    try:
+        return texto.encode("cp850", "replace")
+    except Exception:
+        return texto.encode("latin-1", "replace")
+
+
+def montar_escpos(texto, colunas=32):
+    """Converte o texto da comanda em bytes ESC/POS estilizados."""
+    try:
+        linhas = montar_linhas_estilizadas(texto, colunas=colunas)
+    except Exception as e:
+        log(f"Falha ao montar ESC/POS: {e}", "AVISO")
+        return None
+
+    if not linhas:
+        return None
+
+    out = bytearray()
+    out += ESC + b"@"  # reset
+
+    def align(n):
+        out.extend(ESC + b"a" + bytes([n]))
+
+    def bold(on):
+        out.extend(ESC + b"E" + bytes([1 if on else 0]))
+
+    def size(n):
+        out.extend(GS + b"!" + bytes([n]))
+
+    def inverse(on):
+        out.extend(GS + b"B" + bytes([1 if on else 0]))
+
+    for linha, estilo in linhas:
+        if estilo == "espaco" or not linha:
+            out += b"\n"
+            continue
+
+        if estilo in ("titulo", "pedido"):
+            align(1); bold(True); size(0x11)
+        elif estilo == "tipo":
+            align(1); bold(True); inverse(True); size(0x01)
+        elif estilo == "cliente":
+            align(0); bold(True); inverse(True); size(0x00)
+        elif estilo == "item":
+            align(0); bold(True); size(0x00)
+        elif estilo in ("pronto", "add"):
+            align(0); bold(True); size(0x00)
+        elif estilo == "rodape":
+            align(1); bold(False); size(0x00)
+        elif estilo == "datetime":
+            align(1); bold(False); size(0x00)
+        else:
+            align(0); bold(False); size(0x00)
+
+        conteudo = linha
+        if estilo in ("tipo", "cliente"):
+            # faixa preenchida ate a largura do papel
+            conteudo = f" {linha} ".center(colunas)[:colunas]
+
+        out += _escpos_encode(conteudo) + b"\n"
+
+        inverse(False)
+        bold(False)
+        size(0x00)
+        align(0)
+
+    out += b"\n\n\n\n"
+    return bytes(out)
+
+
+
 def _imprimir_html(html_content, station_id=None):
     """
     Envia HTML para a impressora térmica via Win32Print
