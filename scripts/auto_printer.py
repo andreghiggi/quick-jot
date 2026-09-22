@@ -1212,7 +1212,7 @@ def montar_escpos(texto, colunas=32):
             # faixa preenchida ate a largura do papel
             conteudo = f" {linha} ".center(colunas)[:colunas]
         elif estilo == "grupo":
-            conteudo = f"\xfe {linha}"  # quadrado cheio do CP850
+            conteudo = f"■ {linha}"  # quadrado cheio (0xFE no CP850)
         elif estilo == "sep":
             conteudo = "-" * colunas
 
