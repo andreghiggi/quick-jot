@@ -1324,14 +1324,17 @@ def montar_escpos_blocos(blocos, colunas=32):
             emitir(f" {texto} ".center(colunas)[:colunas])
         elif direita:
             # Rotulo a esquerda e valor a direita NA MESMA LINHA.
-            espaco = colunas - len(direita)
-            if espaco < 4:
-                if texto:
-                    emitir(texto[:colunas])
-                emitir(direita.rjust(colunas)[:colunas])
+            espaco = colunas - len(direita) - 1
+            if espaco >= 4 and len(texto) <= espaco:
+                emitir(texto.ljust(colunas - len(direita)) + direita)
             else:
-                esquerda = texto[: espaco - 1]
-                emitir(esquerda.ljust(espaco) + direita)
+                # Nome comprido: quebra em varias linhas e o valor fica
+                # alinhado a direita na ultima linha, sem cortar o produto.
+                partes = _tw.wrap(texto, max(8, colunas)) if texto else []
+                for parte in partes:
+                    emitir(parte)
+                emitir(direita.rjust(colunas)[:colunas])
+
         else:
             for parte in (_tw.wrap(texto, max(8, largura)) or [texto]):
                 emitir(parte)
