@@ -698,9 +698,11 @@ def extrair_blocos_v2(html_content):
             return set(self.attrs.get("class", "").split())
 
         def text(self):
-            values = list(self.parts)
-            for child in self.children:
-                values.append(child.text())
+            # `parts` guarda texto e filhos NA ORDEM do documento: sem isso
+            # "<span>Tel:</span> 9999" virava "9999 Tel:".
+            values = []
+            for part in self.parts:
+                values.append(part.text() if isinstance(part, Node) else part)
             return _re.sub(r"\s+", " ", _html.unescape(" ".join(values))).strip()
 
     class TreeParser(HTMLParser):
@@ -720,8 +722,10 @@ def extrair_blocos_v2(html_content):
                 return
             node = Node(tag, attrs, self.current)
             self.current.children.append(node)
+            self.current.parts.append(node)
             if tag not in self.VOID:
                 self.current = node
+
 
         def handle_endtag(self, tag):
             if tag in ("style", "script", "head", "title"):
