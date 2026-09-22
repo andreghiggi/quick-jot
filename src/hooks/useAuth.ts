@@ -73,6 +73,14 @@ export function useAuth() {
     const applySession = (session: Session | null) => {
       if (!mounted) return;
 
+      // Sem isto, a conexão de tempo real continua com o token antigo e fica muda
+      // depois que a credencial é renovada (~1h) — a tela só atualizava com F5.
+      try {
+        supabase.realtime.setAuth(session?.access_token ?? null);
+      } catch (e) {
+        console.warn('[auth] falha ao atualizar token do realtime', e);
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -100,6 +108,16 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if (event === 'INITIAL_SESSION') return;
+      if (event === 'TOKEN_REFRESHED') {
+        // Só renova o token do realtime: reaplicar a sessão inteira recarregaria dados à toa.
+        try {
+          supabase.realtime.setAuth(session?.access_token ?? null);
+        } catch (e) {
+          console.warn('[auth] falha ao renovar token do realtime', e);
+        }
+        setSession(session);
+        return;
+      }
       applySession(session);
     });
 
