@@ -1576,19 +1576,15 @@ def main(company_id, company_name):
         print("!" * 60)
         log("COMPANY_ID vazio — layout completo indisponivel", "AVISO")
     elif COMPANY_ID in GDI_COMPANY_IDS:
+        # A impressora termica reproduz o layout completo por conta propria
+        # (ESC/POS). O modo grafico do Windows e apenas um extra opcional,
+        # entao a ausencia dele nao e mais tratada como problema.
         try:
             _import_win32ui()
+            log("Modo grafico do Windows disponivel", "OK")
         except Exception as ui_err:
-            print("!" * 60)
-            print("  ATENCAO: MODO SIMPLES DE IMPRESSAO")
-            print("  O complemento do Windows (pywin32/win32ui) esta com problema,")
-            print("  entao o recibo sai sem o layout completo.")
-            print("  Para corrigir, abra o Prompt de Comando como administrador e rode:")
-            print("    python -m pip install --upgrade --force-reinstall pywin32")
-            print("    python -m pywin32_postinstall -install")
-            print("  Depois reinicie o computador.")
-            print("!" * 60)
-            log(f"win32ui indisponivel no start: {ui_err}", "AVISO")
+            log(f"Layout completo pelo modo termico nativo ({ui_err})", "INFO")
+
 
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
