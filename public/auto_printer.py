@@ -95,7 +95,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.7.9"
+SCRIPT_VERSION = "1.8.0"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -469,6 +469,44 @@ def normalizar_marcadores(texto):
     return texto
 
 
+def sanitizar_icones(texto):
+    """Troca emojis/icones por texto simples e remove o que a impressora nao tem.
+
+    Sem isso a POS-58 imprime "?" no lugar do raio, da sacola, etc.
+    """
+    if not texto:
+        return texto
+    trocas = {
+        "\u26a1": "",   # raio (pedido express)
+        "\U0001f6cd": "",  # sacola
+        "\U0001f6d2": "",  # carrinho
+        "\U0001f3e0": "",  # casa
+        "\U0001f4cd": "",  # pin de local
+        "\U0001f4de": "Tel:",
+        "\U0001f514": "",  # sino
+        "\U0001f37d": "",  # prato
+        "\u2b50": "",
+        "\u2705": "",
+        "\u25a0": "",
+        "\u25aa": "",
+    }
+    for origem, destino in trocas.items():
+        texto = texto.replace(origem, destino)
+    # Remove qualquer caractere que a tabela da impressora nao represente
+    limpo = []
+    for ch in texto:
+        if ch in "\n\r\t":
+            limpo.append(ch)
+            continue
+        try:
+            ch.encode("cp850")
+            limpo.append(ch)
+        except Exception:
+            pass
+    import re as _re_icon
+    return _re_icon.sub(r"[ \t]{2,}", "  ", "".join(limpo))
+
+
 def montar_linhas_estilizadas(texto, colunas=32):
     """
     Converte o texto da comanda em linhas com PAPEL LOGICO (estilo por
@@ -483,6 +521,9 @@ def montar_linhas_estilizadas(texto, colunas=32):
     import re as _re
     import textwrap as _tw
 
+    texto = sanitizar_icones(texto or "")
+
+
     # Colunas efetivas por estilo (fontes maiores cabem menos caracteres)
     fator = {
         "titulo": 0.72,
@@ -496,6 +537,9 @@ def montar_linhas_estilizadas(texto, colunas=32):
         "obs": 0.90,
         "normal": 1.0,
         "rodape": 1.0,
+        "loja": 0.90,
+        "grupo": 0.90,
+        "sep": 1.0,
     }
 
     saida = []
@@ -510,6 +554,7 @@ def montar_linhas_estilizadas(texto, colunas=32):
             saida.append((parte, estilo))
 
     linhas_src = texto.split("\n")
+    primeira_linha_util = True
     idx = 0
     while idx < len(linhas_src):
         linha = linhas_src[idx].strip()
@@ -525,13 +570,16 @@ def montar_linhas_estilizadas(texto, colunas=32):
                 idx += 1
 
         upper = linha.upper()
+        eh_primeira = primeira_linha_util
+        primeira_linha_util = False
 
         # Rodape antigo ("--- FIM ---") e removido: o padrao e adicionado no final
         if _re.match(r"^-{2,}\s*FIM.*$", upper):
             continue
 
-        # Linhas de separador do parser antigo
-        if set(linha) <= {"=", "-", ".", "_"} and len(linha) > 3:
+        # Linhas de separador -> tracejado do layout padrao
+        if set(linha) <= {"=", "-", ".", "_", "*"} and len(linha) > 3:
+            saida.append(("-" * colunas, "sep"))
             continue
 
         # Titulo da comanda
@@ -592,6 +640,24 @@ def montar_linhas_estilizadas(texto, colunas=32):
         # Adicionais
         if linha.startswith(">>"):
             add(">> " + linha.lstrip("> ").upper(), "add")
+            continue
+
+        # Adicionais no formato "+ ITEM"
+        if linha.startswith("+"):
+            add("+ " + linha.lstrip("+ ").upper(), "add")
+            continue
+
+        # Titulo de grupo de opcionais ("Escolha a base:", "Adicionais Premium:")
+        if linha.endswith(":") and not _re.match(
+            r"^(TEL|FONE|PAGAMENTO|SUBTOTAL|TOTAL|TAXA|DESCONTO|TROCO|ENDERECO|CLIENTE|OBS)",
+            upper,
+        ):
+            add(linha.rstrip(":").strip(), "grupo")
+            continue
+
+        # Nome da loja (primeira linha util do cupom)
+        if eh_primeira:
+            add(upper, "loja")
             continue
 
         add(linha, "normal")
@@ -1062,6 +1128,9 @@ def montar_escpos(texto, colunas=32):
 
     out = bytearray()
     out += ESC + b"@"  # reset
+    # Tabela de caracteres: sem isso a impressora interpreta os acentos em outra
+    # pagina de codigo e sai "ACAI" com simbolos estranhos.
+    out += ESC + b"t" + bytes([2])   # CP850 (multilingual)
 
     def align(n):
         out.extend(ESC + b"a" + bytes([n]))
@@ -1075,21 +1144,31 @@ def montar_escpos(texto, colunas=32):
     def inverse(on):
         out.extend(GS + b"B" + bytes([1 if on else 0]))
 
+    def underline(on):
+        out.extend(ESC + b"-" + bytes([1 if on else 0]))
+
     for linha, estilo in linhas:
         if estilo == "espaco" or not linha:
             out += b"\n"
             continue
 
+        sublinhado = False
         if estilo in ("titulo", "pedido"):
             align(1); bold(True); size(0x11)
+        elif estilo == "loja":
+            align(0); bold(True); size(0x00)
         elif estilo == "tipo":
             align(1); bold(True); inverse(True); size(0x01)
         elif estilo == "cliente":
             align(0); bold(True); inverse(True); size(0x00)
+        elif estilo == "grupo":
+            align(0); bold(True); size(0x00); underline(True); sublinhado = True
         elif estilo == "item":
             align(0); bold(True); size(0x00)
         elif estilo in ("pronto", "add"):
             align(0); bold(True); size(0x00)
+        elif estilo == "sep":
+            align(0); bold(False); size(0x00)
         elif estilo == "rodape":
             align(1); bold(False); size(0x00)
         elif estilo == "datetime":
@@ -1101,9 +1180,15 @@ def montar_escpos(texto, colunas=32):
         if estilo in ("tipo", "cliente"):
             # faixa preenchida ate a largura do papel
             conteudo = f" {linha} ".center(colunas)[:colunas]
+        elif estilo == "grupo":
+            conteudo = f"\xfe {linha}"  # quadrado cheio do CP850
+        elif estilo == "sep":
+            conteudo = "-" * colunas
 
         out += _escpos_encode(conteudo) + b"\n"
 
+        if sublinhado:
+            underline(False)
         inverse(False)
         bold(False)
         size(0x00)
