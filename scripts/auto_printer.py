@@ -890,19 +890,24 @@ def extrair_blocos_v2(html_content):
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
-        for node in nodes:
+        # Somente nos folha (<p>) evitam duplicar o mesmo texto vindo dos pais.
+        folhas = [
+            node for node in nodes
+            if node.tag == "p" and not any(child.text() for child in node.children if child.tag != "span")
+        ]
+        for node in folhas:
             text = node.text()
             if "[CLIENTE]" in text:
                 blocos.append(block(text, "inverse"))
             elif _re.search(r"\bTEL\s*:", text, _re.I):
                 blocos.append(block(text, "normal"))
-            elif "PAGAMENTO" in text.upper():
+            elif "PAGAMENTO" in text.upper() or "TROCO" in text.upper() or "CHAVE PIX" in text.upper():
                 blocos.append(block(text.upper(), "ready"))
 
         for badge in by_class("delivery-badge"):
             blocos.append(block(badge.text(), "type", "center"))
 
-        for node in nodes:
+        for node in folhas:
             if "[ENDERECO]" in node.text():
                 blocos.append(block(node.text(), "inverse"))
 
@@ -914,7 +919,15 @@ def extrair_blocos_v2(html_content):
             name_node = next((n for n in walk(item) if "item-name" in n.classes()), None)
             detail_node = next((n for n in walk(item) if "item-detail" in n.classes()), None)
             if name_node:
-                blocos.append(block(name_node.text(), "item_qty", "left"))
+                # Valor do item na MESMA linha do nome (alinhado a direita).
+                blocos.append({
+                    "text": clean_marker(name_node.text()),
+                    "style": "item_qty",
+                    "align": "left",
+                    "right": clean_marker(detail_node.text()) if detail_node else "",
+                })
+            elif detail_node:
+                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(detail_node.text())})
             for sub in walk(item):
                 classes = sub.classes()
                 if "add-group-label" in classes:
@@ -923,8 +936,7 @@ def extrair_blocos_v2(html_content):
                     blocos.append(block(sub.text(), "additional"))
                 elif "item-notes" in classes:
                     blocos.append(block(sub.text(), "description"))
-            if detail_node:
-                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(detail_node.text())})
+
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
