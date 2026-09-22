@@ -531,8 +531,9 @@ def montar_linhas_estilizadas(texto, colunas=32):
         if _re.match(r"^-{2,}\s*FIM.*$", upper):
             continue
 
-        # Linhas de separador do parser antigo
-        if set(linha) <= {"=", "-", ".", "_"} and len(linha) > 3:
+        # Linhas de separador -> tracejado do layout padrao
+        if set(linha) <= {"=", "-", ".", "_", "*"} and len(linha) > 3:
+            saida.append(("-" * colunas, "sep"))
             continue
 
         # Titulo da comanda
