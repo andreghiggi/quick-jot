@@ -1320,8 +1320,11 @@ def montar_escpos_blocos(blocos, colunas=32):
             texto = "■ " + texto.lstrip("■ ").strip()
 
         if estilo == "inverse":
-            # Faixa preenchida ocupando a largura do papel.
-            emitir(f" {texto} ".center(colunas)[:colunas])
+            # Faixa preenchida ocupando a largura do papel, quebrando nomes longos.
+            partes = _tw.wrap(texto, max(8, colunas - 2)) or [texto]
+            for parte in partes:
+                emitir(f" {parte} ".center(colunas)[:colunas])
+
         elif direita:
             # Rotulo a esquerda e valor a direita NA MESMA LINHA.
             espaco = colunas - len(direita) - 1
