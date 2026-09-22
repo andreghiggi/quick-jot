@@ -459,18 +459,6 @@ export async function enqueueReceiptJob(params: {
 }) {
   const { companyId, html, label, sourceOrderId } = params;
 
-  if (sourceOrderId) {
-    const { data: existing, error: lookupError } = await supabase
-      .from('print_queue')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('source_order_id', sourceOrderId)
-      .eq('job_type', 'receipt')
-      .limit(1)
-      .maybeSingle();
-    if (lookupError) throw lookupError;
-    if (existing) return;
-  }
   const { data: stations } = await supabase
     .from('print_stations' as never)
     .select('id')
