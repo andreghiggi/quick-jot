@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '22/09/2026',
+    version: '1.74.4-beta',
+    type: 'fix',
+    description: 'Programa de impressão v1.8.2: a faixa preta do recibo volta a mostrar "CLIENTE: Nome do cliente", igual ao layout padrão, e nomes longos passam a quebrar em duas linhas dentro da faixa sem cortar letras. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
+    date: '22/09/2026',
     version: '1.74.3-beta',
     type: 'fix',
     description: 'Programa de impressão v1.8.1: o recibo passa a sair no layout padrão direto pela impressora térmica, sem depender de nenhum complemento do Windows. Subtotal, total, taxa de entrega e telefone deixam de quebrar em duas linhas (rótulo à esquerda, valor à direita na mesma linha), o preço do produto volta para a linha do próprio produto em vez de aparecer depois dos adicionais, as linhas tracejadas voltam a separar cabeçalho, cliente, itens e totais, e o aviso de erro que aparecia ao abrir o programa foi removido por não se aplicar às impressoras térmicas. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
