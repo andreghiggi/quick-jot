@@ -69,7 +69,7 @@ export default function Subcategories() {
       toast.success('Imagem enviada!');
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao enviar imagem');
+      toast.error((err as any)?.message || 'Erro ao enviar imagem');
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -86,7 +86,7 @@ export default function Subcategories() {
       await updateSubcategory(subcatId, { imageUrl: result.publicUrl + '?t=' + Date.now() });
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao enviar imagem');
+      toast.error((err as any)?.message || 'Erro ao enviar imagem');
     }
     e.target.value = '';
   };

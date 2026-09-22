@@ -154,7 +154,7 @@ export default function Categories() {
                                   await updateCategory(cat.id, { imageUrl: result.publicUrl + '?t=' + Date.now() });
                                 } catch (err) {
                                   console.error(err);
-                                  toast.error('Erro ao enviar imagem');
+                                  toast.error((err as any)?.message || 'Erro ao enviar imagem');
                                 }
                                 e.target.value = '';
                               }}
