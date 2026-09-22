@@ -475,7 +475,6 @@ export async function enqueueReceiptJob(params: {
     station_id: receiptStation,
     job_type: 'receipt',
     printed: false,
-    source_order_id: sourceOrderId ?? null,
   } as never);
   if (error && sourceOrderId && error.code === '23505') return;
   if (error) throw error;

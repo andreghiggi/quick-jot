@@ -1635,7 +1635,6 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 label: createdShortCode ? `Recibo ${createdShortCode}` : `Recibo Express - ${customerName.trim()}`,
                 station_id: jobs[0]?.station_id ?? null,
                 job_type: 'receipt',
-                source_order_id: created.id,
               } as any);
             } catch (e) {
               console.error('Erro ao enfileirar recibo Express:', e);
