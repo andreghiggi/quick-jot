@@ -95,7 +95,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.1"
+SCRIPT_VERSION = "1.8.2"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -769,11 +769,19 @@ def extrair_blocos_v2(html_content):
             return f"Pronto até: {m.group(1)}"
         return value
 
+    def prefixo_cliente(value):
+        """Garante o prefixo 'CLIENTE:' na faixa invertida do recibo."""
+        value = clean_marker(value)
+        if value and not _re.match(r"^\s*cliente\s*:", value, _re.I):
+            value = f"CLIENTE: {value}"
+        return value
+
     def block(text, style="normal", align="left", right=None):
         text = clean_marker(text)
         if text or right:
             return {"text": text, "style": style, "align": align, "right": clean_marker(right or "")}
         return None
+
 
 
     blocos = []
@@ -794,7 +802,7 @@ def extrair_blocos_v2(html_content):
             blocos.append(block(table_infos[0].text(), "type", "center"))
         customer = next((node for node in infos if "[CLIENTE]" in node.text()), None)
         if customer:
-            blocos.append(block(customer.text(), "inverse"))
+            blocos.append(block(prefixo_cliente(customer.text()), "inverse"))
         datetimes = [node for node in by_class("datetime") if "ready-inline" not in node.classes()]
         if datetimes:
             blocos.append(block(datetimes[0].text(), "datetime", "center"))
@@ -848,7 +856,7 @@ def extrair_blocos_v2(html_content):
                 spans = [node.text() for node in child.children if node.tag == "span"]
                 blocos.append({"text": spans[0] if spans else "TOTAL", "style": "total", "align": "left", "right": spans[1] if len(spans) > 1 else ""})
             elif "[CLIENTE]" in text:
-                blocos.append(block(text, "inverse"))
+                blocos.append(block(prefixo_cliente(text), "inverse"))
             elif "[ENDERECO]" in text:
                 blocos.append(block(text, "inverse"))
             elif text.upper().startswith("PRONTO AT") or _re.match(r"^\d{1,2}:\d{2}\s*pronto", text, _re.I):
@@ -902,7 +910,7 @@ def extrair_blocos_v2(html_content):
         for node in folhas:
             text = node.text()
             if "[CLIENTE]" in text:
-                blocos.append(block(text, "inverse"))
+                blocos.append(block(prefixo_cliente(text), "inverse"))
             elif _re.search(r"\bTEL\s*:", text, _re.I):
                 blocos.append(block(text, "normal"))
             elif "PAGAMENTO" in text.upper() or "TROCO" in text.upper() or "CHAVE PIX" in text.upper():
@@ -1320,8 +1328,11 @@ def montar_escpos_blocos(blocos, colunas=32):
             texto = "■ " + texto.lstrip("■ ").strip()
 
         if estilo == "inverse":
-            # Faixa preenchida ocupando a largura do papel.
-            emitir(f" {texto} ".center(colunas)[:colunas])
+            # Faixa preenchida ocupando a largura do papel, quebrando nomes longos.
+            partes = _tw.wrap(texto, max(8, colunas - 2)) or [texto]
+            for parte in partes:
+                emitir(f" {parte} ".center(colunas)[:colunas])
+
         elif direita:
             # Rotulo a esquerda e valor a direita NA MESMA LINHA.
             espaco = colunas - len(direita) - 1
