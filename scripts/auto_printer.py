@@ -802,7 +802,7 @@ def extrair_blocos_v2(html_content):
             blocos.append(block(table_infos[0].text(), "type", "center"))
         customer = next((node for node in infos if "[CLIENTE]" in node.text()), None)
         if customer:
-            blocos.append(block(customer.text(), "inverse"))
+            blocos.append(block(prefixo_cliente(customer.text()), "inverse"))
         datetimes = [node for node in by_class("datetime") if "ready-inline" not in node.classes()]
         if datetimes:
             blocos.append(block(datetimes[0].text(), "datetime", "center"))
