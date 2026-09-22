@@ -333,6 +333,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         .eq('id', order.id);
       if (error) throw error;
 
+      // Some da tela na hora, sem depender do aviso de tempo real
+      applyLocalOrderStatus(order.id, 'canceled' as any, newNotes);
+
+
       // Acionar gaveta ao cancelar (finalizar ciclo) se habilitada
       if (storeSettings.drawerEnabled && company?.id) {
         openCashDrawer(company.id, {
