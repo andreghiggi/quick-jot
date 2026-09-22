@@ -1087,6 +1087,9 @@ def montar_escpos(texto, colunas=32):
 
     out = bytearray()
     out += ESC + b"@"  # reset
+    # Tabela de caracteres: sem isso a impressora interpreta os acentos em outra
+    # pagina de codigo e sai "ACAI" com simbolos estranhos.
+    out += ESC + b"t" + bytes([2])   # CP850 (multilingual)
 
     def align(n):
         out.extend(ESC + b"a" + bytes([n]))
@@ -1100,21 +1103,31 @@ def montar_escpos(texto, colunas=32):
     def inverse(on):
         out.extend(GS + b"B" + bytes([1 if on else 0]))
 
+    def underline(on):
+        out.extend(ESC + b"-" + bytes([1 if on else 0]))
+
     for linha, estilo in linhas:
         if estilo == "espaco" or not linha:
             out += b"\n"
             continue
 
+        sublinhado = False
         if estilo in ("titulo", "pedido"):
             align(1); bold(True); size(0x11)
+        elif estilo == "loja":
+            align(0); bold(True); size(0x00)
         elif estilo == "tipo":
             align(1); bold(True); inverse(True); size(0x01)
         elif estilo == "cliente":
             align(0); bold(True); inverse(True); size(0x00)
+        elif estilo == "grupo":
+            align(0); bold(True); size(0x00); underline(True); sublinhado = True
         elif estilo == "item":
             align(0); bold(True); size(0x00)
         elif estilo in ("pronto", "add"):
             align(0); bold(True); size(0x00)
+        elif estilo == "sep":
+            align(0); bold(False); size(0x00)
         elif estilo == "rodape":
             align(1); bold(False); size(0x00)
         elif estilo == "datetime":
@@ -1126,9 +1139,15 @@ def montar_escpos(texto, colunas=32):
         if estilo in ("tipo", "cliente"):
             # faixa preenchida ate a largura do papel
             conteudo = f" {linha} ".center(colunas)[:colunas]
+        elif estilo == "grupo":
+            conteudo = f"\xfe {linha}"  # quadrado cheio do CP850
+        elif estilo == "sep":
+            conteudo = "-" * colunas
 
         out += _escpos_encode(conteudo) + b"\n"
 
+        if sublinhado:
+            underline(False)
         inverse(False)
         bold(False)
         size(0x00)
