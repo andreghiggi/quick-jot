@@ -702,11 +702,24 @@ export function useOrders(options: UseOrdersOptions = {}) {
       .reduce((sum, order) => sum + order.total, 0);
   }
 
+  // Atualiza o estado local imediatamente (sem escrever no banco). Usado por
+  // fluxos que já gravaram a mudança direto no Supabase (ex.: cancelamento),
+  // para o card sair da tela na hora, sem esperar o aviso de tempo real.
+  function applyLocalOrderStatus(orderId: string, status: OrderStatus, notes?: string) {
+    prevOrdersJsonRef.current = '';
+    setOrders(prev =>
+      prev.map(o =>
+        o.id === orderId ? { ...o, status, ...(notes !== undefined ? { notes } : {}) } : o
+      )
+    );
+  }
+
   return {
     orders,
     loading,
     addOrder,
     updateOrderStatus,
+    applyLocalOrderStatus,
     sendConfirmationWhatsApp,
     deleteOrder,
     getOrdersByStatus,
