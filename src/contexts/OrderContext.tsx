@@ -10,6 +10,7 @@ interface OrderContextType {
     orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>
   ) => Promise<{ id: string; shortCode?: string; orderCode?: string; dailyNumber?: number } | null>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<boolean>;
+  applyLocalOrderStatus: (orderId: string, status: OrderStatus, notes?: string) => void;
   sendConfirmationWhatsApp: (orderId: string) => Promise<boolean>;
   deleteOrder: (orderId: string) => Promise<boolean>;
   getOrdersByStatus: (status: OrderStatus) => Order[];
