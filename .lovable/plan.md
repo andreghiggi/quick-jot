@@ -16,18 +16,21 @@ O programinha que fica rodando no PC da loja pode imprimir de dois jeitos:
 - **Jeito simples (texto):** ele manda só as letras, sem nenhum enfeite. É exatamente o que está saindo hoje no Rei do Açaí.
 
 Ele só usa o jeito bonito quando três coisas estão certas no computador:
-1. o programinha é a versão nova;
-2. o número de identificação da loja está gravado na pasta do programinha (sem isso ele não sabe que essa loja usa o jeito bonito);
-3. o complemento do Windows que permite "pintar" o papel está instalado.
+1. o programinha é a versão nova — **confirmado nas suas fotos: v1.7.8, ativo e monitorando**;
+2. o número de identificação da loja está gravado na pasta — **confirmado: o `company_id.txt` está com o código certo do Rei do Açaí**;
+3. o complemento do Windows que permite "pintar" o papel (o `win32ui`) está instalado e funcionando — **é o único item que ainda falta confirmar**.
 
-Faltando qualquer uma das três, ele cai sozinho no jeito simples e ninguém é avisado — o pedido imprime, só que feio. É o que está acontecendo.
+Como os dois primeiros estão certos, a explicação que sobra é a terceira: o complemento do Windows falha, o programinha percebe isso e, para não deixar o pedido sem sair, imprime no jeito simples. Por isso sai tudo plano, sem caixa e sem inversão.
 
-### Passo a passo para resolver (no acesso remoto do PC da loja)
-1. Abrir a pasta onde fica o programinha de impressão e abrir o arquivo de registro `printer_log.txt`.
-2. Olhar duas informações nesse arquivo: a **versão** que aparece ao iniciar e se existe a mensagem **"Modo GDI ignorado"**. Isso já diz qual das três coisas está faltando.
-3. Conforme o que faltar: atualizar o programinha, gravar o número da loja na pasta, ou instalar o complemento do Windows.
-4. Fechar e abrir o programinha e mandar **uma folha de teste** (não vamos reimprimir pedidos antigos).
-5. Comparar com o modelo da foto e confirmar.
+### O que preciso que você me envie (é só isso)
+1. Na mesma pasta do programinha, dar dois cliques em **`verificar_pywin32.py`** (ou abrir o Prompt na pasta e rodar `python verificar_pywin32.py`) e me mandar a tela. A linha que interessa é **"win32ui: OK"** ou **"win32ui: AVISO"**.
+2. Se for mais fácil, me mande também o arquivo **`printer_log.txt`** da pasta — nele aparece a mensagem "Modo GDI ignorado" toda vez que ele cai no jeito simples.
+
+### Passo a passo depois disso
+1. Se o complemento estiver falhando: rodar o **`instalar_impressao.cmd` como administrador**, reiniciar o Windows e abrir o programinha de novo.
+2. Mandar **uma folha de teste** (não vamos reimprimir pedidos antigos).
+3. Comparar com o modelo da foto e confirmar.
+
 
 ### Melhoria que vou aplicar no programinha
 - Quando o jeito bonito não estiver disponível, ele passa a usar os recursos da própria impressora para pelo menos manter **negrito e texto invertido**, em vez de sair tudo plano.
