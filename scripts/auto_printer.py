@@ -1511,9 +1511,23 @@ def _imprimir_html(html_content, station_id=None):
             raw_data = None
             if usar_escpos:
                 colunas = 42 if str(PAPER_SIZE).startswith("80") else 32
-                raw_data = montar_escpos(texto_puro, colunas=colunas)
-                if raw_data:
-                    log(f"Layout ESC/POS aplicado ({colunas} colunas)", "IMPRESSORA")
+                # 1a opcao: blocos semanticos (valor alinhado a direita,
+                # tracejados, faixas) extraidos direto do HTML do recibo.
+                try:
+                    blocos_layout = extrair_blocos_v2(html_content) if "<" in html_content else []
+                except Exception as bloco_err:
+                    blocos_layout = []
+                    log(f"Falha ao ler o layout do recibo: {bloco_err}", "AVISO")
+                if blocos_layout:
+                    raw_data = montar_escpos_blocos(blocos_layout, colunas=colunas)
+                    if raw_data:
+                        log(f"Layout completo aplicado ({colunas} colunas)", "IMPRESSORA")
+                # 2a opcao: texto plano estilizado (compatibilidade).
+                if not raw_data:
+                    raw_data = montar_escpos(texto_puro, colunas=colunas)
+                    if raw_data:
+                        log(f"Layout ESC/POS simples aplicado ({colunas} colunas)", "IMPRESSORA")
+
             if not raw_data:
                 try:
                     raw_data = texto_puro.encode('cp850', 'replace')
