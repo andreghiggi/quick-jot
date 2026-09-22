@@ -1428,6 +1428,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
             deliveryType === 'entrega' && deliveryFee > 0 ? deliveryFee : 0;
           await printOnlyReceipt({
             companyId: company.id,
+            sourceOrderId: created.id,
             orderCode: createdOrderCode,
             dailyNumber: createdDailyNumber,
             shortCode: createdShortCode,
@@ -1678,6 +1679,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           });
           await printOnlyReceipt({
             companyId: company.id,
+            sourceOrderId: created.id,
             orderCode: createdOrderCode,
             dailyNumber: createdDailyNumber,
             shortCode: createdShortCode,

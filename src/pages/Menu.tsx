@@ -1429,29 +1429,33 @@ export default function Menu() {
             });
 
             if (shouldPrintProduction) {
-              const productionHtml = generateProductionTicketHTML({
-                tabNumber: newOrder.daily_number || 0,
-                customerName,
-                items: productionItems,
-                createdAt: new Date(),
-                paperSize: settings.printerPaperSize,
-                referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
-                layout: settings.printLayout,
-                companyId: company.id,
-                orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
-                showReadyTime: true,
-                readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
-                deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
-              });
-              const { error: productionError } = await supabase
-                .from('print_queue')
-                .insert({
-                  company_id: company.id,
-                  html_content: productionHtml,
-                  label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
-                  job_type: 'production',
+              try {
+                const productionHtml = generateProductionTicketHTML({
+                  tabNumber: newOrder.daily_number || 0,
+                  customerName,
+                  items: productionItems,
+                  createdAt: new Date(),
+                  paperSize: settings.printerPaperSize,
+                  referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
+                  layout: settings.printLayout,
+                  companyId: company.id,
+                  orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
+                  showReadyTime: true,
+                  readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
+                  deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
                 });
-              if (productionError) throw productionError;
+                const { error: productionError } = await supabase
+                  .from('print_queue')
+                  .insert({
+                    company_id: company.id,
+                    html_content: productionHtml,
+                    label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
+                    job_type: 'production',
+                  });
+                if (productionError) throw productionError;
+              } catch (productionError) {
+                console.error('Erro ao enfileirar comanda de produção:', productionError);
+              }
             }
 
             // Recibo obrigatório: piloto no Rei e Bon Appetit; preserva Amore Mio.
@@ -1472,6 +1476,7 @@ export default function Menu() {
                 ].filter(Boolean).join(' | ');
                 await printOnlyReceipt({
                   companyId: company.id,
+                  sourceOrderId: newOrder.id,
                   orderCode: (newOrder as any).order_code || '',
                   dailyNumber: newOrder.daily_number || 0,
                   shortCode: (newOrder as any).short_code || undefined,
@@ -1492,6 +1497,7 @@ export default function Menu() {
                 });
               } catch (receiptErr) {
                 console.error('Receipt print queue error:', receiptErr);
+                toast.error('Pedido criado, mas o recibo não foi enviado para impressão.');
               }
             }
           } catch (printErr) {
