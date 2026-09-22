@@ -106,7 +106,7 @@ const nextStatusLabel: Record<OrderStatus, string> = {
 };
 
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
-  const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp } = useOrderContext();
+  const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp, applyLocalOrderStatus } = useOrderContext();
   const { company, isSuperAdmin, isCompanyAdmin } = useAuthContext();
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
@@ -332,6 +332,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         .update({ notes: newNotes, status: 'canceled' as any })
         .eq('id', order.id);
       if (error) throw error;
+
+      // Some da tela na hora, sem depender do aviso de tempo real
+      applyLocalOrderStatus(order.id, 'canceled' as any, newNotes);
+
 
       // Acionar gaveta ao cancelar (finalizar ciclo) se habilitada
       if (storeSettings.drawerEnabled && company?.id) {

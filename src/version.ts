@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.1-beta";
+export const VERSION = "1.74.2-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Atualização automática das telas";
+export const CODENAME = "Recibo no layout padrão + cancelamento instantâneo";
 
 
 
