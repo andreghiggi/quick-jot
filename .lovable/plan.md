@@ -22,14 +22,21 @@ Ele só usa o jeito bonito quando três coisas estão certas no computador:
 
 Como os dois primeiros estão certos, a explicação que sobra é a terceira: o complemento do Windows falha, o programinha percebe isso e, para não deixar o pedido sem sair, imprime no jeito simples. Por isso sai tudo plano, sem caixa e sem inversão.
 
-### O que preciso que você me envie (é só isso)
-1. Na mesma pasta do programinha, dar dois cliques em **`verificar_pywin32.py`** (ou abrir o Prompt na pasta e rodar `python verificar_pywin32.py`) e me mandar a tela. A linha que interessa é **"win32ui: OK"** ou **"win32ui: AVISO"**.
-2. Se for mais fácil, me mande também o arquivo **`printer_log.txt`** da pasta — nele aparece a mensagem "Modo GDI ignorado" toda vez que ele cai no jeito simples.
+### O que preciso que você me envie (passo a passo exato, com os arquivos que estão aí)
+Na pasta que você mostrou não existe o verificador, então é mais simples ainda:
+
+1. Nessa pasta, clique com o botão direito no arquivo **`printer_log`** → **Abrir com** → **Bloco de Notas**.
+2. Aperte **Ctrl + End** para ir até o final (é o registro de hoje).
+3. Selecione as últimas ~50 linhas, **Ctrl + C**, e me cole aqui. Se preferir, **anexe o próprio arquivo `printer_log`** aqui no chat — funciona igual.
+4. Só isso. Eu procuro nele a linha **"Modo GDI ignorado"** e a mensagem de erro que vem junto.
+
+Se quiser adiantar o outro caminho: abra o **Prompt de Comando**, digite `cd ` (com espaço), arraste a pasta para a janela, dê **Enter**, depois digite `python -c "import win32ui"` e **Enter**. Se não aparecer nada, está tudo certo; se aparecer erro vermelho, é esse o problema — me mande a tela.
 
 ### Passo a passo depois disso
-1. Se o complemento estiver falhando: rodar o **`instalar_impressao.cmd` como administrador**, reiniciar o Windows e abrir o programinha de novo.
+1. Se o complemento estiver falhando: baixar de novo o pacote em **Configurações → Impressão** e rodar o **`instalar_impressao.cmd` como administrador**, reiniciar o Windows e abrir o programinha de novo.
 2. Mandar **uma folha de teste** (não vamos reimprimir pedidos antigos).
 3. Comparar com o modelo da foto e confirmar.
+
 
 
 ### Melhoria que vou aplicar no programinha
