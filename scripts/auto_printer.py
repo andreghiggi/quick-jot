@@ -881,11 +881,12 @@ def extrair_blocos_v2(html_content):
         if order_nodes:
             blocos.append(block(order_nodes[0].text(), "order", "center"))
         for origem in by_class("origem"):
-            blocos.append(block(origem[0].text(), "type", "center"))
+            blocos.append(block(origem.text(), "type", "center"))
         for date_node in by_class("date"):
-            blocos.append(block(date_node[0].text(), "datetime", "center"))
+            blocos.append(block(date_node.text(), "datetime", "center"))
         for ready in by_class("ready-inline"):
-            blocos.append(block(normalizar_ready(ready[0].text()), "ready", "center"))
+            blocos.append(block(normalizar_ready(ready.text()), "ready", "center"))
+
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
