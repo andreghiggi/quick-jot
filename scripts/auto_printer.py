@@ -469,6 +469,44 @@ def normalizar_marcadores(texto):
     return texto
 
 
+def sanitizar_icones(texto):
+    """Troca emojis/icones por texto simples e remove o que a impressora nao tem.
+
+    Sem isso a POS-58 imprime "?" no lugar do raio, da sacola, etc.
+    """
+    if not texto:
+        return texto
+    trocas = {
+        "\u26a1": "",   # raio (pedido express)
+        "\U0001f6cd": "",  # sacola
+        "\U0001f6d2": "",  # carrinho
+        "\U0001f3e0": "",  # casa
+        "\U0001f4cd": "",  # pin de local
+        "\U0001f4de": "Tel:",
+        "\U0001f514": "",  # sino
+        "\U0001f37d": "",  # prato
+        "\u2b50": "",
+        "\u2705": "",
+        "\u25a0": "",
+        "\u25aa": "",
+    }
+    for origem, destino in trocas.items():
+        texto = texto.replace(origem, destino)
+    # Remove qualquer caractere que a tabela da impressora nao represente
+    limpo = []
+    for ch in texto:
+        if ch in "\n\r\t":
+            limpo.append(ch)
+            continue
+        try:
+            ch.encode("cp850")
+            limpo.append(ch)
+        except Exception:
+            pass
+    import re as _re_icon
+    return _re_icon.sub(r"[ \t]{2,}", "  ", "".join(limpo))
+
+
 def montar_linhas_estilizadas(texto, colunas=32):
     """
     Converte o texto da comanda em linhas com PAPEL LOGICO (estilo por
