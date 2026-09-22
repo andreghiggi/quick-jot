@@ -250,6 +250,7 @@ export function PDVV2PaymentDialog({
   const [tefInstallmentType, setTefInstallmentType] = useState<'adm' | 'loja'>('adm');
   // CPF/CNPJ do consumidor (opcional) — vai para o destinatário da NFC-e
   const [customerDocument, setCustomerDocument] = useState('');
+  const [showDocumentField, setShowDocumentField] = useState(false);
   const [documentMode, setDocumentMode] = useState<DocumentMode>(() => {
     const saved = localStorage.getItem('pdv_document_mode');
     return saved === 'sale_with_nfce' ? 'sale_with_nfce' : 'sale_only';
