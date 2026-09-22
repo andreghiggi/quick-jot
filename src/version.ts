@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.73.2-beta";
+export const VERSION = "1.74.0-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo obrigatório independente";
+export const CODENAME = "CPF/CNPJ na tela de cobrança + impressão estilizada";
 
 
 
