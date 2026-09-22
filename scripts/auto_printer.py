@@ -1294,8 +1294,9 @@ def montar_escpos_blocos(blocos, colunas=32):
 
     for bloco in blocos:
         estilo = bloco.get("style", "normal")
-        texto = sanitizar_icones(bloco.get("text", "") or "")
-        direita = sanitizar_icones(bloco.get("right", "") or "")
+        texto = sanitizar_icones(bloco.get("text", "") or "").strip()
+        direita = sanitizar_icones(bloco.get("right", "") or "").strip()
+
 
         if estilo == "sep":
             reset_estilos()
