@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.7-beta";
-export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo do Rei do Açaí no layout padrão (v1.8.4)";
+export const VERSION = "1.74.8-beta";
+export const RELEASE_DATE = "2026-09-23"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Fim da repetição no recibo e recibo garantido (v1.8.5)";
 
 
 
