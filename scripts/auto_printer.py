@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.5"
+SCRIPT_VERSION = "1.8.6"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -902,7 +902,7 @@ def extrair_blocos_v2(html_content):
         return [node for node in nodes if name in node.classes()]
 
     def clean_marker(value):
-        value = _re.sub(r"\[/?(?:CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL)\]", "", value)
+        value = _re.sub(r"\[/?(?:CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL|OBS)\]", "", value)
         return _re.sub(r"\s+", " ", value).strip()
 
     def normalizar_ready(value):
@@ -1032,6 +1032,9 @@ def extrair_blocos_v2(html_content):
     store_nodes = by_class("store-name")
     order_nodes = by_class("order-num")
     if store_nodes or order_nodes:
+        rei_header_box = COMPANY_ID == "b2f97590-ff21-4951-95dc-e3e2b19d4ccb"
+        if rei_header_box:
+            blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
         if store_nodes:
             blocos.append(block(store_nodes[0].text(), "store", "center"))
         if order_nodes:
@@ -1059,6 +1062,9 @@ def extrair_blocos_v2(html_content):
                 blocos.append(block(text, "normal"))
             elif "PAGAMENTO" in text.upper() or "TROCO" in text.upper() or "CHAVE PIX" in text.upper():
                 blocos.append(block(text.upper(), "ready"))
+
+        if rei_header_box:
+            blocos.append({"text": "", "style": "box_end", "align": "left", "right": ""})
 
         for badge in by_class("delivery-badge"):
             blocos.append(block(badge.text(), "type", "center"))
@@ -1091,7 +1097,9 @@ def extrair_blocos_v2(html_content):
                 elif "add-line" in classes:
                     blocos.append(block(texto_proprio(sub) or sub.text(), "additional"))
                 elif "item-notes" in classes:
-                    blocos.append(block(texto_proprio(sub) or sub.text(), "description"))
+                    nota = texto_proprio(sub) or sub.text()
+                    estilo_nota = "inverse" if rei_header_box and "[OBS]" in nota else "description"
+                    blocos.append(block(nota, estilo_nota))
 
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
@@ -1159,11 +1167,11 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             # Papel 58mm: fontes menores para o nome do item e o valor caberem
             # na mesma linha, evitando quebras soltas linha a linha.
             pontos = {
-                "store": 15, "title": 15, "type": 14, "order": 15,
-                "code": 10, "inverse": 14, "datetime": 12, "ready": 14,
+                "store": 15, "title": 15, "type": 11, "order": 15,
+                "code": 10, "inverse": 14, "datetime": 12, "ready": 11,
                 "item_qty": 12, "item": 12, "description": 10,
                 "group": 11, "additional": 11, "normal": 12,
-                "total": 15, "footer": 11, "sep": 10,
+                "total": 13, "footer": 11, "sep": 10,
             }
         pesos = {
             "store": 800, "title": 800, "type": 800, "order": 800,
@@ -1183,6 +1191,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     "name": "Courier New",
                     "height": -max(10, int(pontos.get(estilo, 11) * dpi_y / 72)),
                     "weight": pesos.get(estilo, 500),
+                    "underline": COMPANY_ID == "b2f97590-ff21-4951-95dc-e3e2b19d4ccb" and estilo == "group",
                 })
             return cache_fontes[estilo]
 
@@ -1215,11 +1224,28 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             ]
 
         y = margem
+        box_start_y = None
         for bloco in blocos:
             estilo = bloco.get("style", "normal")
             texto = bloco.get("text", "")
             direita = bloco.get("right", "")
             alinhamento = bloco.get("align", "left")
+            if estilo == "box_start":
+                box_start_y = y
+                y += max(3, margem // 2)
+                continue
+            if estilo == "box_end":
+                if box_start_y is not None:
+                    y += max(3, margem // 2)
+                    borda = max(2, int(dpi_x * 0.45 / 25.4))
+                    box_x = max(0, margem // 3)
+                    box_right = largura_canvas - box_x
+                    dc.FillSolidRect((box_x, box_start_y, box_right, box_start_y + borda), 0x000000)
+                    dc.FillSolidRect((box_x, y - borda, box_right, y), 0x000000)
+                    dc.FillSolidRect((box_x, box_start_y, box_x + borda, y), 0x000000)
+                    dc.FillSolidRect((box_right - borda, box_start_y, box_right, y), 0x000000)
+                    box_start_y = None
+                continue
             dc.SelectObject(fonte(estilo))
             tm = dc.GetTextMetrics()
             altura_linha = max(12, tm["tmHeight"] + tm["tmExternalLeading"])
@@ -1234,7 +1260,8 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             direita_propria = False
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
-                limite_esquerda = largura_util - direita_px - max(6, margem)
+                folga_colunas = max(12, dc.GetTextExtent("  ")[0])
+                limite_esquerda = largura_util - direita_px - folga_colunas
                 if limite_esquerda < int(largura_util * 0.35):
                     # Nao cabe lado a lado: valor vai para a linha seguinte, alinhado a direita.
                     direita_propria = True

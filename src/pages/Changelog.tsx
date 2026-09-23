@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '23/09/2026',
+    version: '1.74.9-beta',
+    type: 'fix',
+    description: 'Recibo do Rei do Açaí v1.8.6: cabeçalho completo até o cliente dentro de um box de linha grossa; Pedido Express e Pronto até em uma linha; grupos sublinhados; subtotal sem sobreposição; observação em faixa invertida; e respostas como “Sim, preciso” com apenas um sinal de +. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
     date: '22/09/2026',
     version: '1.74.6-beta',
     type: 'fix',
