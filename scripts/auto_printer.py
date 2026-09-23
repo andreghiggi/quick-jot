@@ -963,20 +963,20 @@ def extrair_blocos_v2(html_content):
             # Ignora containers que apenas envolvem outros .item.
             if any("item" in child.classes() for child in item.children):
                 continue
-            qty = next((node.text() for node in walk(item) if "qty" in node.classes()), "")
-            name = next((node.text() for node in walk(item) if "name" in node.classes()), "")
+            qty = next((texto_proprio(node) or node.text() for node in walk_item(item) if "qty" in node.classes()), "")
+            name = next((texto_proprio(node) or node.text() for node in walk_item(item) if "name" in node.classes()), "")
             if qty or name:
                 # Uma unica coluna com quebra de linha: evita corte do nome na margem.
                 linha_item = " ".join(p for p in (clean_marker(qty), clean_marker(name)) if p)
                 blocos.append({"text": linha_item, "style": "item_qty", "align": "left", "right": ""})
-            for node in walk(item):
+            for node in walk_item(item):
                 classes = node.classes()
                 if "description" in classes:
-                    blocos.append(block(node.text(), "description"))
+                    blocos.append(block(texto_proprio(node) or node.text(), "description"))
                 elif "add-group-label" in classes:
-                    blocos.append(block("■ " + node.text(), "group"))
+                    blocos.append(block("■ " + rotulo_grupo(node), "group"))
                 elif "add-line" in classes:
-                    blocos.append(block(node.text().replace(">>", "+", 1), "additional"))
+                    blocos.append(block((texto_proprio(node) or node.text()).replace(">>", "+", 1), "additional"))
                 elif "obs-text" in classes:
                     blocos.append(block(node.text(), "inverse"))
         blocos.append(block("--- FIM ---", "footer", "center"))
