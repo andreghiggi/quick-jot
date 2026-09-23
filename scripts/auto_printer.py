@@ -869,7 +869,34 @@ def extrair_blocos_v2(html_content):
         for child in node.children:
             yield from walk(child)
 
+    def walk_item(node, raiz=True):
+        """Percorre um item SEM descer em itens aninhados.
+
+        Quando o HTML chega com uma tag nao fechada, o item seguinte vira filho
+        do anterior. Sem esta barreira, o cupom inteiro era reimpresso dentro do
+        primeiro item (conteudo duplicado no mesmo papel).
+        """
+        yield node
+        for child in node.children:
+            if not raiz and "item" in child.classes():
+                continue
+            if "item" in child.classes():
+                continue
+            yield from walk_item(child, False)
+
+    def texto_proprio(node):
+        """Somente o texto direto do no, ignorando filhos."""
+        valores = [p for p in node.parts if not isinstance(p, Node)]
+        return _re.sub(r"\s+", " ", _html.unescape(" ".join(valores))).strip()
+
+    def rotulo_grupo(node):
+        """Le o nome do grupo pelo marcador, nunca arrastando o texto dos filhos."""
+        bruto = texto_proprio(node) or node.text()
+        m = _re.search(r"\[ADDGROUP_LABEL\](.*?)\[/ADDGROUP_LABEL\]", bruto)
+        return (m.group(1) if m else bruto).strip()
+
     nodes = list(walk(parser.root))
+
 
     def by_class(name):
         return [node for node in nodes if name in node.classes()]
