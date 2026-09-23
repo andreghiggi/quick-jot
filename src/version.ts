@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.6-beta";
+export const VERSION = "1.74.7-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Impressão gráfica sem depender de DLL (v1.8.3)";
+export const CODENAME = "Recibo do Rei do Açaí no layout padrão (v1.8.4)";
 
 
 
@@ -23,6 +23,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.7-beta",
+    date: "2026-09-22",
+    codename: "Recibo do Rei do Açaí no layout padrão (v1.8.4)",
+    changes: [
+      "Corrigido o recibo que saía com o pedido repetido e os acompanhamentos grudados: faltava o fechamento do rótulo do grupo no texto enviado à impressora.",
+      "Cada acompanhamento volta a sair em uma linha, com o sinal + na frente, logo abaixo do produto.",
+      "Valores com centavos (ex.: R$ 2,00) deixam de ser quebrados em duas linhas.",
+      "Programa de impressão v1.8.4: letras ajustadas para papel 58mm, com nome do produto e valor na mesma linha.",
+      "Proteção extra contra segunda via: assim que o papel sai, o pedido nunca é reimpresso, mesmo com internet lenta.",
+      "Nenhum pedido, venda, caixa, TEF ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.74.6-beta",
     date: "2026-09-22",
