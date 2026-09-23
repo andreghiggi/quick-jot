@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { z } from 'zod';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
+import { printOnlyReceipt, isGdiReceiptCompany } from '@/utils/pdvV2Print';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
 import { Progress } from '@/components/ui/progress';
 import { NovidadesSlideshow } from '@/components/menu/NovidadesSlideshow';
