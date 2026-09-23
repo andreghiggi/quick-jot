@@ -241,7 +241,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
           const single =
             groups.length === 1 && g.groupName.trim().toLowerCase() === 'adicionais';
           if (!single) {
-            additionalsHtml += `<div class="add-group-label">[ADDGROUP_LABEL]${escapeHtml(g.groupName)}[/ADDGROUP_LABEL]`;
+            additionalsHtml += `<div class="add-group-label">[ADDGROUP_LABEL]${escapeHtml(g.groupName)}[/ADDGROUP_LABEL]</div>`;
           }
           for (const ad of g.items.split(',').map((s) => s.trim()).filter(Boolean)) {
             const mPrice = ad.match(/\s*R\$\s*([\d.,]+)\s*$/);
