@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.8-beta";
+export const VERSION = "1.74.9-beta";
 export const RELEASE_DATE = "2026-09-23"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Fim da repetição no recibo e recibo garantido (v1.8.5)";
+export const CODENAME = "Ajustes finos no recibo do Rei do Açaí (v1.8.6)";
 
 
 
@@ -23,6 +23,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.9-beta",
+    date: "2026-09-23",
+    codename: "Ajustes finos no recibo do Rei do Açaí (v1.8.6)",
+    changes: [
+      "Recibo do Rei do Açaí: cabeçalho completo até os dados do cliente dentro de um box de linha grossa.",
+      "Pedido Express e Pronto até passam a ocupar uma linha; grupos de adicionais ficam sublinhados.",
+      "Subtotal e valor deixam de se sobrepor, observações saem em faixa invertida e respostas como 'Sim, preciso' recebem apenas um sinal de +.",
+      "Programa de impressão v1.8.6 — basta baixar novamente e reabrir o iniciar_impressao.",
+      "Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.74.8-beta",
     date: "2026-09-23",

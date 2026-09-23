@@ -167,7 +167,9 @@ function escapeHtml(s: string) {
 function resolveOrigemLabel(payload: PrintPayload): string {
   const notes = payload.notes || '';
   if (payload.orderOrigin === 'express' || notes.includes('[EXPRESS]')) {
-    return '⚡ PEDIDO EXPRESS';
+    return payload.companyId === 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb'
+      ? 'PEDIDO EXPRESS'
+      : '⚡ PEDIDO EXPRESS';
   }
   if (payload.orderOrigin === 'waiter') return '🍽️ PEDIDO GARÇOM';
   if (payload.orderOrigin === 'balcao') return '⚡ PEDIDO EXPRESS';
@@ -201,6 +203,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
   const paperSize = payload.paperSize === '58mm' ? '58mm' : '80mm';
   const fontSize = paperSize === '80mm' ? '11pt' : '10pt';
   const storeName = (payload.storeName || 'LOJA').toUpperCase();
+  const isReiDoAcai = payload.companyId === 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
   const orderRef = payload.shortCode || String(payload.dailyNumber);
   const dt = new Date().toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -245,7 +248,11 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
           }
           // Separa por vírgula sem quebrar centavos ("R$ 2,00" continua inteiro).
           const partes = g.items
-            .split(/,(?!\s*\d{2}\s*(?:,|$))/)
+            .split(
+              isReiDoAcai && /^sim\s*,\s*preciso(?:\s+R\$\s*[\d.,]+)?$/i.test(g.items.trim())
+                ? /\u0000/
+                : /,(?!\s*\d{2}\s*(?:,|$))/,
+            )
             .map((s) => s.trim())
             .filter(Boolean);
           for (const ad of partes) {
@@ -261,7 +268,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
         <div class="item-name">${it.quantity}x ${escapeHtml(it.name)}</div>`;
       if (additionalsHtml) block += additionalsHtml;
       if (it.notes) {
-        block += `<div class="item-notes">Obs: ${escapeHtml(it.notes)}</div>`;
+        block += `<div class="item-notes">${isReiDoAcai ? '[OBS]' : ''}Obs: ${escapeHtml(it.notes)}${isReiDoAcai ? '[/OBS]' : ''}</div>`;
       }
       block += `<div class="item-detail">R$ ${lineTotal}</div></div>`;
       if (idx < payload.items.length - 1) {

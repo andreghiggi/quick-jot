@@ -14,4 +14,5 @@
 - [ ] Liberação gradual das demais lojas (etapa 6)
 - [ ] Estabilização, contingência e relatório final (etapas 7-8)
 - [ ] Validar impressão física piloto: Rei do Açaí com recibo V39 sem comanda; Bon Appetit com recibo + comanda — código validado, aguarda publicação e teste autorizado
+- [x] Ajustar os sete detalhes visuais do recibo V39 do Rei do Açaí no programa v1.8.6; validação física ainda depende da loja
 - [ ] Após validação física dos pilotos, liberar recibo obrigatório independente da comanda para as demais lojas
