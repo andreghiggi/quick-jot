@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.5-beta";
+export const VERSION = "1.74.6-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Troco no recibo do Pedido Express";
+export const CODENAME = "Impressão gráfica sem depender de DLL (v1.8.3)";
 
 
 
@@ -23,6 +23,16 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.6-beta",
+    date: "2026-09-22",
+    codename: "Impressão gráfica sem depender de DLL (v1.8.3)",
+    changes: [
+      "Programa de impressão v1.8.3: quando o complemento gráfico do Windows (win32ui) não carrega, o programa usa um caminho alternativo já presente no Windows e imprime o mesmo layout completo (faixas pretas, linhas e alinhamento), como funcionava antes.",
+      "Nenhuma instalação extra é necessária no computador da loja — basta baixar o auto_printer novo e reiniciar o programinha.",
+      "Nenhum valor, pedido, caixa, TEF ou nota fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.74.5-beta",
     date: "2026-09-22",

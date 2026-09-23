@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '22/09/2026',
+    version: '1.74.6-beta',
+    type: 'fix',
+    description: 'Programa de impressão v1.8.3: quando o complemento gráfico do Windows (win32ui) não carrega no computador da loja, o programa passa a usar um caminho alternativo que já existe no Windows e imprime o mesmo layout completo do recibo (faixas pretas com texto branco, linhas divisórias e valores alinhados), como funcionava antes. Não é necessário instalar nada no computador da loja: basta baixar o auto_printer novo e reiniciar o programinha. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
+    date: '22/09/2026',
     version: '1.74.5-beta',
     type: 'fix',
     description: 'Troco no recibo: pedidos lançados pelo Pedido Express com pagamento em dinheiro e troco voltam a imprimir a linha "TROCO PARA: R$ ..." no recibo (a observação era gravada com dois-pontos e o gerador do recibo não a reconhecia). A reimpressão pelo card do pedido na Dashboard também passa a reconhecer as duas grafias. Correção pontual: nenhum valor, cálculo, pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado, e nenhuma outra loja é impactada.',
