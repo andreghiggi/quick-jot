@@ -129,7 +129,11 @@ async function callTefWebService(companyId: string, body: Record<string, unknown
   });
   if (error) {
     console.error('[PinPad] Edge function error:', error);
-    throw new Error(error.message || 'Erro ao comunicar com TEF WebService');
+    const raw = String(error.message || '');
+    if (!raw || /non-2xx|failed to fetch|network|fetch|dns|timeout|ENOTFOUND/i.test(raw)) {
+      throw new Error('Comunicação com a Multiplus temporariamente indisponível. Tente novamente em instantes ou use outra forma de pagamento.');
+    }
+    throw new Error(raw);
   }
   return data;
 }
