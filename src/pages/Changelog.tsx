@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '23/09/2026',
+    version: '1.74.11-beta',
+    type: 'fix',
+    description: 'Recibo do Rei do Açaí v1.8.7: cada produto passa a ser separado do anterior por uma linha tracejada; pedidos em dinheiro mostram “TROCO PARA” quando solicitado; e retiradas sem diferença de valor exibem somente o TOTAL, mantendo Subtotal e Entrega quando necessários. É preciso baixar novamente o auto_printer e reabrir o iniciar_impressao. Nenhum pedido existente foi reenfileirado e nenhum fluxo de venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',
+  },
+  {
+    date: '23/09/2026',
     version: '1.74.9-beta',
     type: 'fix',
     description: 'Recibo do Rei do Açaí v1.8.6: cabeçalho completo até o cliente dentro de um box de linha grossa; Pedido Express e Pronto até em uma linha; grupos sublinhados; subtotal sem sobreposição; observação em faixa invertida; e respostas como “Sim, preciso” com apenas um sinal de +. Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.',

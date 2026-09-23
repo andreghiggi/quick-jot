@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.6"
+SCRIPT_VERSION = "1.8.7"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1075,9 +1075,11 @@ def extrair_blocos_v2(html_content):
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
-        for item in by_class("item"):
-            if any("item" in child.classes() for child in item.children):
-                continue
+        receipt_items = [
+            item for item in by_class("item")
+            if not any("item" in child.classes() for child in item.children)
+        ]
+        for item_index, item in enumerate(receipt_items):
             name_node = next((n for n in walk_item(item) if "item-name" in n.classes()), None)
             detail_node = next((n for n in walk_item(item) if "item-detail" in n.classes()), None)
             if name_node:
@@ -1100,6 +1102,8 @@ def extrair_blocos_v2(html_content):
                     nota = texto_proprio(sub) or sub.text()
                     estilo_nota = "inverse" if rei_header_box and "[OBS]" in nota else "description"
                     blocos.append(block(nota, estilo_nota))
+            if rei_header_box and item_index < len(receipt_items) - 1:
+                blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})

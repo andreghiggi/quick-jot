@@ -1471,6 +1471,7 @@ export default function Menu() {
                 }));
                 const receiptNotes = [
                   `Pagamento: ${paymentMethod}`,
+                  changeFor.trim() ? `Troco para: R$ ${changeFor.trim()}` : '',
                   deliveryFee > 0 ? `Taxa de entrega: R$ ${deliveryFee.toFixed(2)}` : '',
                   discountAmount > 0 ? `Desconto: R$ ${discountAmount.toFixed(2)}` : '',
                 ].filter(Boolean).join(' | ');

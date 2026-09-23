@@ -289,6 +289,13 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     deliveryFee > 0.009
       ? `<div class="total-line"><span>Entrega:</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>`
       : '';
+  const subtotalHtml =
+    !isReiDoAcai || Math.abs(payload.total - subtotal) > 0.009
+      ? `<div class="total-line">
+    <span>Subtotal:</span>
+    <span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+  </div>`
+      : '';
 
   return `<!DOCTYPE html>
 <html>
@@ -362,10 +369,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     ${itemsHtml}
   </div>
   <hr class="divider">
-  <div class="total-line">
-    <span>Subtotal:</span>
-    <span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
-  </div>
+  ${subtotalHtml}
   ${deliveryFeeHtml}
   <div class="grand-total">
     <span>TOTAL:</span>
