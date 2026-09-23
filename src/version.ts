@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.9-beta";
+export const VERSION = "1.74.10-beta";
 export const RELEASE_DATE = "2026-09-23"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Ajustes finos no recibo do Rei do Açaí (v1.8.6)";
+export const CODENAME = "Observação limpa no recibo do Rei do Açaí";
 
 
 
