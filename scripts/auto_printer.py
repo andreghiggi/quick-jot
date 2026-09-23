@@ -82,12 +82,126 @@ def _import_win32print():
     return win32print
 
 
+def criar_win32gui_shim(win32gui, win32print, win32con):
+    """Fallback sem win32ui (Windows sem MFC/mfc140u.dll).
+
+    win32print + win32gui funcionam normalmente nessas maquinas. Este adaptador
+    expoe apenas os metodos usados por imprimir_gdi, mantendo o layout identico.
+    """
+
+    def criar_fonte(spec):
+        lf = win32gui.LOGFONT()
+        lf.lfFaceName = spec.get("name", "Courier New")
+        lf.lfHeight = int(spec.get("height", 0))
+        lf.lfWeight = int(spec.get("weight", 400))
+        lf.lfItalic = 1 if spec.get("italic") else 0
+        lf.lfUnderline = 1 if spec.get("underline") else 0
+        lf.lfStrikeOut = 1 if spec.get("strikeout") else 0
+        lf.lfCharSet = int(spec.get("charset", 1))
+        return win32gui.CreateFontIndirect(lf)
+
+    class GuiDC:
+        def __init__(self):
+            self.hdc = None
+
+        def CreatePrinterDC(self, printer_name):
+            try:
+                self.hdc = win32gui.CreateDC("WINSPOOL", printer_name, None)
+            except Exception:
+                self.hdc = win32gui.CreateDC("", printer_name, None)
+
+        def GetDeviceCaps(self, cap):
+            return win32print.GetDeviceCaps(self.hdc, cap)
+
+        def SelectObject(self, obj):
+            return win32gui.SelectObject(self.hdc, obj)
+
+        def GetTextMetrics(self):
+            tm = win32gui.GetTextMetrics(self.hdc)
+            if isinstance(tm, dict):
+                normalized = dict(tm)
+                for key, value in list(tm.items()):
+                    if not key.startswith("tm"):
+                        normalized["tm" + key] = value
+                normalized.setdefault("tmHeight", normalized.get("Height", 0))
+                normalized.setdefault("tmExternalLeading", normalized.get("ExternalLeading", 0))
+                normalized.setdefault("tmAscent", normalized.get("Ascent", 0))
+                normalized.setdefault("tmDescent", normalized.get("Descent", 0))
+                return normalized
+            return tm
+
+        def GetTextExtent(self, text):
+            return win32gui.GetTextExtentPoint32(self.hdc, str(text))
+
+        def StartDoc(self, title):
+            return win32print.StartDoc(self.hdc, (title, None, None, 0))
+
+        def StartPage(self):
+            return win32print.StartPage(self.hdc)
+
+        def EndPage(self):
+            return win32print.EndPage(self.hdc)
+
+        def EndDoc(self):
+            return win32print.EndDoc(self.hdc)
+
+        def DeleteDC(self):
+            if self.hdc:
+                win32gui.DeleteDC(self.hdc)
+                self.hdc = None
+
+        def GetSafeHdc(self):
+            return self.hdc
+
+        def SetTextColor(self, color):
+            return win32gui.SetTextColor(self.hdc, color)
+
+        def SetBkMode(self, mode):
+            return win32gui.SetBkMode(self.hdc, mode)
+
+        def TextOut(self, x, y, text):
+            return win32gui.ExtTextOut(self.hdc, int(x), int(y), 0, None, str(text))
+
+        def FillSolidRect(self, rect, color):
+            brush = win32gui.CreateSolidBrush(int(color))
+            try:
+                win32gui.FillRect(
+                    self.hdc,
+                    (int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3])),
+                    brush,
+                )
+            finally:
+                try:
+                    win32gui.DeleteObject(brush)
+                except Exception:
+                    pass
+
+    class GuiShim:
+        @staticmethod
+        def CreateDC():
+            return GuiDC()
+
+        @staticmethod
+        def CreateFont(spec):
+            return criar_fonte(spec)
+
+    return GuiShim
+
+
 def _import_win32ui():
     _prepare_pywin32_dll_path()
     import win32con
-    import win32ui
 
-    return win32ui, win32con
+    try:
+        import win32ui
+
+        return win32ui, win32con
+    except Exception:
+        # Windows sem MFC: usa o adaptador win32gui (mesmo layout grafico).
+        import win32gui
+        import win32print
+
+        return criar_win32gui_shim(win32gui, win32print, win32con), win32con
 
 
 _prepare_pywin32_dll_path()
