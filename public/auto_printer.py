@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.3"
+SCRIPT_VERSION = "1.8.4"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -341,8 +341,10 @@ def processar_fila(company_id):
 
                 log(f"Imprimindo da fila: {item.get('label', 'Sem título')}", "FILA")
                 if imprimir_html(item.get('html_content', ''), item.get('station_id')):
+                    # Trava imediata: assim que o papel sai, o job nunca mais e reimpresso,
+                    # mesmo que a rede demore para confirmar a baixa na fila.
+                    ids_processados.add(item['id'])
                     if marcar_fila_impressa(item['id']):
-                        ids_processados.add(item['id'])
                         remover_da_fila(item['id'])
                         log(f"Comanda concluida: {item.get('label', item['id'])}", "OK")
                     else:
@@ -1117,13 +1119,24 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         margem = max(4, int(dpi_x * 2.0 / 25.4))
         largura_util = max(80, largura_canvas - (margem * 2))
 
-        pontos = {
-            "store": 17, "title": 17, "type": 17, "order": 17,
-            "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
-            "item_qty": 15, "item": 14, "description": 12,
-            "group": 13, "additional": 13, "normal": 14,
-            "total": 17, "footer": 14, "sep": 12,
-        }
+        if largura_mm >= 80:
+            pontos = {
+                "store": 17, "title": 17, "type": 17, "order": 17,
+                "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
+                "item_qty": 15, "item": 14, "description": 12,
+                "group": 13, "additional": 13, "normal": 14,
+                "total": 17, "footer": 14, "sep": 12,
+            }
+        else:
+            # Papel 58mm: fontes menores para o nome do item e o valor caberem
+            # na mesma linha, evitando quebras soltas linha a linha.
+            pontos = {
+                "store": 15, "title": 15, "type": 14, "order": 15,
+                "code": 10, "inverse": 14, "datetime": 12, "ready": 14,
+                "item_qty": 12, "item": 12, "description": 10,
+                "group": 11, "additional": 11, "normal": 12,
+                "total": 15, "footer": 11, "sep": 10,
+            }
         pesos = {
             "store": 800, "title": 800, "type": 800, "order": 800,
             "code": 500, "inverse": 800, "datetime": 700, "ready": 800,
