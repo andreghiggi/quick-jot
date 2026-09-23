@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.10-beta";
+export const VERSION = "1.74.11-beta";
 export const RELEASE_DATE = "2026-09-23"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Observação limpa no recibo do Rei do Açaí";
+export const CODENAME = "Produtos, troco e total claros no recibo do Rei";
 
 
 
@@ -23,6 +23,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.11-beta",
+    date: "2026-09-23",
+    codename: "Produtos, troco e total claros no recibo do Rei",
+    changes: [
+      "Recibo do Rei do Açaí: uma linha tracejada passa a separar cada produto dos adicionais do produto anterior.",
+      "Pedidos em dinheiro passam a mostrar TROCO PARA no cabeçalho quando o cliente solicitar troco.",
+      "Retiradas sem diferença entre subtotal e total mostram somente o TOTAL; entregas e descontos mantêm o detalhamento necessário.",
+      "Programa de impressão v1.8.7 — baixar novamente e reabrir o iniciar_impressao para receber o separador entre produtos.",
+      "Nenhum pedido existente foi reenfileirado e nenhum fluxo de venda, caixa, TEF, PinPad ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.74.10-beta",
     date: "2026-09-23",
