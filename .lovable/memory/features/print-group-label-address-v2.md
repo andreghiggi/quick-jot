@@ -24,3 +24,12 @@ type: feature
 
 ## Próximo passo
 Validar Margen com pedido real após baixar/rodar `auto_printer.py` v8.38+; se algum caminho interno do PDV V2 ainda sair plano, propagar `groupedOptionals` também nesse caller específico.
+
+## Rei do Açaí — acabamento V39 em 58 mm (v1.8.6)
+- Rollout isolado pelo `company_id` do Rei do Açaí.
+- Cabeçalho cercado por box de linha grossa até cliente, telefone e pagamento.
+- `PEDIDO EXPRESS` e `Pronto até: HH:MM` devem permanecer em uma linha.
+- Rótulos de grupos permanecem com `■` e são sublinhados no GDI.
+- Subtotal e valor usam colunas separadas, sem sobreposição.
+- Observação do item usa faixa invertida.
+- Respostas compostas com vírgula no próprio nome, como `Sim, preciso`, são um único adicional: `+ SIM, PRECISO`.
