@@ -1466,7 +1466,7 @@ export default function Menu() {
                   name: item.product.name,
                   quantity: item.quantity,
                   price: calculateItemTotal(item) / (item.quantity || 1),
-                  notes: productionItems[idx]?.notes,
+                  notes: item.notes?.trim() || undefined,
                   groupedOptionals: productionItems[idx]?.groupedOptionals,
                 }));
                 const receiptNotes = [

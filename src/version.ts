@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.9-beta";
+export const VERSION = "1.74.10-beta";
 export const RELEASE_DATE = "2026-09-23"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Ajustes finos no recibo do Rei do Açaí (v1.8.6)";
+export const CODENAME = "Observação limpa no recibo do Rei do Açaí";
 
 
 
@@ -23,6 +23,17 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.10-beta",
+    date: "2026-09-23",
+    codename: "Observação limpa no recibo do Rei do Açaí",
+    changes: [
+      "O campo Obs do recibo agora mostra apenas o que o cliente escreveu no pedido.",
+      "A lista de adicionais deixa de ser repetida dentro da observação.",
+      "Quando não há observação, a faixa preta não é mais impressa.",
+      "Nenhum pedido, venda, caixa, TEF, PinPad ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.74.9-beta",
     date: "2026-09-23",

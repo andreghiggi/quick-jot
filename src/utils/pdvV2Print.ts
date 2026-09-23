@@ -267,8 +267,15 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
       let block = `<div class="item">
         <div class="item-name">${it.quantity}x ${escapeHtml(it.name)}</div>`;
       if (additionalsHtml) block += additionalsHtml;
-      if (it.notes) {
-        block += `<div class="item-notes">${isReiDoAcai ? '[OBS]' : ''}Obs: ${escapeHtml(it.notes)}${isReiDoAcai ? '[/OBS]' : ''}</div>`;
+      // Sanitiza: nunca repetir a lista de adicionais/opcionais dentro da observação.
+      const cleanNotes = (it.notes || '')
+        .split(/\r?\n|;/)
+        .map((l) => l.trim())
+        .filter((l) => l && !/^(adicionais|opcionais)\s*:/i.test(l))
+        .join(' | ')
+        .trim();
+      if (cleanNotes) {
+        block += `<div class="item-notes">${isReiDoAcai ? '[OBS]' : ''}Obs: ${escapeHtml(cleanNotes)}${isReiDoAcai ? '[/OBS]' : ''}</div>`;
       }
       block += `<div class="item-detail">R$ ${lineTotal}</div></div>`;
       if (idx < payload.items.length - 1) {
