@@ -1072,26 +1072,26 @@ def extrair_blocos_v2(html_content):
         for item in by_class("item"):
             if any("item" in child.classes() for child in item.children):
                 continue
-            name_node = next((n for n in walk(item) if "item-name" in n.classes()), None)
-            detail_node = next((n for n in walk(item) if "item-detail" in n.classes()), None)
+            name_node = next((n for n in walk_item(item) if "item-name" in n.classes()), None)
+            detail_node = next((n for n in walk_item(item) if "item-detail" in n.classes()), None)
             if name_node:
                 # Valor do item na MESMA linha do nome (alinhado a direita).
                 blocos.append({
-                    "text": clean_marker(name_node.text()),
+                    "text": clean_marker(texto_proprio(name_node) or name_node.text()),
                     "style": "item_qty",
                     "align": "left",
-                    "right": clean_marker(detail_node.text()) if detail_node else "",
+                    "right": clean_marker(texto_proprio(detail_node) or detail_node.text()) if detail_node else "",
                 })
             elif detail_node:
-                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(detail_node.text())})
-            for sub in walk(item):
+                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(texto_proprio(detail_node) or detail_node.text())})
+            for sub in walk_item(item):
                 classes = sub.classes()
                 if "add-group-label" in classes:
-                    blocos.append(block("■ " + sub.text(), "group"))
+                    blocos.append(block("■ " + rotulo_grupo(sub), "group"))
                 elif "add-line" in classes:
-                    blocos.append(block(sub.text(), "additional"))
+                    blocos.append(block(texto_proprio(sub) or sub.text(), "additional"))
                 elif "item-notes" in classes:
-                    blocos.append(block(sub.text(), "description"))
+                    blocos.append(block(texto_proprio(sub) or sub.text(), "description"))
 
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
