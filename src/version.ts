@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.5-beta";
+export const VERSION = "1.74.6-beta";
 export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Troco no recibo do Pedido Express";
+export const CODENAME = "Impressão gráfica sem depender de DLL (v1.8.3)";
 
 
 
