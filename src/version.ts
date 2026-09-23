@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.7-beta";
-export const RELEASE_DATE = "2026-09-22"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Recibo do Rei do Açaí no layout padrão (v1.8.4)";
+export const VERSION = "1.74.8-beta";
+export const RELEASE_DATE = "2026-09-23"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Fim da repetição no recibo e recibo garantido (v1.8.5)";
 
 
 
@@ -23,6 +23,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.74.8-beta",
+    date: "2026-09-23",
+    codename: "Fim da repetição no recibo e recibo garantido (v1.8.5)",
+    changes: [
+      "Corrigida a causa real da repetição: o programa lia o nome do grupo de acompanhamentos junto com todo o resto do cupom, e por isso o pedido inteiro saía duas vezes no mesmo papel.",
+      "Agora cada produto sai uma única vez, com os acompanhamentos um abaixo do outro e o valor na mesma linha do nome.",
+      "Pedidos feitos pelo cardápio passam a enviar o recibo para a impressora mesmo se o celular do cliente estiver com internet fraca ou com a página aberta há muito tempo.",
+      "O contador 'PEDIDOS IMPRESSOS HOJE' na tela do programinha volta a mostrar o número correto.",
+      "Programa de impressão v1.8.5 — basta baixar de novo e reabrir o iniciar_impressao.",
+      "Nenhum pedido, venda, caixa, TEF ou documento fiscal foi alterado.",
+    ],
+  },
   {
     version: "1.74.7-beta",
     date: "2026-09-22",
