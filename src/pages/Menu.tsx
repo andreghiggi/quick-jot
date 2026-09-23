@@ -1460,7 +1460,6 @@ export default function Menu() {
             }
 
             // Recibo obrigatório: piloto no Rei e Bon Appetit; preserva Amore Mio.
-            const { printOnlyReceipt, isGdiReceiptCompany } = await import('@/utils/pdvV2Print');
             if (isReceiptPilot || isGdiReceiptCompany(company.id)) {
               try {
                 const receiptItems = cart.map((item, idx) => ({
