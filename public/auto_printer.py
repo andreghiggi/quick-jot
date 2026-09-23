@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.4"
+SCRIPT_VERSION = "1.8.5"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -344,6 +344,7 @@ def processar_fila(company_id):
                     # Trava imediata: assim que o papel sai, o job nunca mais e reimpresso,
                     # mesmo que a rede demore para confirmar a baixa na fila.
                     ids_processados.add(item['id'])
+                    pedidos_impressos_sessao.append(item.get('label', item['id']))
                     if marcar_fila_impressa(item['id']):
                         remover_da_fila(item['id'])
                         log(f"Comanda concluida: {item.get('label', item['id'])}", "OK")
@@ -868,7 +869,34 @@ def extrair_blocos_v2(html_content):
         for child in node.children:
             yield from walk(child)
 
+    def walk_item(node, raiz=True):
+        """Percorre um item SEM descer em itens aninhados.
+
+        Quando o HTML chega com uma tag nao fechada, o item seguinte vira filho
+        do anterior. Sem esta barreira, o cupom inteiro era reimpresso dentro do
+        primeiro item (conteudo duplicado no mesmo papel).
+        """
+        yield node
+        for child in node.children:
+            if not raiz and "item" in child.classes():
+                continue
+            if "item" in child.classes():
+                continue
+            yield from walk_item(child, False)
+
+    def texto_proprio(node):
+        """Somente o texto direto do no, ignorando filhos."""
+        valores = [p for p in node.parts if not isinstance(p, Node)]
+        return _re.sub(r"\s+", " ", _html.unescape(" ".join(valores))).strip()
+
+    def rotulo_grupo(node):
+        """Le o nome do grupo pelo marcador, nunca arrastando o texto dos filhos."""
+        bruto = texto_proprio(node) or node.text()
+        m = _re.search(r"\[ADDGROUP_LABEL\](.*?)\[/ADDGROUP_LABEL\]", bruto)
+        return (m.group(1) if m else bruto).strip()
+
     nodes = list(walk(parser.root))
+
 
     def by_class(name):
         return [node for node in nodes if name in node.classes()]
@@ -935,20 +963,20 @@ def extrair_blocos_v2(html_content):
             # Ignora containers que apenas envolvem outros .item.
             if any("item" in child.classes() for child in item.children):
                 continue
-            qty = next((node.text() for node in walk(item) if "qty" in node.classes()), "")
-            name = next((node.text() for node in walk(item) if "name" in node.classes()), "")
+            qty = next((texto_proprio(node) or node.text() for node in walk_item(item) if "qty" in node.classes()), "")
+            name = next((texto_proprio(node) or node.text() for node in walk_item(item) if "name" in node.classes()), "")
             if qty or name:
                 # Uma unica coluna com quebra de linha: evita corte do nome na margem.
                 linha_item = " ".join(p for p in (clean_marker(qty), clean_marker(name)) if p)
                 blocos.append({"text": linha_item, "style": "item_qty", "align": "left", "right": ""})
-            for node in walk(item):
+            for node in walk_item(item):
                 classes = node.classes()
                 if "description" in classes:
-                    blocos.append(block(node.text(), "description"))
+                    blocos.append(block(texto_proprio(node) or node.text(), "description"))
                 elif "add-group-label" in classes:
-                    blocos.append(block("■ " + node.text(), "group"))
+                    blocos.append(block("■ " + rotulo_grupo(node), "group"))
                 elif "add-line" in classes:
-                    blocos.append(block(node.text().replace(">>", "+", 1), "additional"))
+                    blocos.append(block((texto_proprio(node) or node.text()).replace(">>", "+", 1), "additional"))
                 elif "obs-text" in classes:
                     blocos.append(block(node.text(), "inverse"))
         blocos.append(block("--- FIM ---", "footer", "center"))
@@ -1044,26 +1072,26 @@ def extrair_blocos_v2(html_content):
         for item in by_class("item"):
             if any("item" in child.classes() for child in item.children):
                 continue
-            name_node = next((n for n in walk(item) if "item-name" in n.classes()), None)
-            detail_node = next((n for n in walk(item) if "item-detail" in n.classes()), None)
+            name_node = next((n for n in walk_item(item) if "item-name" in n.classes()), None)
+            detail_node = next((n for n in walk_item(item) if "item-detail" in n.classes()), None)
             if name_node:
                 # Valor do item na MESMA linha do nome (alinhado a direita).
                 blocos.append({
-                    "text": clean_marker(name_node.text()),
+                    "text": clean_marker(texto_proprio(name_node) or name_node.text()),
                     "style": "item_qty",
                     "align": "left",
-                    "right": clean_marker(detail_node.text()) if detail_node else "",
+                    "right": clean_marker(texto_proprio(detail_node) or detail_node.text()) if detail_node else "",
                 })
             elif detail_node:
-                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(detail_node.text())})
-            for sub in walk(item):
+                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(texto_proprio(detail_node) or detail_node.text())})
+            for sub in walk_item(item):
                 classes = sub.classes()
                 if "add-group-label" in classes:
-                    blocos.append(block("■ " + sub.text(), "group"))
+                    blocos.append(block("■ " + rotulo_grupo(sub), "group"))
                 elif "add-line" in classes:
-                    blocos.append(block(sub.text(), "additional"))
+                    blocos.append(block(texto_proprio(sub) or sub.text(), "additional"))
                 elif "item-notes" in classes:
-                    blocos.append(block(sub.text(), "description"))
+                    blocos.append(block(texto_proprio(sub) or sub.text(), "description"))
 
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
