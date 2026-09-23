@@ -243,7 +243,12 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
           if (!single) {
             additionalsHtml += `<div class="add-group-label">[ADDGROUP_LABEL]${escapeHtml(g.groupName)}[/ADDGROUP_LABEL]</div>`;
           }
-          for (const ad of g.items.split(',').map((s) => s.trim()).filter(Boolean)) {
+          // Separa por vírgula sem quebrar centavos ("R$ 2,00" continua inteiro).
+          const partes = g.items
+            .split(/,(?!\s*\d{2}\s*(?:,|$))/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          for (const ad of partes) {
             const mPrice = ad.match(/\s*R\$\s*([\d.,]+)\s*$/);
             const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
             const priceSuffix = mPrice ? `  R$ ${mPrice[1]}` : '';
