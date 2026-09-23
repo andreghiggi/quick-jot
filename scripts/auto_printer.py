@@ -344,6 +344,7 @@ def processar_fila(company_id):
                     # Trava imediata: assim que o papel sai, o job nunca mais e reimpresso,
                     # mesmo que a rede demore para confirmar a baixa na fila.
                     ids_processados.add(item['id'])
+                    pedidos_impressos_sessao.append(item.get('label', item['id']))
                     if marcar_fila_impressa(item['id']):
                         remover_da_fila(item['id'])
                         log(f"Comanda concluida: {item.get('label', item['id'])}", "OK")
