@@ -10,6 +10,10 @@ jobs:
   deploy:
     name: Build and deploy to Comanda Tech VPS
     runs-on: ubuntu-latest
+    # Exige aprovação manual (Settings > Environments > Production > Required
+    # reviewers) antes de rodar este job — vale para qualquer push em main,
+    # seja da Lovable, Cursor ou manual.
+    environment: Production
 
     steps:
       - name: Checkout repository
