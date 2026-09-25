@@ -120,6 +120,20 @@ export async function isPinpadConfigured(companyId: string): Promise<boolean> {
   return config !== null;
 }
 
+/**
+ * Erro de indisponibilidade do servidor TEF (Multiplus) — rede, DNS ou timeout.
+ * Permite ao PDV oferecer "Tentar novamente" ou "Cobrar manual" ao operador.
+ */
+export class TefUnavailableError extends Error {
+  tefUnavailable = true as const;
+  stage: 'timeout' | 'connect';
+  constructor(message: string, stage: 'timeout' | 'connect' = 'connect') {
+    super(message);
+    this.name = 'TefUnavailableError';
+    this.stage = stage;
+  }
+}
+
 // Call the tef-webservice edge function
 async function callTefWebService(companyId: string, body: Record<string, unknown>) {
   // companyId é repassado para o edge function aplicar comportamentos
@@ -131,9 +145,18 @@ async function callTefWebService(companyId: string, body: Record<string, unknown
     console.error('[PinPad] Edge function error:', error);
     const raw = String(error.message || '');
     if (!raw || /non-2xx|failed to fetch|network|fetch|dns|timeout|ENOTFOUND/i.test(raw)) {
-      throw new Error('Comunicação com a Multiplus temporariamente indisponível. Tente novamente em instantes ou use outra forma de pagamento.');
+      throw new TefUnavailableError(
+        'Comunicação com a Multiplus temporariamente indisponível. Tente novamente em instantes ou use outra forma de pagamento.',
+      );
     }
     throw new Error(raw);
+  }
+  // Resposta estruturada de indisponibilidade (HTTP 200 vindo do tef-webservice).
+  if (data && typeof data === 'object' && (data as any).tefUnavailable) {
+    throw new TefUnavailableError(
+      (data as any).errorMessage || 'Servidor TEF (Multiplus) indisponível no momento.',
+      (data as any).tefFailureStage === 'timeout' ? 'timeout' : 'connect',
+    );
   }
   return data;
 }
@@ -176,7 +199,14 @@ export async function sendPinpadPayment(
     installmentType?: 'loja' | 'adm';
     documentoFiscal?: string;
   }
-): Promise<{ success: boolean; hash?: string; identificacao?: string; errorMessage?: string }> {
+): Promise<{
+  success: boolean;
+  hash?: string;
+  identificacao?: string;
+  errorMessage?: string;
+  /** true quando a falha foi indisponibilidade do servidor TEF (rede/timeout). */
+  tefUnavailable?: boolean;
+}> {
   const config = await getPinpadConfig(companyId);
   if (!config) return { success: false, errorMessage: 'PinPad não configurado' };
 
@@ -200,7 +230,11 @@ export async function sendPinpadPayment(
 
     return result;
   } catch (error) {
-    return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro desconhecido' };
+    return {
+      success: false,
+      tefUnavailable: error instanceof TefUnavailableError,
+      errorMessage: error instanceof Error ? error.message : 'Erro desconhecido',
+    };
   }
 }
 

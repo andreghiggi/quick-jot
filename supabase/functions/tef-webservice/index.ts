@@ -60,6 +60,79 @@ function extractReceipt(parsed: Record<string, string>): string[] {
   return lines;
 }
 
+// ============================================================
+// TEF v1.8 — Tolerância a falhas de rede da Multiplus
+// ------------------------------------------------------------
+// Objetivo: nenhuma oscilação de rede/DNS pode travar o caixa nem
+// devolver HTTP 500 (que vira o toast "Edge Function returned a
+// non-2xx status code" no navegador).
+//
+// Regras:
+//  • Timeout estrito de 8s por chamada (AbortController).
+//  • 1 retentativa automática (1s) APENAS em erro de conexão —
+//    quando a requisição comprovadamente não chegou à Multiplus.
+//    Nunca retenta após timeout (a transação pode ter sido aberta).
+//  • Falha final vira resposta HTTP 200 estruturada com
+//    `tefUnavailable: true`, para o PDV oferecer "Tentar novamente"
+//    ou "Cobrar manual" ao operador.
+// Aplica-se a TODAS as lojas com TEF (qualquer adquirente).
+// ============================================================
+const TEF_TIMEOUT_MS = 8000;
+
+class TefUnavailableError extends Error {
+  stage: 'timeout' | 'connect';
+  constructor(stage: 'timeout' | 'connect', message: string) {
+    super(message);
+    this.name = 'TefUnavailableError';
+    this.stage = stage;
+  }
+}
+
+function isConnectError(err: unknown): boolean {
+  const msg = String((err as { message?: string })?.message || err || '').toLowerCase();
+  return /error sending request|dns|connection|connect|network|unreachable|econn|enotfound|tls|handshake|socket/.test(
+    msg,
+  );
+}
+
+async function tefFetch(
+  url: string,
+  init: RequestInit,
+  opts: { timeoutMs?: number; retries?: number } = {},
+): Promise<Response> {
+  const timeoutMs = opts.timeoutMs ?? TEF_TIMEOUT_MS;
+  const maxAttempts = (opts.retries ?? 1) + 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch (err) {
+      if (controller.signal.aborted) {
+        console.error(`[TEF-WS] timeout ${timeoutMs}ms em ${url} (tentativa ${attempt})`);
+        throw new TefUnavailableError(
+          'timeout',
+          `Servidor TEF (Multiplus) não respondeu em ${Math.round(timeoutMs / 1000)}s`,
+        );
+      }
+      if (!isConnectError(err)) throw err;
+      console.error(`[TEF-WS] erro de conexão em ${url} (tentativa ${attempt}):`, err);
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+      throw new TefUnavailableError(
+        'connect',
+        'Servidor TEF (Multiplus) inacessível no momento',
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new TefUnavailableError('connect', 'Servidor TEF (Multiplus) inacessível no momento');
+}
+
 async function handleTef(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -90,7 +163,7 @@ async function handleTef(req: Request): Promise<Response> {
         '999-999': '0',
       });
 
-      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+      const response = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
         headers: {
           'CNPJ': cnpj,
@@ -121,7 +194,7 @@ async function handleTef(req: Request): Promise<Response> {
 
       await new Promise(resolve => setTimeout(resolve, 600));
       
-      const getResponse = await fetch(`${TEF_API_URL}/GetVendasTef`, {
+      const getResponse = await tefFetch(`${TEF_API_URL}/GetVendasTef`, {
         method: 'GET',
         headers: {
           'HASH': hash,
@@ -225,7 +298,7 @@ async function handleTef(req: Request): Promise<Response> {
             '001-000': numericIdent,
             '999-999': '0',
           });
-          const atvResponse = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+          const atvResponse = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
             method: 'POST',
             headers: {
               'CNPJ': cnpj,
@@ -254,10 +327,39 @@ async function handleTef(req: Request): Promise<Response> {
         headers['CALLBACK'] = callbackUrl;
       }
 
-      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
-        method: 'POST',
-        headers,
-      });
+      let response: Response;
+      try {
+        response = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
+          method: 'POST',
+          headers,
+        });
+      } catch (crtErr) {
+        // Timeout no CRT: a transação PODE ter sido aberta na Multiplus.
+        // Dispara NCN (não-confirmação) best-effort com a MESMA identificacao
+        // para liberar o PinPad antes de devolver o erro ao caixa.
+        if (crtErr instanceof TefUnavailableError && crtErr.stage === 'timeout') {
+          try {
+            const ncnConteudo = buildConteudo({
+              '000-000': 'NCN',
+              '001-000': String(ident),
+              '027-000': '',
+              '999-999': '0',
+            });
+            await tefFetch(
+              `${TEF_API_URL}/SetVendaTef`,
+              {
+                method: 'POST',
+                headers: { 'CNPJ': cnpj, 'PDV': pdv, 'TOKEN': token, 'CONTEUDO': ncnConteudo },
+              },
+              { timeoutMs: 5000, retries: 0 },
+            );
+            console.log('[TEF-WS] CRT timeout — NCN de limpeza enviado para ident', ident);
+          } catch (ncnErr) {
+            console.error('[TEF-WS] CRT timeout — falha ao enviar NCN de limpeza:', ncnErr);
+          }
+        }
+        throw crtErr;
+      }
 
       const text = await response.text();
       console.log('[TEF-WS] CRT response:', text);
@@ -301,7 +403,7 @@ async function handleTef(req: Request): Promise<Response> {
       if (cnpj) getHeaders['CNPJ'] = cnpj;
       if (pdv) getHeaders['PDV'] = pdv;
 
-      const response = await fetch(`${TEF_API_URL}/GetVendasTef`, {
+      const response = await tefFetch(`${TEF_API_URL}/GetVendasTef`, {
         method: 'GET',
         headers: getHeaders,
       });
@@ -436,7 +538,7 @@ async function handleTef(req: Request): Promise<Response> {
       const conteudo = buildConteudo(fields);
       console.log(`[TEF-WS] CNF CONTEUDO (ident=${identificacao}):`, conteudo);
 
-      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+      const response = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
         headers: {
           'CNPJ': cnpj,
@@ -479,7 +581,7 @@ async function handleTef(req: Request): Promise<Response> {
       const conteudo = buildConteudo(fields);
       console.log('[TEF-WS] NCN CONTEUDO:', conteudo);
 
-      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+      const response = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
         headers: {
           'CNPJ': cnpj,
@@ -529,7 +631,7 @@ async function handleTef(req: Request): Promise<Response> {
       const conteudo = buildConteudo(fields);
       console.log('[TEF-WS] CNC CONTEUDO:', conteudo);
 
-      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+      const response = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
         headers: {
           'CNPJ': cnpj,
@@ -580,7 +682,7 @@ async function handleTef(req: Request): Promise<Response> {
         '999-999': '0',
       });
 
-      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+      const response = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
         headers: {
           'CNPJ': cnpj,
@@ -641,7 +743,7 @@ async function handleTef(req: Request): Promise<Response> {
       const conteudo = buildConteudo(fields);
       console.log(`[TEF-WS] RPR CONTEUDO (mode=${useAdmForRpr ? 'ADM' : 'CRT-legacy'}):`, conteudo);
 
-      const response = await fetch(`${TEF_API_URL}/SetVendaTef`, {
+      const response = await tefFetch(`${TEF_API_URL}/SetVendaTef`, {
         method: 'POST',
         headers: {
           'CNPJ': cnpj,
@@ -675,6 +777,25 @@ async function handleTef(req: Request): Promise<Response> {
   } catch (error) {
     console.error('[TEF-WS] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+
+    // Indisponibilidade da Multiplus (timeout/conexão): responde HTTP 200
+    // estruturado para o PDV mostrar as opções "Tentar novamente" /
+    // "Cobrar manual" em vez do erro genérico em inglês.
+    if (error instanceof TefUnavailableError) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          tefUnavailable: true,
+          tefFailureStage: error.stage,
+          errorMessage:
+            error.stage === 'timeout'
+              ? 'Servidor TEF (Multiplus) não respondeu a tempo. A maquininha foi liberada.'
+              : 'Servidor TEF (Multiplus) indisponível no momento.',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     return new Response(
       JSON.stringify({ success: false, errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, ArrowLeft, Save, X, CreditCard } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, X, CreditCard, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { openCashDrawer } from '@/utils/cashDrawer';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -152,6 +152,16 @@ export function FrenteCaixaCheckoutDialog({
 
   const [processing, setProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
+
+  /**
+   * Indisponibilidade do servidor TEF (Multiplus) — rede/DNS/timeout.
+   * Mantém o checkout aberto e oferece ao operador: tentar o TEF de novo
+   * ou cobrar a mesma forma manualmente na maquininha (sem TEF).
+   */
+  const [tefFailure, setTefFailure] = useState<{
+    message: string;
+    fiscalChoice?: 'fiscal' | 'nao_fiscal';
+  } | null>(null);
 
   // refs dos inputs de pagamento (pra foco por atalho A/B/C…)
   const lineRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -370,8 +380,13 @@ export function FrenteCaixaCheckoutDialog({
   }, [open, step, processing, allocated, activePaymentMethods, exact, customerDialogOpen]);
 
   // ===== salvar =====
-  async function handleSave(fiscalChoice?: 'fiscal' | 'nao_fiscal') {
+  async function handleSave(
+    fiscalChoice?: 'fiscal' | 'nao_fiscal',
+    opts?: { manualCard?: boolean },
+  ) {
     if (!companyId) return;
+    const manualCard = opts?.manualCard === true;
+    setTefFailure(null);
     if (!exact) {
       if (isCreditSale) {
         const missing = [
@@ -440,11 +455,15 @@ export function FrenteCaixaCheckoutDialog({
           const amount = parseCurrencyInput(lines[m.id]?.text || '');
           if (amount <= 0) return null;
           const itg = (m as any).integration_type as string | undefined;
-          const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
+          // `manualCard`: contingência escolhida pelo operador quando o servidor
+          // TEF está indisponível — a mesma forma é cobrada na maquininha à parte,
+          // sem acionar o PinPad pelo sistema.
+          const isTef = !manualCard && (itg === 'tef_pinpad' || itg === 'tef_smartpos');
+          const wasTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
           const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
           return {
             payment_method_id: m.id,
-            payment_name: m.name,
+            payment_name: manualCard && wasTef ? `${m.name} (manual)` : m.name,
             amount,
             integration: isTef ? (itg as 'tef_pinpad' | 'tef_smartpos') : undefined,
             tef_options: isTef
@@ -471,6 +490,14 @@ export function FrenteCaixaCheckoutDialog({
       });
 
       if (!mp.ok || !mp.primary) {
+        // Servidor TEF fora do ar: mantém o checkout aberto com as duas opções.
+        if (mp.tefUnavailable) {
+          setTefFailure({
+            message: mp.errorMessage || 'Servidor TEF (Multiplus) indisponível no momento.',
+            fiscalChoice,
+          });
+          return;
+        }
         const extra = mp.rolledBackCount
           ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))`
           : '';
@@ -1055,6 +1082,67 @@ export function FrenteCaixaCheckoutDialog({
           </div>
         </div>
       </DialogContent>
+      {/* ── Servidor TEF indisponível: operador escolhe o caminho ── */}
+      <Dialog open={!!tefFailure} onOpenChange={(o) => !o && setTefFailure(null)}>
+        <DialogContent className="max-w-md bg-background text-foreground border-border">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-amber-500/15 grid place-items-center shrink-0">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">Comunicação com o TEF indisponível</h2>
+              <p className="text-sm text-muted-foreground">
+                {tefFailure?.message} A maquininha não foi acionada e a venda continua aberta.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <Button
+              type="button"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={processing}
+              onClick={() => {
+                const fc = tefFailure?.fiscalChoice;
+                setTefFailure(null);
+                void handleSave(fc);
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" /> Tentar TEF novamente
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={processing}
+              onClick={() => {
+                const fc = tefFailure?.fiscalChoice;
+                setTefFailure(null);
+                void handleSave(fc, { manualCard: true });
+              }}
+            >
+              <Zap className="h-4 w-4 mr-2" /> Cobrar manual na maquininha
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              disabled={processing}
+              onClick={() => setTefFailure(null)}
+            >
+              Voltar ao checkout
+            </Button>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">
+            "Cobrar manual" registra o valor na mesma forma de pagamento, com a marcação
+            (manual). Passe o cartão direto na maquininha.
+          </p>
+        </DialogContent>
+      </Dialog>
+
       <FrenteCaixaCustomerDialog
         open={customerDialogOpen}
         onOpenChange={setCustomerDialogOpen}
