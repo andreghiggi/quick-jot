@@ -108,6 +108,8 @@ jobs:
             #    para que abas ja abertas na versao anterior continuem carregando sem 404
             mkdir -p /var/www/comandatech/dist/assets
             rsync -a "$release/assets/" /var/www/comandatech/dist/assets/
+            # Marca os assets desta versao como recem-publicados (protege da limpeza)
+            find "$release/assets" -type f -printf '%P\n' | while read -r f; do touch "/var/www/comandatech/dist/assets/$f"; done
             # 3) Limpeza: remove apenas assets nao modificados ha mais de 24h
             find /var/www/comandatech/dist/assets -type f -mmin +1440 -delete || true
             find /var/www/comandatech/dist/assets -type d -empty -delete || true

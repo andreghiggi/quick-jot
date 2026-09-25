@@ -62,6 +62,8 @@ rsync -a --delete --exclude '/assets/***' "$STAGING/" "$LIVE/"
 #    anterior continuam carregando seus arquivos sem erro 404 durante o deploy
 mkdir -p "$LIVE/assets"
 rsync -a "$STAGING/assets/" "$LIVE/assets/"
+# Marca os assets desta versao como recem-publicados (protege da limpeza)
+find "$STAGING/assets" -type f -printf '%P\n' | while read -r f; do touch "$LIVE/assets/$f"; done
 # 3) limpeza: remove apenas assets sem modificacao ha mais de 24h
 find "$LIVE/assets" -type f -mmin +1440 -delete || true
 find "$LIVE/assets" -type d -empty -delete || true
