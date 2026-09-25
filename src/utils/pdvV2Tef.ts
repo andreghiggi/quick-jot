@@ -51,6 +51,12 @@ export interface RunTefResult {
   notesFragment?: string;
   /** Dados para passar como `tef` ao emitir NFC-e */
   tefData?: NFCeTefData;
+  /**
+   * true quando a falha foi indisponibilidade do servidor TEF (rede/DNS/timeout)
+   * e a transação NÃO chegou a ser aberta/ficou pendente na maquininha.
+   * O checkout usa isso para oferecer "Tentar novamente" ou "Cobrar manual".
+   */
+  tefUnavailable?: boolean;
 }
 
 /**
@@ -86,8 +92,16 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
       });
 
       if (!createResult.success || !createResult.hash) {
-        toast.error(`Erro TEF PinPad: ${createResult.errorMessage || 'falha ao iniciar'}`);
-        return { success: false, errorMessage: createResult.errorMessage };
+        // Indisponibilidade de rede/servidor TEF: não mostra toast de erro —
+        // o checkout exibe o painel com "Tentar novamente" / "Cobrar manual".
+        if (!createResult.tefUnavailable) {
+          toast.error(`Erro TEF PinPad: ${createResult.errorMessage || 'falha ao iniciar'}`);
+        }
+        return {
+          success: false,
+          errorMessage: createResult.errorMessage,
+          tefUnavailable: createResult.tefUnavailable,
+        };
       }
 
       const crtIdentificacao = createResult.identificacao || '';

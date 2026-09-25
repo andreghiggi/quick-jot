@@ -117,3 +117,4 @@
 - [Express Amore Mio status](mem://features/express-amore-mio-status) — Express com telefone nasce `preparing` (libera Pronto/Entregar) e Cliente Loja nasce `delivered`; confirmação + em preparo no WhatsApp no envio para cozinha.
 - [TEF Early Print piloto](mem://features/tef-early-print-piloto.md) — v1.71.0-beta: vias TEF na aprovação do pinpad (FC, Cozinha da Ruiva + I9); liberar geral = 1 linha
 - [Numeração de venda](mem://features/pdv-sale-number-collision) — "Erro ao registrar venda" = contador `pdv_sale_number_counters` atrás do maior `pv_numero` (índice único). Rodar `sync_pdv_sale_counters()` após qualquer import de vendas.
+- [TEF fallback manual](mem://features/tef-fallback-manual-v1-75) — v1.75.0-beta: timeout 8s + retry 1s no tef-webservice, resposta tefUnavailable (HTTP 200) e painel "Tentar novamente / Cobrar manual" na Frente de Caixa; vale para todas as lojas com TEF.

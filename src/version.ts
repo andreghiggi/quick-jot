@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.74.11-beta";
-export const RELEASE_DATE = "2026-09-23"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Produtos, troco e total claros no recibo do Rei";
+export const VERSION = "1.75.0-beta";
+export const RELEASE_DATE = "2026-09-25"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Caixa nunca trava quando o TEF oscila";
 
 
 
@@ -23,6 +23,19 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.75.0-beta",
+    date: "2026-09-25",
+    codename: "Caixa nunca trava quando o TEF oscila",
+    changes: [
+      "Vale para todas as lojas com TEF: a comunicação com a Multiplus passa a ter limite de 8 segundos e uma retentativa automática quando a internet oscila por instantes.",
+      "Some da tela o aviso em inglês 'Edge Function returned a non-2xx status code'; no lugar aparece um aviso claro em português.",
+      "Na Frente de Caixa, quando o servidor do cartão não responde, a venda continua aberta e o operador escolhe: Tentar TEF novamente ou Cobrar manual na maquininha.",
+      "Ao cobrar manual, o valor é registrado na mesma forma de pagamento com a marcação (manual), sem perder cliente, desconto nem CPF já digitados.",
+      "Se a demora acontecer depois do envio, o sistema manda o cancelamento da operação para liberar a maquininha e evitar cobrança em duplicidade.",
+      "Nenhuma regra de venda, caixa, impressão, PinPad homologado ou documento fiscal foi alterada.",
+    ],
+  },
   {
     version: "1.74.11-beta",
     date: "2026-09-23",

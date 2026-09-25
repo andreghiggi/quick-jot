@@ -73,6 +73,11 @@ export interface RunMultiPaymentResult {
   combinedNotesFragment?: string;
   /** Quantas linhas TEF foram estornadas em caso de falha. */
   rolledBackCount?: number;
+  /**
+   * true quando a falha foi indisponibilidade do servidor TEF (rede/timeout).
+   * O checkout usa para oferecer "Tentar novamente" ou "Cobrar manual".
+   */
+  tefUnavailable?: boolean;
 }
 
 function extractControlNumber(notesFragment?: string): string | undefined {
@@ -169,6 +174,7 @@ export async function runMultiPayment(args: RunMultiPaymentArgs): Promise<RunMul
         ok: false,
         errorMessage: result.errorMessage || 'Cobrança recusada',
         rolledBackCount,
+        tefUnavailable: result.tefUnavailable,
       };
     }
     resolved.push({
