@@ -101,8 +101,16 @@ jobs:
             if [ -d /var/www/comandatech/dist ]; then
               cp -a /var/www/comandatech/dist "$previous"
             fi
-            echo "==> Publishing dist"
-            rsync -a --delete "$release/" /var/www/comandatech/dist/
+            echo "==> Publishing dist (mantendo assets antigos por 24h)"
+            # 1) Sincroniza tudo menos /assets: index.html e afins sempre atualizados na hora
+            rsync -a --delete --exclude '/assets/***' "$release/" /var/www/comandatech/dist/
+            # 2) Assets sao acumulativos (nomes com hash unico) — nada e apagado agora,
+            #    para que abas ja abertas na versao anterior continuem carregando sem 404
+            mkdir -p /var/www/comandatech/dist/assets
+            rsync -a "$release/assets/" /var/www/comandatech/dist/assets/
+            # 3) Limpeza: remove apenas assets nao modificados ha mais de 24h
+            find /var/www/comandatech/dist/assets -type f -mmin +1440 -delete || true
+            find /var/www/comandatech/dist/assets -type d -empty -delete || true
             rm -f /tmp/comandatech-dist.tar.gz
             echo "==> Reloading Nginx"
             systemctl reload nginx
