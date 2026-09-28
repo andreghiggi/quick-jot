@@ -1355,7 +1355,13 @@ export default function Menu() {
         // controla somente a comanda de produção. Piloto isolado no Rei e Bon Appetit.
         const REI_DO_ACAI_ID = 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
         const BON_APPETIT_ID = '32b71649-461d-4cb6-b26c-12390b090feb';
-        const isReceiptPilot = company.id === REI_DO_ACAI_ID || company.id === BON_APPETIT_ID;
+        // Império não quer a Comanda de Produção (autoPrintProductionTicket
+        // fica desligado por escolha da loja), mas quer ALGO saindo sozinho:
+        // entra no piloto do Recibo igual Rei do Açaí/Bon Appetit, independente
+        // do toggle de comanda de produção.
+        const IMPERIO_DO_ACAI_ID = '96e53bb2-2b71-4ed3-86cd-0f97858aca73';
+        const isReceiptPilot =
+          company.id === REI_DO_ACAI_ID || company.id === BON_APPETIT_ID || company.id === IMPERIO_DO_ACAI_ID;
         const shouldPrintProduction = settings.autoPrintProductionTicket && company.id !== REI_DO_ACAI_ID;
         if (shouldPrintProduction || isReceiptPilot) {
           try {
