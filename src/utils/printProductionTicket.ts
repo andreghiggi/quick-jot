@@ -46,6 +46,11 @@ interface PrintTicketData {
    *  Emite marcador [ENDERECO]...[/ENDERECO] que o auto_printer.py >= v8.32
    *  interpreta. */
   deliveryAddress?: string | null;
+  /** Linha de pagamento/troco do pedido (ex.: "Pagamento: Dinheiro | Troco
+   *  para: R$ 100"). Quando omitido (padrão), nada é renderizado e o layout
+   *  permanece idêntico ao anterior. Isolado por company_id no caller —
+   *  atualmente APENAS Bon Appetit (só layout V2). */
+  paymentNote?: string | null;
 }
 
 // Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
@@ -448,6 +453,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${data.deliveryAddress && data.layout === 'v2' ? `<div class="info">[ENDERECO]${data.deliveryAddress}[/ENDERECO]</div>` : ''}
       </div>
       <!--BOX_END-->
+      ${data.paymentNote ? `<div class="obs-block"><div class="obs"><span class="obs-text">${data.paymentNote}</span></div></div>` : ''}
       ${readyBlockHTML}
       <div class="items">${itemsHTML}</div>
       <div class="footer">--- FIM ---</div>

@@ -1444,6 +1444,14 @@ export default function Menu() {
                   showReadyTime: true,
                   readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
                   deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
+                  // Isolado: só Bon Appetit recebe pagamento/troco na comanda de
+                  // produção (pedido do cliente). Nenhuma outra loja é afetada.
+                  paymentNote:
+                    company.id === BON_APPETIT_ID
+                      ? [`Pagamento: ${paymentMethod}`, changeFor.trim() ? `Troco para: R$ ${changeFor.trim()}` : '']
+                          .filter(Boolean)
+                          .join(' | ')
+                      : undefined,
                 });
                 const { error: productionError } = await supabase
                   .from('print_queue')
