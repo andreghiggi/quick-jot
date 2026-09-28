@@ -81,6 +81,16 @@ Deno.serve(async (req) => {
     return json({ customer_id: data?.id ?? null });
   } catch (err) {
     console.error('public-customer error:', err);
+    // 23505 = violação de constraint única do Postgres (ex: CPF/CNPJ já
+    // cadastrado para outro telefone). Isso é uma validação esperada, não uma
+    // falha de infra — devolve 409 com a mensagem amigável do banco em vez de
+    // estourar como 500 genérico para o cliente que está fazendo o pedido.
+    const code = (err as { code?: string } | null)?.code;
+    if (code === '23505') {
+      const message = (err as { message?: string } | null)?.message
+        || 'Já existe um cliente cadastrado com esses dados.';
+      return json({ error: message }, 409);
+    }
     return json({ error: 'Erro ao processar solicitação' }, 500);
   }
 });

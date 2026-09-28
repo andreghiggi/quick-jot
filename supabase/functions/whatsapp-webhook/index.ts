@@ -361,15 +361,26 @@ serve(async (req) => {
       }
 
       // Send message
+      // Timeout de segurança: sem isso, uma Evolution API lenta/travada prende
+      // o worker do edge-runtime até o limite de wall-clock da plataforma matar
+      // a execução à força (causa dos "early termination" vistos em produção).
       const evolutionBaseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
-      const res = await fetch(`${evolutionBaseUrl}/message/sendText/${instanceName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': EVOLUTION_API_KEY,
-        },
-        body: JSON.stringify({ number: senderPhone, text: greetingMessage, linkPreview: false }),
-      });
+      const sendController = new AbortController();
+      const sendTimeout = setTimeout(() => sendController.abort(), 8000);
+      let res: Response;
+      try {
+        res = await fetch(`${evolutionBaseUrl}/message/sendText/${instanceName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': EVOLUTION_API_KEY,
+          },
+          body: JSON.stringify({ number: senderPhone, text: greetingMessage, linkPreview: false }),
+          signal: sendController.signal,
+        });
+      } finally {
+        clearTimeout(sendTimeout);
+      }
 
       const responseData = await res.json();
       console.log('Auto-reply sent:', res.ok, JSON.stringify(responseData).slice(0, 200));

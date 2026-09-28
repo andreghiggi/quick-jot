@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveNfceApiUrl } from '../_shared/fiscal-api-url.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,11 +106,7 @@ Deno.serve(async (req) => {
       userId = user.id
     }
     const GLOBAL_NFCE_API_KEY = Deno.env.get('NFCE_API_KEY')
-    const NFCE_API_URL = Deno.env.get('NFCE_API_URL')
-
-    if (!NFCE_API_URL) {
-      return new Response(JSON.stringify({ error: 'NFC-e API não configurada (URL ausente)' }), { status: 500, headers: corsHeaders })
-    }
+    const NFCE_API_URL = resolveNfceApiUrl()
 
     const body = await req.json()
     const { action, companyId, saleId, nfceId, payload } = body
