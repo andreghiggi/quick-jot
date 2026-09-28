@@ -1,44 +1,83 @@
-# Deploy Edge Functions → Supabase Comanda (iwmrtxdzlkasuzutxvhh)
-# Secret: SUPABASE_ACCESS_TOKEN → https://supabase.com/dashboard/account/tokens
-
 name: Deploy Supabase Edge Functions
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'supabase/functions/**'
-      - 'supabase/config.toml'
       - '.github/workflows/deploy-supabase-functions.yml'
   workflow_dispatch:
 
 jobs:
   deploy:
+    name: Deploy edge functions to Comanda Tech VPS
     runs-on: ubuntu-latest
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROJECT_ID: iwmrtxdzlkasuzutxvhh
+    # Mesma trava de aprovacao manual do deploy do front (Settings > Environments >
+    # Production > Required reviewers) — vale pra qualquer push em main, seja da
+    # Lovable, Cursor ou manual.
+    environment: Production
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Verificar secret
+      - name: Setup SSH key
         run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "::error::Defina SUPABASE_ACCESS_TOKEN em GitHub → Settings → Secrets → Actions"
-            exit 1
-          fi
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Secrets fiscais (emit VPS)
+      - name: Deploy edge functions to VPS (backup + smoke test + rollback automatico)
         run: |
-          supabase secrets set \
-            NFCE_API_URL=https://emit.agilizeerp.com.br/functions/v1/nfce-api \
-            NFE_API_URL=https://emit.agilizeerp.com.br/functions/v1/nfe-api \
-            --project-ref "$PROJECT_ID"
+          tar -C supabase/functions -czf /tmp/comandatech-functions.tar.gz .
+          scp -i ~/.ssh/deploy_key /tmp/comandatech-functions.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/comandatech-functions.tar.gz
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -e
+            target=/opt/apps/comandatech-api/supabase/functions
+            if [ ! -d "$target" ]; then
+              echo "ERRO: $target nao existe na VPS; abortando sem mexer em nada"
+              exit 1
+            fi
 
-      - name: Deploy edge functions
-        run: supabase functions deploy --project-ref "$PROJECT_ID"
+            stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+            backup="/root/functions-backups/functions-$stamp"
+            mkdir -p /root/functions-backups
+            echo "==> Backup completo da pasta atual em $backup"
+            cp -a "$target" "$backup"
+
+            echo "==> Extraindo pacote novo"
+            rm -rf /tmp/comandatech-functions
+            mkdir -p /tmp/comandatech-functions
+            tar -xzf /tmp/comandatech-functions.tar.gz -C /tmp/comandatech-functions
+
+            echo "==> Publicando (so adiciona/atualiza arquivo por arquivo — NUNCA apaga)"
+            # Sem --delete de proposito: preserva qualquer funcao que exista na VPS
+            # mas ainda nao esteja versionada no git (ex.: main/, web-print-session/).
+            rsync -a /tmp/comandatech-functions/ "$target/"
+            rm -rf /tmp/comandatech-functions /tmp/comandatech-functions.tar.gz
+
+            echo "==> Reiniciando container de functions (necessario pra carregar o codigo novo)"
+            docker restart supabase-functions-1 >/dev/null
+
+            echo "==> Aguardando o container voltar a responder"
+            ok=""
+            for i in $(seq 1 15); do
+              sleep 2
+              code="$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS http://127.0.0.1:54324/tef-webservice || true)"
+              if [ "$code" = "204" ]; then ok="1"; break; fi
+            done
+
+            if [ -z "$ok" ]; then
+              echo "==> Smoke test falhou (functions nao respondeu); restaurando backup anterior"
+              rm -rf "$target"
+              cp -a "$backup" "$target"
+              docker restart supabase-functions-1 >/dev/null
+              sleep 3
+              echo "==> Backup restaurado. Deploy de functions ABORTADO."
+              exit 1
+            fi
+
+            echo "==> Deploy de functions concluido (backup preservado em $backup)"
+          ENDSSH
