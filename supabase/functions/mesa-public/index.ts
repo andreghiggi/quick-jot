@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
       }
 
       // Encontra ou cria comanda aberta (modo normal: 1 comanda por mesa)
-      const { data: existingTab } = cardTab ? { data: cardTab } : await admin = await admin
+      const { data: existingTab } = cardTab ? { data: cardTab } : await admin
         .from("tabs")
         .select("id, tab_number")
         .eq("company_id", companyId)
