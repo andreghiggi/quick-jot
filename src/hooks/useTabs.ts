@@ -21,6 +21,8 @@ export interface Tab {
   company_id: string;
   table_id: string | null;
   tab_number: number;
+  /** Número do cartão (modo comanda individual). Nulo nas demais lojas. */
+  comanda_number?: number | null;
   customer_name: string | null;
   status: string;
   notes: string | null;
@@ -187,6 +189,7 @@ export function useTabs(options: UseTabsOptions = {}) {
           .eq('company_id', companyId)
           .eq('table_id', data.tableId)
           .eq('status', 'open')
+          .is('comanda_number' as any, null)
           .maybeSingle();
 
         if (existingTableTab) {
@@ -261,6 +264,74 @@ export function useTabs(options: UseTabsOptions = {}) {
       toast.error('Erro ao criar comanda');
       return null;
     }
+  }
+
+  /**
+   * Modo comanda individual: localiza a comanda aberta pelo número do cartão
+   * ou abre uma nova ligada à mesa. Se estiver em outra mesa, pede confirmação
+   * (callback) para transferir.
+   */
+  async function openComandaTab(data: {
+    comandaNumber: number;
+    tableId: string;
+    tableNumber: number;
+    userId: string;
+    userName: string;
+    confirmTransfer: (fromTableNumber: number | null) => boolean | Promise<boolean>;
+  }): Promise<Tab | null> {
+    if (!companyId) return null;
+    const { data: existing } = await supabase
+      .from('tabs')
+      .select('*, table:tables(number)')
+      .eq('company_id', companyId)
+      .eq('status', 'open')
+      .eq('comanda_number' as any, data.comandaNumber)
+      .maybeSingle();
+    if (existing) {
+      const ex: any = existing;
+      if (ex.table_id !== data.tableId) {
+        const fromNum = ex.table?.number ?? null;
+        const ok = await data.confirmTransfer(fromNum);
+        if (!ok) return null;
+        const log = Array.isArray(ex.transfer_log) ? ex.transfer_log : [];
+        await supabase.from('tabs').update({
+          table_id: data.tableId,
+          transfer_log: [...log, { from_table_number: fromNum, to_table_number: data.tableNumber, at: new Date().toISOString(), by_name: data.userName }],
+        } as any).eq('id', ex.id);
+        await supabase.from('tables').update({ status: 'occupied' }).eq('id', data.tableId);
+        if (ex.table_id) {
+          const { count } = await supabase.from('tabs').select('id', { count: 'exact', head: true }).eq('table_id', ex.table_id).eq('status', 'open');
+          if ((count || 0) === 0) await supabase.from('tables').update({ status: 'available' }).eq('id', ex.table_id);
+        }
+        toast.success(`Comanda ${String(data.comandaNumber).padStart(3, '0')} transferida para a Mesa ${data.tableNumber}`);
+      }
+      await fetchTabs();
+      return { ...(ex as Tab), table_id: data.tableId };
+    }
+    const { data: lastTab } = await supabase
+      .from('tabs').select('tab_number').eq('company_id', companyId)
+      .order('tab_number', { ascending: false }).limit(1).maybeSingle();
+    const { data: newTab, error } = await supabase
+      .from('tabs')
+      .insert({
+        company_id: companyId,
+        table_id: data.tableId,
+        tab_number: (lastTab?.tab_number || 0) + 1,
+        comanda_number: data.comandaNumber,
+        customer_name: `Comanda ${String(data.comandaNumber).padStart(3, '0')}`,
+        created_by: data.userId,
+        status: 'open',
+      } as any)
+      .select()
+      .single();
+    if (error) {
+      console.error('openComandaTab', error);
+      toast.error(error.code === '23505' ? 'Essa comanda acabou de ser aberta em outro aparelho. Tente de novo.' : 'Erro ao abrir comanda');
+      return null;
+    }
+    await supabase.from('tables').update({ status: 'occupied' }).eq('id', data.tableId);
+    await fetchTabs();
+    return newTab as unknown as Tab;
   }
 
   async function addItemToTab(tabId: string, item: {
@@ -445,8 +516,17 @@ export function useTabs(options: UseTabsOptions = {}) {
 
       if (error) throw error;
 
-      // If tab had a table, mark it as available
-      if (tab?.table_id) {
+      // Modo cartão: a mesa só fica livre quando a última comanda dela fechar.
+      let freeTable = !!tab?.table_id;
+      if (tab?.table_id && tab.comanda_number != null) {
+        const { count } = await supabase
+          .from('tabs')
+          .select('id', { count: 'exact', head: true })
+          .eq('table_id', tab.table_id)
+          .eq('status', 'open');
+        freeTable = (count || 0) === 0;
+      }
+      if (tab?.table_id && freeTable) {
         await supabase
           .from('tables')
           .update({ status: 'available' })
@@ -535,6 +615,7 @@ export function useTabs(options: UseTabsOptions = {}) {
     closedTabs,
     loading,
     createTab,
+    openComandaTab,
     addItemToTab,
     addMultipleItemsToTab,
     removeItemFromTab,
