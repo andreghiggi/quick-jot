@@ -847,6 +847,9 @@ export default function FrenteCaixa() {
     // Se a venda vem de uma comanda importada, prefixa com "Comanda #N"
     // para que apareça no Histórico de Comandas (que filtra por notes ILIKE '%Comanda%').
     const noteParts: string[] = [];
+    if (comandaCharge) {
+      noteParts.push(comandaCharge.label);
+    }
     if (importedOrderId && importedOrderSource === 'tab' && importedLabel) {
       noteParts.push(`Comanda #${importedLabel.replace(/^#/, '')}`);
     }
