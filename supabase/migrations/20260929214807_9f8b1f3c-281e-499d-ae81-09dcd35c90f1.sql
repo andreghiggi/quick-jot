@@ -1,0 +1,20 @@
+
+REVOKE EXECUTE ON FUNCTION public.comanda_cards_allowed(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.comanda_cards_active(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.guard_comanda_cards_setting() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public._comanda_guard(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.expire_comanda_charges() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_comanda_charge(uuid, uuid[]) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.reserve_tab_fraction(uuid, uuid, int, int) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.cancel_fraction_reservation(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.cancel_comanda_charge(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.finalize_comanda_charge(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.comanda_cards_allowed(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.comanda_cards_active(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.create_comanda_charge(uuid, uuid[]) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.reserve_tab_fraction(uuid, uuid, int, int) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.cancel_fraction_reservation(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.cancel_comanda_charge(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.finalize_comanda_charge(uuid, uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public._comanda_guard(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.expire_comanda_charges() TO service_role;
