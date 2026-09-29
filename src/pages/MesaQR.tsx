@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Plus, Minus, Trash2, CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { parseComandaCode } from '@/utils/comandaCode';
 import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard';
 import { MenuV2 } from '@/components/menu/MenuV2';
 import { parseItemNotes } from '@/utils/orderNotesDisplay';
@@ -41,6 +42,10 @@ export default function MesaQR() {
   const [mesas, setMesas] = useState<MesaInfo[]>([]);
 
   const [tableInput, setTableInput] = useState('');
+  // Modo comanda individual (trava validada no servidor)
+  const [comandaCards, setComandaCards] = useState(false);
+  const [comandaInput, setComandaInput] = useState('');
+  const [comandaNumber, setComandaNumber] = useState<number | null>(null);
   const [selectedMesa, setSelectedMesa] = useState<MesaInfo | null>(null);
   const [previewMesa, setPreviewMesa] = useState<MesaInfo | null>(null);
   const [tabPreview, setTabPreview] = useState<{
@@ -153,6 +158,7 @@ export default function MesaQR() {
       setCompanyId(data.companyId);
       setCompanyName(data.companyName);
       setModuleEnabled(!!data.moduleEnabled);
+      setComandaCards(data.comandaCards === true);
       setMesas(data.mesas || []);
     } catch (e: any) {
       setBootError(e?.message || 'erro');
@@ -414,14 +420,19 @@ export default function MesaQR() {
           action: 'submit-order',
           companyId,
           tableNumber: selectedMesa.number,
+          ...(comandaCards ? { comandaNumber } : {}),
           items,
           productionTicketHtml,
           ticketLabel,
         },
       });
       if (error) throw error;
+      if (data?.error === 'comanda_in_other_table') {
+        toast.error('Essa comanda está aberta em outra mesa. Chame o garçom.');
+        return;
+      }
       if (data?.error) throw new Error(data.error);
-      setSuccessInfo({ tabNumber: data.tabNumber, tableNumber: data.tableNumber });
+      setSuccessInfo({ tabNumber: comandaCards && comandaNumber ? comandaNumber : data.tabNumber, tableNumber: data.tableNumber });
       setCart([]);
       setCartOpen(false);
       await refreshBoot();
@@ -518,6 +529,16 @@ export default function MesaQR() {
       const mesa = mesas.find(m => m.number === n);
       if (!mesa) {
         toast.error(`Mesa ${n} não encontrada`);
+        return;
+      }
+      if (comandaCards) {
+        const c = parseComandaCode(comandaInput);
+        if (!c) {
+          toast.error('Informe o número da sua comanda (cartão)');
+          return;
+        }
+        setComandaNumber(c);
+        setSelectedMesa(mesa);
         return;
       }
       if (mesa.hasOpenTab) {
@@ -673,6 +694,20 @@ export default function MesaQR() {
               onKeyDown={e => { if (e.key === 'Enter') trySelect(); }}
             />
           </div>
+          {comandaCards && (
+            <div className="space-y-2">
+              <Label htmlFor="comanda-num">Número da sua comanda (cartão)</Label>
+              <Input
+                id="comanda-num"
+                inputMode="numeric"
+                value={comandaInput}
+                onChange={e => setComandaInput(e.target.value)}
+                placeholder="Ex: 026"
+                className="text-center text-2xl h-14"
+                onKeyDown={e => { if (e.key === 'Enter') trySelect(); }}
+              />
+            </div>
+          )}
           <Button className="w-full h-12" onClick={trySelect}>Acessar cardápio</Button>
           <p className="text-xs text-center text-muted-foreground">
             Confira o número da mesa no cartão sobre ela
