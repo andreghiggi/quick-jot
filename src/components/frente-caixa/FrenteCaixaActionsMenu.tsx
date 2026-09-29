@@ -12,6 +12,8 @@ interface Props {
   onImportPedido?: () => void;
   /** Quando definido, exibe "Importar mesa" (módulo Mesa QR ativo). */
   onImportMesa?: () => void;
+  /** Comanda individual (cartões) — só quando a trava está ativa. */
+  onCobrarComanda?: () => void;
   open?: boolean;
   onOpenChange?: (o: boolean) => void;
 }
@@ -64,6 +66,7 @@ export function FrenteCaixaActionsMenu({
   onRelFechamento,
   onImportPedido,
   onImportMesa,
+  onCobrarComanda,
   open = false,
   onOpenChange,
 }: Props) {
@@ -140,6 +143,9 @@ export function FrenteCaixaActionsMenu({
             items={[
               ...(onImportPedido
                 ? [{ label: 'Importar pedido', accel: 0, onClick: onImportPedido } as Item]
+                : []),
+              ...(onCobrarComanda
+                ? [{ label: 'Cobrar comanda', accel: 0, onClick: onCobrarComanda } as Item]
                 : []),
               ...(onImportMesa
                 ? [{ label: 'Importar mesa', accel: 0, onClick: onImportMesa } as Item]
