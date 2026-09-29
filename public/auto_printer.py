@@ -274,7 +274,7 @@ def mostrar_status(company_id):
     if pedidos_impressos_sessao:
         print("  ÚLTIMOS 3:")
         for p in pedidos_impressos_sessao[-3:]:
-            print(f"    - #{p['numero']} ({p['cliente']}) às {p['hora']}")
+            print(f"    - {p}")
     print("-" * 60)
     print("  Pressione Ctrl+C para encerrar com segurança")
     print("=" * 60)
