@@ -53,8 +53,13 @@ Ativado somente na Lancheria da I9 (lista de lojas liberadas) e, dentro dela, s�
 - Novo componente `ComandaChargeDialog` usado no Frente de Caixa e no `PDVV2TablesPanel`; a escolha entre um e outro segue o módulo Frente de Caixa estar ativo ou não.
 - Importar fração: dentro de uma transação, diminui a quantidade/total na origem e cria o item fracionado na comanda que está sendo cobrada.
 - Pagamento: montar os itens de todas as comandas escolhidas e passar para o fluxo de pagamento/venda que já existe (`pdv_sales` + `pdv_sale_items`), marcar `tab_items.paid` e fechar os `tabs`.
-- Geração dos cartões: página para imprimir com códigos de barras em SVG, sem biblioteca externa.
+- Chave: nova coluna `comanda_cards_enabled boolean default false` nas configurações da loja usadas pelo módulo Mesa/QR (espelhar na VPS).
+- Leitura do código: aceitar EAN-8 (7 dígitos + verificador) e também número puro; o número da comanda = dígitos sem zeros à esquerda e sem o verificador. Antes de ativar, validar com um cartão real da I9 lido pelo leitor/câmera para confirmar o formato.
+- Câmera no garçom: `BarcodeDetector` nativo do navegador (Android/Chrome) com opção de digitar quando não houver suporte (iPhone).
+- QR da mesa (`MesaQR` + função `mesa-public`): receber `tab_number` e lançar os itens na comanda aberta (ou abrir uma nova), validando a loja.
+- Ao começar a construção: registrar as tarefas no roadmap.
 
 ## Fora do escopo agora
+- Impressão de cartões (cada loja já tem os seus).
 - Liberar para outras lojas (só depois de validar na I9).
 - Mudanças no TEF, no fiscal ou na impressão automática.
