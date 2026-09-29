@@ -28,3 +28,12 @@
 - [ ] Espelhar banco na VPS antes de publicar — bloqueado: sem acesso à VPS nesta sessão
 - [ ] Confirmar formato do código do cartão (leitura real) — aguarda usuário
 - [ ] Decisões: frações, taxa de serviço, tempos — aguarda usuário
+
+### Comanda individual — status da UI (piloto I9)
+- [x] Opção nas configurações de Mesas (só lojas liberadas)
+- [x] Garçom: número da comanda digitado ou pela câmera; transferência entre mesas
+- [x] QR da mesa: campo do número da comanda (trava no servidor)
+- [x] Cobrança: Frente de Caixa (menu lateral) e PDV V2 (lojas sem Frente de Caixa), várias comandas + importar 1/2, 1/4, 1/5, 1/8, 1/10
+- [ ] Teste real na I9 (ligar a opção e testar com cartões) — aguarda usuário
+- [ ] Espelhar banco e função do QR na VPS antes de publicar — sem acesso à VPS nesta sessão
+- [ ] Novidades + versão 1.76.0-beta
