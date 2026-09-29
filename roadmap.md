@@ -17,3 +17,14 @@
 - [x] Ajustar os sete detalhes visuais do recibo V39 do Rei do Açaí no programa v1.8.6; validação física ainda depende da loja
 - [x] Ajustar separação entre produtos, troco e subtotal redundante no recibo do Rei do Açaí (sistema 1.74.11-beta / impressor 1.8.7); validação física ainda depende da loja
 - [ ] Após validação física dos pilotos, liberar recibo obrigatório independente da comanda para as demais lojas
+
+## Comanda individual (piloto I9) — plano v3.1 aprovado
+- [ ] Banco: comanda_number, lista liberada, opção, reservas de fração, cobranças, funções com trava no servidor
+- [ ] Opção nas configurações de Mesas (só lojas da lista)
+- [ ] Garçom: número da comanda digitado ou lido pela câmera
+- [ ] QR da mesa: número da comanda (só comanda aberta na mesma mesa; senão pendente)
+- [ ] Janela "Cobrar Comanda" (várias comandas + importar fração) no Frente de Caixa / Mesas PDV V2
+- [ ] Novidades + versão
+- [ ] Espelhar banco na VPS antes de publicar — bloqueado: sem acesso à VPS nesta sessão
+- [ ] Confirmar formato do código do cartão (leitura real) — aguarda usuário
+- [ ] Decisões: frações, taxa de serviço, tempos — aguarda usuário
