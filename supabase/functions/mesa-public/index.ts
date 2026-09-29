@@ -25,6 +25,30 @@ function json(body: unknown, status = 200) {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/** Mesmo algoritmo do front (src/utils/comandaCode.ts). */
+function parseComandaCode(raw: unknown): number | null {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.length === 8) {
+    let sum = 0;
+    for (let i = 0; i < 7; i++) sum += Number(digits[i]) * (i % 2 === 0 ? 3 : 1);
+    if ((10 - (sum % 10)) % 10 === Number(digits[7])) return Number(digits.slice(0, 7)) || null;
+    return null;
+  }
+  if (digits.length > 7) return null;
+  const n = Number(digits);
+  return n > 0 ? n : null;
+}
+
+async function comandaCardsActive(admin: any, companyId: string): Promise<boolean> {
+  const { data, error } = await admin.rpc("comanda_cards_active", { _company_id: companyId });
+  if (error) {
+    console.error("comanda_cards_active failed", error);
+    return false;
+  }
+  return data === true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -95,10 +119,13 @@ Deno.serve(async (req) => {
         };
       });
 
+      const comandaCards = await comandaCardsActive(admin, company.id);
+
       return json({
         companyId: company.id,
         companyName: company.name,
         moduleEnabled,
+        comandaCards,
         mesas,
       });
     }
@@ -132,13 +159,63 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!table) return json({ error: "table_not_found" }, 404);
 
-      // Encontra ou cria comanda aberta
-      const { data: existingTab } = await admin
+      // ---- Modo comanda individual (trava validada no servidor) ----
+      const cardsActive = await comandaCardsActive(admin, companyId);
+      const hasComandaField = payload?.comandaNumber !== undefined && payload?.comandaNumber !== null && payload?.comandaNumber !== "";
+      if (hasComandaField && !cardsActive) {
+        return json({ error: "comanda_cards_disabled" }, 403);
+      }
+      let cardTab: { id: string; tab_number: number } | null = null;
+      if (cardsActive) {
+        const comandaNumber = parseComandaCode(payload?.comandaNumber);
+        if (!comandaNumber) return json({ error: "comanda_required" }, 400);
+        const { data: openCard } = await admin
+          .from("tabs")
+          .select("id, tab_number, table_id")
+          .eq("company_id", companyId)
+          .eq("status", "open")
+          .eq("comanda_number", comandaNumber)
+          .maybeSingle();
+        if (openCard && openCard.table_id !== table.id) {
+          // Comanda aberta em outra mesa: não mexe, pede ao garçom.
+          return json({ error: "comanda_in_other_table" }, 409);
+        }
+        if (openCard) {
+          cardTab = { id: openCard.id, tab_number: openCard.tab_number };
+        } else {
+          const { data: lastTab } = await admin
+            .from("tabs").select("tab_number").eq("company_id", companyId)
+            .order("tab_number", { ascending: false }).limit(1).maybeSingle();
+          const { data: newTab, error: tabErr } = await admin
+            .from("tabs")
+            .insert({
+              company_id: companyId,
+              table_id: table.id,
+              tab_number: (lastTab?.tab_number || 0) + 1,
+              comanda_number: comandaNumber,
+              customer_name: `Comanda ${String(comandaNumber).padStart(3, "0")} (QR)`,
+              status: "open",
+              created_by: "00000000-0000-0000-0000-000000000000",
+            })
+            .select("id, tab_number")
+            .single();
+          if (tabErr || !newTab) {
+            console.error("create card tab failed", tabErr);
+            return json({ error: tabErr?.code === "23505" ? "comanda_busy" : "create_tab_failed" }, tabErr?.code === "23505" ? 409 : 500);
+          }
+          cardTab = newTab;
+          await admin.from("tables").update({ status: "occupied" }).eq("id", table.id);
+        }
+      }
+
+      // Encontra ou cria comanda aberta (modo normal: 1 comanda por mesa)
+      const { data: existingTab } = cardTab ? { data: cardTab } : await admin
         .from("tabs")
         .select("id, tab_number")
         .eq("company_id", companyId)
         .eq("table_id", table.id)
         .eq("status", "open")
+        .is("comanda_number", null)
         .maybeSingle();
 
       let tabId: string;
@@ -259,13 +336,21 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!table) return json({ ok: true, items: [], tabNumber: null });
 
-      const { data: tab } = await admin
+      const cardsActive = await comandaCardsActive(admin, companyId);
+      let tabQuery = admin
         .from("tabs")
         .select("id, tab_number, transfer_log")
         .eq("company_id", companyId)
         .eq("table_id", table.id)
-        .eq("status", "open")
-        .maybeSingle();
+        .eq("status", "open");
+      if (cardsActive) {
+        const comandaNumber = parseComandaCode(payload?.comandaNumber);
+        if (!comandaNumber) return json({ ok: true, items: [], tabNumber: null });
+        tabQuery = tabQuery.eq("comanda_number", comandaNumber);
+      } else {
+        tabQuery = tabQuery.is("comanda_number", null);
+      }
+      const { data: tab } = await tabQuery.maybeSingle();
       if (!tab) return json({ ok: true, items: [], tabNumber: null });
 
       const { data: items } = await admin

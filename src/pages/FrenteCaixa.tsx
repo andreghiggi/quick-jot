@@ -73,6 +73,8 @@ import {
   FrenteCaixaImportDialog,
   type ImportableOrder,
 } from '@/components/frente-caixa/FrenteCaixaImportDialog';
+import { ComandaChargeDialog, type ComandaChargeReady } from '@/components/comanda/ComandaChargeDialog';
+import { useComandaCards } from '@/hooks/useComandaCards';
 import type { Product } from '@/types/product';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
 import { printCurrentCashClosing } from '@/utils/printCurrentCashClosing';
@@ -144,6 +146,9 @@ export default function FrenteCaixa() {
   /** "Importar mesa" cobre tanto mesas do QR público quanto mesas/comandas
    *  abertas direto no PDV V2 (tabela `tabs`). */
   const importMesaEnabled = mesaQrModuleEnabled || mesasPdvModuleEnabled;
+  const comandaCards = useComandaCards(company?.id);
+  const [comandaDialogOpen, setComandaDialogOpen] = useState(false);
+  const [comandaCharge, setComandaCharge] = useState<ComandaChargeReady | null>(null);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
   const { settings: pdvSettings } = usePdvSettings(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
@@ -721,6 +726,41 @@ export default function FrenteCaixa() {
     beep(true);
   }
 
+  // ---- comanda individual (cartões) ----
+  function handleComandaProceed(charge: ComandaChargeReady) {
+    if (importedOrderId || comandaCharge) {
+      toast.error('Já existe um pedido/comanda importado neste carrinho.');
+      void supabase.rpc('cancel_comanda_charge' as any, { _charge_id: charge.chargeId });
+      return;
+    }
+    const newLines: CartLine[] = charge.lines.map((it) => ({
+      id: crypto.randomUUID(),
+      product_id: it.product_id,
+      product_name: it.product_name,
+      quantity: it.quantity,
+      unit_price: it.unit_price,
+      effective_unit_price: it.unit_price,
+      line_discount: 0,
+      line_surcharge: 0,
+      unit: 'UN',
+      imported: true,
+      imported_notes: it.notes,
+    }));
+    setLines((prev) => [...newLines, ...prev]);
+    setComandaCharge(charge);
+    setImportedLabel(charge.label);
+    setComandaDialogOpen(false);
+    toast.success(`${charge.label} no carrinho.`);
+    beep(true);
+  }
+
+  function discardComandaCharge() {
+    if (comandaCharge) {
+      void supabase.rpc('cancel_comanda_charge' as any, { _charge_id: comandaCharge.chargeId });
+      setComandaCharge(null);
+    }
+  }
+
   // ---- importação de pedido/mesa ----
   function handleImportOrder(order: ImportableOrder) {
     if (importedOrderId) {
@@ -807,6 +847,9 @@ export default function FrenteCaixa() {
     // Se a venda vem de uma comanda importada, prefixa com "Comanda #N"
     // para que apareça no Histórico de Comandas (que filtra por notes ILIKE '%Comanda%').
     const noteParts: string[] = [];
+    if (comandaCharge) {
+      noteParts.push(comandaCharge.label);
+    }
     if (importedOrderId && importedOrderSource === 'tab' && importedLabel) {
       noteParts.push(`Comanda #${importedLabel.replace(/^#/, '')}`);
     }
@@ -952,6 +995,20 @@ export default function FrenteCaixa() {
           console.error('[FrenteCaixa] falha ao criar título de crediário', err);
           toast.error('Venda registrada, mas falha ao gerar o título de crediário. Registre manualmente.');
         }
+      }
+
+      // Comanda individual: fecha as comandas, confirma frações — tudo numa
+      // transação no servidor, idempotente por cobrança.
+      if (comandaCharge) {
+        const { error: finErr } = await supabase.rpc('finalize_comanda_charge' as any, {
+          _charge_id: comandaCharge.chargeId,
+          _sale_id: saleId,
+        });
+        if (finErr) {
+          console.error('[FrenteCaixa] finalize_comanda_charge', finErr);
+          toast.error(`Venda salva, mas as comandas não foram fechadas: ${finErr.message}. Não cobre de novo — avise o suporte.`);
+        }
+        setComandaCharge(null);
       }
 
       // Importação: vincula o pedido original à venda do FC e marca como entregue.
@@ -1721,6 +1778,7 @@ export default function FrenteCaixa() {
                   setLastTouchedId(null);
                   setImportedOrderId(null);
                   setImportedLabel(null);
+                  discardComandaCharge();
                   setConfirmCancel(false);
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
@@ -1982,7 +2040,19 @@ export default function FrenteCaixa() {
           onImportMesa={
             importMesaEnabled ? () => setImportDialog('mesa') : undefined
           }
+          onCobrarComanda={
+            comandaCards.active ? () => setComandaDialogOpen(true) : undefined
+          }
         />
+
+        {company?.id && comandaCards.active && (
+          <ComandaChargeDialog
+            open={comandaDialogOpen}
+            onOpenChange={setComandaDialogOpen}
+            companyId={company.id}
+            onProceed={handleComandaProceed}
+          />
+        )}
 
         <FrenteCaixaImportDialog
           open={importDialog !== null}
