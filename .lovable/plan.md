@@ -69,7 +69,17 @@ Entram no piloto:
 Dependem de você:
 - **Taxa de serviço/couvert**: sugestão para o piloto — calcular sobre o total da cobrança, usando a regra que a loja já usa hoje. Confirme ou diga se deve ser por comanda.
 
-## 8. Mantido
+## 8. Ajustes da aprovação (v3.1)
+- **Trava também no servidor:** nova função `comanda_cards_active(company_id)` = loja está na lista liberada (tabela `comanda_cards_allowed_companies`, só a I9, alterável apenas por super admin) **e** `comanda_cards_enabled = true`. Ela é checada dentro de `reserve_tab_fraction`, `cancel_comanda_charge`, `finalize_comanda_charge` e no caminho de comanda da função `mesa-public`. Loja fora da lista ou com a opção desligada recebe erro "Comanda individual não habilitada para esta loja" e nada é gravado.
+- **Opção visível só para lojas da lista:** o botão "Usar cartões de comanda individuais" aparece nas configurações apenas quando a loja está na lista (hoje só a I9). Nas outras lojas a opção não aparece; mesmo que alguém tente ligar a coluna direto, o servidor recusa ao salvar (gatilho de validação).
+- **Sem impacto nas outras lojas:**
+  - A coluna `comanda_number` fica nula nas outras lojas e o índice só vale para linhas com número preenchido — nenhuma consulta, tela ou relatório atual lê essa coluna.
+  - As tabelas novas (reservas e cobranças) só são usadas pelas telas novas, que só aparecem com a trava ativa.
+  - `useTabs.createTab`, `mesa-public`, PDV V2, Frente de Caixa, Garçom e relatórios mantêm o caminho atual quando a trava está desligada; o caminho novo é um desvio separado.
+  - A regra "mesa só fica livre quando a última comanda fechar" e as várias comandas por mesa valem **apenas no modo cartão**; no modo normal a mesa continua sendo liberada ao fechar a comanda, como hoje.
+  - Antes de publicar: conferir na VPS que outra loja (ex.: Cozinha da Ruiva) abre mesa, lança, cobra e fecha exatamente como antes.
+
+## 9. Mantido
 Opção "Usar cartões de comanda individuais" desligada por padrão; dupla trava (lista + opção); sem impressão de cartões; sem mudanças no TEF e no fiscal; registro em "Novidades" e nova versão; banco espelhado na VPS antes de publicar; tarefas registradas no roadmap ao começar.
 
 ## Decisões que dependem de você
