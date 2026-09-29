@@ -37,11 +37,14 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import { Switch } from '@/components/ui/switch';
+import { useComandaCards } from '@/hooks/useComandaCards';
 
 export default function TablesConfig() {
   const { company } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const cardapioMesaEnabled = isModuleEnabled('cardapio_mesa');
+  const comandaCards = useComandaCards(company?.id);
   const mesaUrl = company?.slug ? `${window.location.origin}/mesa/${company.slug}` : '';
 
   const handleCopyLink = async () => {
@@ -189,6 +192,29 @@ export default function TablesConfig() {
       }
     >
       <div className="space-y-6">
+        {comandaCards.allowed && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Usar cartões de comanda individuais</CardTitle>
+              <CardDescription>
+                Cada cliente recebe um cartão numerado. O garçom e o QR Code da mesa pedem o número da
+                comanda, e o caixa cobra uma ou várias comandas pelo número ou código de barras.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center gap-3">
+              <Switch
+                checked={comandaCards.enabled}
+                disabled={comandaCards.loading}
+                onCheckedChange={async (v) => {
+                  const ok = await comandaCards.setEnabled(v);
+                  if (ok) toast.success(v ? 'Cartões de comanda ativados' : 'Cartões de comanda desativados');
+                  else toast.error('Não foi possível salvar a opção');
+                }}
+              />
+              <span className="text-sm">{comandaCards.enabled ? 'Ligado' : 'Desligado'}</span>
+            </CardContent>
+          </Card>
+        )}
         {/* Cardápio de Mesa (QR Code) */}
         {cardapioMesaEnabled && mesaUrl && (
           <Card className="border-primary/40 bg-primary/5">
