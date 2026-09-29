@@ -280,7 +280,7 @@ export function useTabs(options: UseTabsOptions = {}) {
     confirmTransfer: (fromTableNumber: number | null) => boolean | Promise<boolean>;
   }): Promise<Tab | null> {
     if (!companyId) return null;
-    const { data: existing } = await supabase
+    const { data: existing } = await (supabase as any)
       .from('tabs')
       .select('*, table:tables(number)')
       .eq('company_id', companyId)

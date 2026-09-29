@@ -71,7 +71,7 @@ function rpcError(err: unknown): string {
 }
 
 async function fetchOpenComanda(companyId: string, n: number): Promise<ComandaTab | null> {
-  const { data } = await supabase
+  const { data } = await (supabase as any)
     .from('tabs')
     .select('id, comanda_number, created_at, table:tables(number), items:tab_items(id, product_id, product_name, quantity, unit_price, total_price, notes, paid)')
     .eq('company_id', companyId)
@@ -245,7 +245,7 @@ export function ComandaChargeDialog({ open, onOpenChange, companyId, onProceed }
   }
 
   async function loadOpenList() {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('tabs')
       .select('comanda_number, created_at, table:tables(number), items:tab_items(total_price, paid)')
       .eq('company_id', companyId)
