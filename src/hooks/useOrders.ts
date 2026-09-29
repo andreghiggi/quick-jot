@@ -11,6 +11,50 @@ interface UseOrdersOptions {
   companyId?: string | null;
 }
 
+// Extraído de fetchOrders para ser reaproveitado por fetchOrdersByDateRange
+// (mesma forma de mapear linha do banco -> Order, sem duplicar a lógica).
+function mapOrderRow(order: any, itemsData: any[]): Order {
+  return {
+    id: order.id,
+    dailyNumber: (order as any).daily_number || 0,
+    orderCode: (order as any).order_code || '',
+    shortCode: (order as any).short_code || undefined,
+    customerName: order.customer_name,
+    customerPhone: order.customer_phone || undefined,
+    deliveryAddress: order.delivery_address || undefined,
+    notes: order.notes || undefined,
+    total: Number(order.total),
+    status: order.status as OrderStatus,
+    createdAt: new Date(order.created_at),
+    companyId: order.company_id || undefined,
+    printed: (order as any).printed || false,
+    printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
+    confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
+    paymentStatus: (order as any).payment_status || undefined,
+    paidAmount: Number((order as any).paid_amount || 0),
+    paidItems: (order as any).paid_items || undefined,
+    splitInfo: (order as any).split_info || undefined,
+    origin: (
+      true &&
+      ((order as any).origin === 'cardapio' || !(order as any).origin) &&
+      typeof order.notes === 'string' &&
+      order.notes.includes('[EXPRESS]')
+        ? 'balcao'
+        : ((order as any).origin || 'cardapio')
+    ) as 'cardapio' | 'balcao' | 'mesa',
+    items: itemsData
+      .filter((item) => item.order_id === order.id)
+      .map((item) => ({
+        id: item.id,
+        productId: item.product_id || '',
+        name: item.name,
+        quantity: item.quantity,
+        price: Number(item.price),
+        notes: item.notes || undefined,
+      })),
+  };
+}
+
 export function useOrders(options: UseOrdersOptions = {}) {
   const { companyId } = options;
   const [orders, setOrders] = useState<Order[]>([]);
@@ -62,45 +106,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         }
       }
 
-      const mappedOrders: Order[] = (ordersData || []).map((order) => ({
-        id: order.id,
-        dailyNumber: (order as any).daily_number || 0,
-        orderCode: (order as any).order_code || '',
-        shortCode: (order as any).short_code || undefined,
-        customerName: order.customer_name,
-        customerPhone: order.customer_phone || undefined,
-        deliveryAddress: order.delivery_address || undefined,
-        notes: order.notes || undefined,
-        total: Number(order.total),
-        status: order.status as OrderStatus,
-        createdAt: new Date(order.created_at),
-        companyId: order.company_id || undefined,
-        printed: (order as any).printed || false,
-        printedAt: (order as any).printed_at ? new Date((order as any).printed_at) : undefined,
-        confirmedAt: (order as any).confirmed_at ? new Date((order as any).confirmed_at) : undefined,
-        paymentStatus: (order as any).payment_status || undefined,
-        paidAmount: Number((order as any).paid_amount || 0),
-        paidItems: (order as any).paid_items || undefined,
-        splitInfo: (order as any).split_info || undefined,
-        origin: (
-          true &&
-          ((order as any).origin === 'cardapio' || !(order as any).origin) &&
-          typeof order.notes === 'string' &&
-          order.notes.includes('[EXPRESS]')
-            ? 'balcao'
-            : ((order as any).origin || 'cardapio')
-        ) as 'cardapio' | 'balcao' | 'mesa',
-        items: itemsData
-          .filter((item) => item.order_id === order.id)
-          .map((item) => ({
-            id: item.id,
-            productId: item.product_id || '',
-            name: item.name,
-            quantity: item.quantity,
-            price: Number(item.price),
-            notes: item.notes || undefined,
-          })),
-      }));
+      const mappedOrders: Order[] = (ordersData || []).map((order) => mapOrderRow(order, itemsData));
 
       // Only update state if data actually changed to prevent unnecessary re-renders
       const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, notes: o.notes, confirmedAt: o.confirmedAt?.toISOString(), paymentStatus: o.paymentStatus, paidAmount: o.paidAmount, paidItems: o.paidItems, splitInfo: o.splitInfo })));
@@ -128,6 +134,57 @@ export function useOrders(options: UseOrdersOptions = {}) {
       setLoading(false);
     }
   }
+
+  // A busca principal (fetchOrders) só traz pedidos das últimas 48h ou ainda
+  // ativos (pendente/preparando/pronto) — de propósito, pra tela ficar rápida
+  // em tempo real. Pedidos mais antigos e já finalizados (entregue/cancelado)
+  // nunca entram nesse carregamento. Esta função busca um intervalo específico
+  // direto no banco, sob demanda, para quando o usuário filtra por uma data
+  // fora dessa janela (ex.: tela de Pedidos, período customizado/7/15/30 dias).
+  // Não mexe no estado `orders` nem na assinatura de tempo real.
+  // useCallback com [companyId]: mantém a mesma referência entre re-renders
+  // (o hook recria funções a cada atualização de `orders`), evitando refetch
+  // desnecessário em quem usa isso como dependência de useEffect.
+  const fetchOrdersByDateRange = useCallback(async (startDate: Date, endDate: Date): Promise<Order[]> => {
+    if (!companyId) return [];
+
+    const toSPDateString = (date: Date) => date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    const startISO = `${toSPDateString(startDate)}T00:00:00-03:00`;
+    const endISO = `${toSPDateString(endDate)}T23:59:59.999-03:00`;
+
+    const { data: ordersData, error: ordersError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('company_id', companyId)
+      .gte('created_at', startISO)
+      .lte('created_at', endISO)
+      .order('created_at', { ascending: false });
+
+    if (ordersError) {
+      console.error('Error fetching orders by date range:', ordersError);
+      return [];
+    }
+
+    const orderIds = (ordersData || []).map((o) => o.id);
+    let itemsData: any[] = [];
+    if (orderIds.length > 0) {
+      const CHUNK = 200;
+      for (let i = 0; i < orderIds.length; i += CHUNK) {
+        const slice = orderIds.slice(i, i + CHUNK);
+        const { data, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .in('order_id', slice);
+        if (itemsError) {
+          console.error('Error fetching order_items by date range:', itemsError);
+          continue;
+        }
+        if (data) itemsData = itemsData.concat(data);
+      }
+    }
+
+    return (ordersData || []).map((order) => mapOrderRow(order, itemsData));
+  }, [companyId]);
 
   function scheduleFetchOrders() {
     if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
@@ -726,5 +783,6 @@ export function useOrders(options: UseOrdersOptions = {}) {
     getTodayOrders,
     getTodayRevenue,
     refetch: fetchOrders,
+    fetchOrdersByDateRange,
   };
 }

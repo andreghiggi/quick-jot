@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -16,9 +16,10 @@ import {
 } from '@/components/OrderFilters';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Order } from '@/types/order';
 
 function OrdersContent() {
-  const { orders } = useOrderContext();
+  const { orders, fetchOrdersByDateRange } = useOrderContext();
   const { company } = useAuthContext();
   const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
@@ -28,6 +29,11 @@ function OrdersContent() {
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>('all');
   const [originFilter, setOriginFilter] = useState<OriginFilter>('all');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>([]);
+  // `orders` (tempo real) só cobre as últimas 48h + pedidos ainda ativos.
+  // Quando o usuário escolhe um período com data, buscamos esse intervalo
+  // direto no banco, pra pedidos antigos já finalizados aparecerem também.
+  const [historicalOrders, setHistoricalOrders] = useState<Order[] | null>(null);
+  const [loadingHistorical, setLoadingHistorical] = useState(false);
 
   const toSPDateString = (date: Date) => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -35,23 +41,45 @@ function OrdersContent() {
 
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 
+  useEffect(() => {
+    if (!startDate && !endDate) {
+      setHistoricalOrders(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingHistorical(true);
+    fetchOrdersByDateRange(startDate ?? new Date(2020, 0, 1), endDate ?? new Date())
+      .then((result) => {
+        if (!cancelled) setHistoricalOrders(result);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingHistorical(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [startDate, endDate, fetchOrdersByDateRange]);
+
   const dateFilteredOrders = useMemo(() => {
-    // Default (today): show today's orders
+    // Default (today): show today's orders (lista em tempo real)
     if (!startDate && !endDate) {
       return orders.filter((order) => {
         const orderStr = toSPDateString(new Date(order.createdAt));
         return orderStr === todayStr;
       });
     }
+    // Período com data selecionada: usa o resultado buscado direto no banco
+    // (cobre pedidos antigos já entregues/cancelados, fora da janela de 48h).
+    const sourceOrders = historicalOrders ?? [];
     const startStr = startDate ? toSPDateString(startDate) : null;
     const endStr = endDate ? toSPDateString(endDate) : null;
-    return orders.filter((order) => {
+    return sourceOrders.filter((order) => {
       const orderStr = toSPDateString(new Date(order.createdAt));
       if (startStr && orderStr < startStr) return false;
       if (endStr && orderStr > endStr) return false;
       return true;
     });
-  }, [orders, startDate, endDate, todayStr]);
+  }, [orders, historicalOrders, startDate, endDate, todayStr]);
 
   const filteredOrders = useMemo(
     () => filterOrders(dateFilteredOrders, deliveryFilter, originFilter, paymentFilter),
@@ -83,6 +111,9 @@ function OrdersContent() {
           activePeriod={activePeriod}
           onPeriodChange={setActivePeriod}
         />
+        {loadingHistorical && (
+          <p className="text-sm text-muted-foreground">Carregando pedidos do período...</p>
+        )}
 
         <OrderFilters
           orders={dateFilteredOrders}

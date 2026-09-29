@@ -17,6 +17,7 @@ interface OrderContextType {
   getTodayOrders: () => Order[];
   getTodayRevenue: () => number;
   refetch: () => Promise<void>;
+  fetchOrdersByDateRange: (startDate: Date, endDate: Date) => Promise<Order[]>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
