@@ -825,6 +825,111 @@ export type Database = {
           },
         ]
       }
+      comanda_cards_allowed_companies: {
+        Row: {
+          company_id: string
+          created_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      comanda_charges: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          finalized_at: string | null
+          id: string
+          sale_id: string | null
+          status: string
+          tab_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          finalized_at?: string | null
+          id?: string
+          sale_id?: string | null
+          status?: string
+          tab_ids: string[]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          finalized_at?: string | null
+          id?: string
+          sale_id?: string | null
+          status?: string
+          tab_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      comanda_pending_orders: {
+        Row: {
+          comanda_number: number | null
+          company_id: string
+          created_at: string
+          id: string
+          items: Json
+          production_ticket_html: string | null
+          reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resolved_tab_id: string | null
+          status: string
+          table_id: string | null
+          table_number: number | null
+          updated_at: string
+        }
+        Insert: {
+          comanda_number?: number | null
+          company_id: string
+          created_at?: string
+          id?: string
+          items: Json
+          production_ticket_html?: string | null
+          reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_tab_id?: string | null
+          status?: string
+          table_id?: string | null
+          table_number?: number | null
+          updated_at?: string
+        }
+        Update: {
+          comanda_number?: number | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          items?: Json
+          production_ticket_html?: string | null
+          reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_tab_id?: string | null
+          status?: string
+          table_id?: string | null
+          table_number?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       combo_categories: {
         Row: {
           category_id: string
@@ -4370,42 +4475,113 @@ export type Database = {
           },
         ]
       }
+      tab_item_fraction_reservations: {
+        Row: {
+          amount_cents: number
+          charge_id: string
+          company_id: string
+          created_at: string
+          fraction_den: number
+          fraction_num: number
+          id: string
+          quantity: number
+          source_tab_id: string
+          source_tab_item_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          charge_id: string
+          company_id: string
+          created_at?: string
+          fraction_den: number
+          fraction_num: number
+          id?: string
+          quantity: number
+          source_tab_id: string
+          source_tab_item_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          charge_id?: string
+          company_id?: string
+          created_at?: string
+          fraction_den?: number
+          fraction_num?: number
+          id?: string
+          quantity?: number
+          source_tab_id?: string
+          source_tab_item_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tab_item_fraction_reservations_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "comanda_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tab_items: {
         Row: {
+          amount_cents: number | null
           created_at: string | null
           created_by: string
+          fraction_den: number | null
+          fraction_num: number | null
           id: string
           notes: string | null
+          original_quantity: number | null
+          original_total_cents: number | null
           paid: boolean
           product_id: string | null
           product_name: string
           quantity: number
+          source_tab_item_id: string | null
           tab_id: string
           total_price: number
           unit_price: number
         }
         Insert: {
+          amount_cents?: number | null
           created_at?: string | null
           created_by: string
+          fraction_den?: number | null
+          fraction_num?: number | null
           id?: string
           notes?: string | null
+          original_quantity?: number | null
+          original_total_cents?: number | null
           paid?: boolean
           product_id?: string | null
           product_name: string
           quantity?: number
+          source_tab_item_id?: string | null
           tab_id: string
           total_price: number
           unit_price: number
         }
         Update: {
+          amount_cents?: number | null
           created_at?: string | null
           created_by?: string
+          fraction_den?: number | null
+          fraction_num?: number | null
           id?: string
           notes?: string | null
+          original_quantity?: number | null
+          original_total_cents?: number | null
           paid?: boolean
           product_id?: string | null
           product_name?: string
           quantity?: number
+          source_tab_item_id?: string | null
           tab_id?: string
           total_price?: number
           unit_price?: number
@@ -4501,6 +4677,7 @@ export type Database = {
       tabs: {
         Row: {
           closed_at: string | null
+          comanda_number: number | null
           company_id: string
           created_at: string | null
           created_by: string
@@ -4515,6 +4692,7 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          comanda_number?: number | null
           company_id: string
           created_at?: string | null
           created_by: string
@@ -4529,6 +4707,7 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          comanda_number?: number | null
           company_id?: string
           created_at?: string | null
           created_by?: string
@@ -4878,6 +5057,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _comanda_guard: { Args: { _company_id: string }; Returns: undefined }
       apply_stock_movement: {
         Args: {
           _notes?: string
@@ -4893,11 +5073,30 @@ export type Database = {
         Args: { _company_id: string; _name: string }
         Returns: string
       }
+      cancel_comanda_charge: {
+        Args: { _charge_id: string }
+        Returns: undefined
+      }
+      cancel_fraction_reservation: {
+        Args: { _reservation_id: string }
+        Returns: undefined
+      }
       cleanup_old_whatsapp_messages: { Args: never; Returns: Json }
       close_inventory_count: { Args: { _count_id: string }; Returns: Json }
+      comanda_cards_active: { Args: { _company_id: string }; Returns: boolean }
+      comanda_cards_allowed: { Args: { _company_id: string }; Returns: boolean }
+      create_comanda_charge: {
+        Args: { _company_id: string; _tab_ids: string[] }
+        Returns: string
+      }
       ensure_credit_receipt_tax_rule: {
         Args: { _company_id: string }
         Returns: string
+      }
+      expire_comanda_charges: { Args: never; Returns: number }
+      finalize_comanda_charge: {
+        Args: { _charge_id: string; _sale_id: string }
+        Returns: Json
       }
       generate_clean_subdomain: { Args: { _input: string }; Returns: string }
       generate_company_serial: { Args: never; Returns: string }
@@ -4948,6 +5147,15 @@ export type Database = {
         Returns: string
       }
       process_overdue_invoices: { Args: never; Returns: Json }
+      reserve_tab_fraction: {
+        Args: {
+          _charge_id: string
+          _den: number
+          _num: number
+          _source_item_id: string
+        }
+        Returns: Json
+      }
       sync_pdv_sale_counters: { Args: never; Returns: Json }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
