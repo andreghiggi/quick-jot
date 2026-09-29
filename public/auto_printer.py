@@ -236,6 +236,7 @@ STATIONS_TTL = 300  # segundos
 GDI_COMPANY_IDS = {
     "f5f9eec3-67bc-497a-88a6-ce41d3b15df8",  # Amore Mio
     "b2f97590-ff21-4951-95dc-e3e2b19d4ccb",  # Rei do Acai
+    "8c9e7a0e-dbb6-49b9-8344-c23155a71164",  # Lancheria da i9 (loja de testes, usa Microsoft Print to PDF)
 }
 
 # Lojas que DESCARTAM o backlog ao iniciar o script (nao imprimem acumulo antigo).
