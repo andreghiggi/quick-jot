@@ -59,6 +59,9 @@ import {
   ArrowLeftRight
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useComandaCards } from '@/hooks/useComandaCards';
+import { ComandaNumberInput } from '@/components/comanda/ComandaNumberInput';
+import { formatComandaNumber } from '@/utils/comandaCode';
 
 export default function Waiter() {
   const { company, user, profile } = useAuthContext();
@@ -71,7 +74,8 @@ export default function Waiter() {
     removeItemFromTab,
     getTabTotal,
     addItemToTab,
-    deleteTab
+    deleteTab,
+    openComandaTab
   } = useTabs({ companyId: company?.id });
   const { products, loading: loadingProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
@@ -101,6 +105,33 @@ export default function Waiter() {
   const cartEndRef = useRef<HTMLDivElement>(null);
 
   const isI9 = true;
+
+  // Modo comanda individual (cartões) — só lojas liberadas + opção ligada.
+  const comandaCards = useComandaCards(company?.id);
+  const [comandaTable, setComandaTable] = useState<typeof tables[0] | null>(null);
+  const [comandaBusy, setComandaBusy] = useState(false);
+
+  async function handleComandaNumber(n: number) {
+    if (!comandaTable || !user?.id) return;
+    setComandaBusy(true);
+    try {
+      const tab = await openComandaTab({
+        comandaNumber: n,
+        tableId: comandaTable.id,
+        tableNumber: comandaTable.number,
+        userId: user.id,
+        userName: profile?.full_name || 'Garçom',
+        confirmTransfer: (from) =>
+          window.confirm(`A comanda ${formatComandaNumber(n)} está aberta na Mesa ${from ?? '?'}. Transferir para a Mesa ${comandaTable.number}?`),
+      });
+      if (tab) {
+        setSelectedTab(tab);
+        setComandaTable(null);
+      }
+    } finally {
+      setComandaBusy(false);
+    }
+  }
 
   // i9: animated badge counter
   const [cartBounce, setCartBounce] = useState(false);
@@ -221,6 +252,10 @@ export default function Waiter() {
   };
 
   const handleTableClick = (table: typeof tables[0]) => {
+    if (comandaCards.active) {
+      setComandaTable(table);
+      return;
+    }
     // Guard anti-duplicação: SEMPRE checa se já existe comanda aberta
     // para esta mesa (pode ter sido criada via QR Mesa e o status local
     // ainda não foi atualizado pelo realtime). Se houver, abre a
@@ -582,6 +617,35 @@ export default function Waiter() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Comanda individual: pede o número do cartão da mesa */}
+      <Dialog open={!!comandaTable} onOpenChange={(o) => !o && setComandaTable(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mesa {comandaTable?.number} — Comanda</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Digite ou leia o número do cartão</Label>
+              <ComandaNumberInput onSubmit={handleComandaNumber} showCamera autoFocus disabled={comandaBusy} submitLabel="Abrir" />
+            </div>
+            {comandaTable && openTabs.filter((t) => t.table_id === comandaTable.id && t.comanda_number != null).length > 0 && (
+              <div className="space-y-2">
+                <Label>Comandas abertas nesta mesa</Label>
+                <div className="flex flex-wrap gap-2">
+                  {openTabs
+                    .filter((t) => t.table_id === comandaTable.id && t.comanda_number != null)
+                    .map((t) => (
+                      <Button key={t.id} variant="outline" size="sm" onClick={() => { setSelectedTab(t); setComandaTable(null); }}>
+                        {formatComandaNumber(t.comanda_number!)} · R$ {getTabTotal(t).toFixed(2).replace('.', ',')}
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* New Tab Dialog */}
       <Dialog open={newTabDialogOpen} onOpenChange={setNewTabDialogOpen}>
