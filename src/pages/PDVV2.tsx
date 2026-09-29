@@ -40,6 +40,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import { ComandaChargeDialog, type ComandaChargeReady } from '@/components/comanda/ComandaChargeDialog';
+import { useComandaCards } from '@/hooks/useComandaCards';
 import { PDVV2ClosedTabsDialog, ClosedTabSale } from '@/components/pdv-v2/PDVV2ClosedTabsDialog';
 import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -118,6 +120,12 @@ export default function PDVV2() {
   const { products } = useProducts({ companyId });
   const { taxRules } = useTaxRules({ companyId });
   const { enabled: mercadoEnabled } = useMercadoEnabled(companyId);
+  // Comanda individual: no PDV V2 só quando a loja NÃO tem Frente de Caixa.
+  const comandaCards = useComandaCards(companyId);
+  const comandaInPdv = comandaCards.active && !mercadoEnabled;
+  const [comandaDialogOpen, setComandaDialogOpen] = useState(false);
+  const [comandaCharge, setComandaCharge] = useState<ComandaChargeReady | null>(null);
+  const comandaChargeDoneRef = useRef(false);
   const fiscalEnabled = isModuleEnabled('fiscal');
   const hasTefPaymentMethod = useMemo(
     () => hasActiveTefPaymentMethod([...activePaymentMethods, ...menuPaymentMethods]),
@@ -772,6 +780,52 @@ export default function PDVV2() {
 
   const isI9 = true;
 
+  async function confirmComandaCharge({
+    paymentMethodId, paymentName, discount, finalTotal, documentMode, printDocument,
+    tefOptions, tefIntegration, customerDocument, prechargedTef,
+  }: Parameters<typeof confirmImportTab>[0]) {
+    if (!comandaCharge || !user || !currentRegister || !companyId) {
+      toast.error('Caixa precisa estar aberto');
+      return;
+    }
+    const charge = comandaCharge;
+    const items = charge.lines.map(({ product_id, product_name, quantity, unit_price }) => ({ product_id, product_name, quantity, unit_price }));
+    let tefData: NFCeTefData | undefined;
+    let tefNotesFragment = '';
+    if (prechargedTef?.tefData) {
+      tefData = prechargedTef.tefData;
+      tefNotesFragment = prechargedTef.notesFragment ? ` | ${prechargedTef.notesFragment}` : '';
+    } else if (tefIntegration && tefOptions) {
+      const result = await runTefPayment({
+        companyId, integration: tefIntegration, amount: finalTotal, options: tefOptions,
+        description: charge.label, onStatus: setTefStatus, tefFirstFlow: chargeTefBeforePopups,
+      });
+      setTefStatus('');
+      if (!result.success) return;
+      tefData = result.tefData;
+      tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
+    }
+    const saleId = await addSale(items, paymentMethodId, user.id, discount, charge.label,
+      `${charge.label} | Pagamento: ${paymentName}${tefNotesFragment}`);
+    if (!saleId) return;
+    const { error: finErr } = await supabase.rpc('finalize_comanda_charge' as any, { _charge_id: charge.chargeId, _sale_id: saleId });
+    if (finErr) toast.error(`Venda salva, mas as comandas não foram fechadas: ${finErr.message}. Não cobre de novo.`);
+    comandaChargeDoneRef.current = true;
+    setComandaCharge(null);
+    const wantsNfce = (tefIntegration ? true : documentMode === 'sale_with_nfce') && fiscalEnabled;
+    if (wantsNfce) {
+      await emitNFCeAndOpenDialog({ saleId, items, discount, customerName: null, shouldPrint: printDocument !== false, tefData, customerDocument });
+    } else if (printDocument !== false) {
+      await printOnlyReceipt({
+        companyId, orderCode: charge.label, dailyNumber: charge.comandaNumbers[0] || 0, customerName: charge.label,
+        items: charge.lines.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price, notes: i.notes })),
+        total: finalTotal, notes: `Pagamento: ${paymentName}`,
+        paperSize: (settings.printerPaperSize as '58mm' | '80mm') || '80mm', printLayout: settings.printLayout,
+      });
+    }
+    toast.success(`${charge.label} cobrada(s) e fechada(s)!`);
+  }
+
   function handleImportClick(tab: OccupiedTab) {
     if (!cashOpen) {
       toast.error('Abra o caixa para cobrar');
@@ -1370,6 +1424,13 @@ export default function PDVV2() {
             </TabsContent>
 
             <TabsContent value="tables" className="hidden !mt-0 min-h-0 flex-1 flex-col overflow-hidden pt-3 data-[state=active]:flex data-[state=active]:!mt-0">
+              {comandaInPdv && (
+                <div className="px-4 pb-2">
+                  <Button onClick={() => { if (!cashOpen) { toast.error('Abra o caixa para cobrar'); return; } setComandaDialogOpen(true); }}>
+                    Cobrar Comanda
+                  </Button>
+                </div>
+              )}
               <PDVV2TablesSummaryCards
                 occupiedTables={tablesMetrics.occupiedTables}
                 openTabs={tablesMetrics.openTabsCount}
@@ -1562,6 +1623,35 @@ export default function PDVV2() {
         checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
         transferLog={importingTab ? (openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.transfer_log as any) || undefined : undefined}
       />
+
+      {comandaInPdv && companyId && (
+        <ComandaChargeDialog
+          open={comandaDialogOpen}
+          onOpenChange={setComandaDialogOpen}
+          companyId={companyId}
+          onProceed={(c) => { comandaChargeDoneRef.current = false; setComandaDialogOpen(false); setComandaCharge(c); }}
+        />
+      )}
+      {comandaInPdv && (
+        <PDVV2PaymentDialog
+          open={!!comandaCharge}
+          onOpenChange={(o) => {
+            if (!o && comandaCharge && !comandaChargeDoneRef.current) {
+              void supabase.rpc('cancel_comanda_charge' as any, { _charge_id: comandaCharge.chargeId });
+              setComandaCharge(null);
+            }
+          }}
+          companyId={companyId}
+          total={comandaCharge?.total || 0}
+          printLayout={settings.printLayout}
+          title={`Cobrar ${comandaCharge?.label || ''}`}
+          showDocumentMode
+          showAddItem={false}
+          tefStatus={tefStatus}
+          chargeTefBeforePopups={chargeTefBeforePopups}
+          onConfirm={confirmComandaCharge}
+        />
+      )}
 
       <PDVV2SequentialPaymentDialog
         open={multiPayOpen}
