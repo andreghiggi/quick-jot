@@ -291,7 +291,11 @@ export default function Waiter() {
       customerName: customerName || undefined,
       notes: tabNotes || undefined,
       userId: user.id,
-      manualTabNumber: manualTabNumber ? parseInt(manualTabNumber) : undefined
+      manualTabNumber: manualTabNumber ? parseInt(manualTabNumber) : undefined,
+      // Comanda individual ativa (só lojas liberadas, ex.: i9): o número do
+      // cartão físico digitado aqui também fica encontrável pela cobrança
+      // por comanda, sem precisar passar pelo fluxo separado.
+      comandaCardsActive: comandaCards.active,
     });
 
     if (newTab) {

@@ -173,6 +173,11 @@ export function useTabs(options: UseTabsOptions = {}) {
     notes?: string;
     userId: string;
     manualTabNumber?: number;
+    /** Loja com "comanda individual" (cartões numerados) ativa: espelha o
+     *  número digitado também em `comanda_number`, pra essa comanda ser
+     *  encontrável pela função de cobrança por cartão. Isolado — lojas sem
+     *  o piloto continuam com `comanda_number` nulo, sem mudança nenhuma. */
+    comandaCardsActive?: boolean;
   }): Promise<Tab | null> {
     if (!companyId) return null;
 
@@ -238,11 +243,12 @@ export function useTabs(options: UseTabsOptions = {}) {
           company_id: companyId,
           table_id: data.tableId || null,
           tab_number: tabNumber,
+          comanda_number: data.comandaCardsActive && data.manualTabNumber ? data.manualTabNumber : null,
           customer_name: data.customerName || null,
           notes: data.notes || null,
           created_by: data.userId,
           status: 'open'
-        })
+        } as any)
         .select()
         .single();
 
