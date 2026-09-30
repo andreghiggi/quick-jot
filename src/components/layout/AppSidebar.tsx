@@ -89,7 +89,12 @@ export function AppSidebar() {
   // Perfil "só Mercado": esconde Pedidos, Cardápio, Mesas, Cupons, Combos,
   // Adicionais, Subcategorias e WhatsApp Ordering. Mantém Frente de Caixa,
   // Produtos, Estoque, Clientes, Fornecedores, Caixa, Fiscal e Relatórios.
-  const mercadoOnly = mercadoActive && !cardapioEnabled;
+  // Precisa TAMBÉM não ter PDV V2/Mesas ativos: loja com mercado ligado mas
+  // que já opera com PDV V2 + Mesas (ex.: i9, Cozinha da Ruiva) é um
+  // restaurante de verdade, não um "mercado só" — só desligou o Cardápio
+  // online por escolha própria. Sem essa checagem, o menu principal ficava
+  // reduzido a só "Frente de Caixa", escondendo PDV/Pedidos/Comandas.
+  const mercadoOnly = mercadoActive && !cardapioEnabled && !pdvV2Enabled && !isModuleEnabled('mesas');
 
   // Waiter-only menu
   const waiterMenuItems = [

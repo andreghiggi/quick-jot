@@ -4,6 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
+import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useGlobalShortcut } from '@/hooks/useGlobalShortcut';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,6 +24,8 @@ export function FrenteCaixaFAB() {
   const { company } = useAuthContext();
   const { enabled: mercadoOn } = useMercadoEnabled(company?.id);
   const { enabled: cardapioOn } = useCardapioEnabled(company?.id);
+  const { enabled: pdvV2On } = usePdvV2Enabled(company?.id);
+  const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
 
@@ -33,9 +37,14 @@ export function FrenteCaixaFAB() {
   // Dentro do hub de Compras, esse atalho cede o canto pro FAB "+" de
   // "Cadastrar nota de compra" — evita sobreposição de dois botões redondos.
   const onCompras = pathname.startsWith('/compras');
-  // Só faz sentido para LOJA HÍBRIDA (Mercado + Cardápio).
-  // Loja só-mercado já abre direto na Frente de Caixa, não precisa de atalho.
-  const shouldRender = mercadoOn && cardapioOn && !isMobile && !onFrenteCaixa && !onCompras;
+  // Só faz sentido para loja com Mercado ativo que NÃO é "mercado só":
+  // híbrida com Cardápio, ou restaurante de verdade com PDV V2/Mesas (ex.:
+  // i9, Cozinha da Ruiva - têm Mercado ligado mas Cardápio online desligado
+  // por escolha própria; sem essa checagem o atalho ficava escondido).
+  // Loja verdadeiramente só-mercado já abre direto na Frente de Caixa, não
+  // precisa de atalho.
+  const isRealRestaurant = pdvV2On || isModuleEnabled('mesas');
+  const shouldRender = mercadoOn && (cardapioOn || isRealRestaurant) && !isMobile && !onFrenteCaixa && !onCompras;
 
   // Hook precisa ser chamado incondicionalmente; só dispara se renderizar.
   useGlobalShortcut('F8', () => {
