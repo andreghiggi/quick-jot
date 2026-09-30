@@ -26,7 +26,13 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          # Auto-cura: se o package.json ganhou uma lib nova mas o
+          # package-lock.json nao foi atualizado junto (comum em sessoes da
+          # Lovable, que mantem o proprio bun.lock em vez do lockfile do
+          # npm), sincroniza o lockfile antes do npm ci em vez de falhar.
+          npm install --package-lock-only --no-audit --no-fund
+          npm ci
 
       - name: Validate Supabase secrets point to VPS API
         env:
