@@ -188,6 +188,13 @@ function resolvePaymentHtml(notes: string | undefined): string {
   }
   if (trocoMatch) {
     html += `<p><span class="label">TROCO PARA:</span> R$ ${escapeHtml(trocoMatch[1].trim())}</p>`;
+  } else if (/troco/i.test(notes)) {
+    // Rede de seguranca: as observacoes mencionam troco mas o padrao
+    // "Troco para: R$ X" nao bateu (formato inesperado). Em vez de perder
+    // a informacao silenciosamente, imprime a observacao por extenso -
+    // mesmo comportamento que o recibo simples (buildReceiptHTML) ja usa
+    // como padrao hoje.
+    html += `<p><span class="label">OBS:</span> ${escapeHtml(notes.trim())}</p>`;
   }
   if (pixMatch) {
     html += `<p><span class="label">CHAVE PIX:</span> ${escapeHtml(pixMatch[1].trim())}</p>`;

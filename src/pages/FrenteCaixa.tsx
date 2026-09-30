@@ -154,6 +154,76 @@ export default function FrenteCaixa() {
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   const { paymentMethods: allPaymentMethods } = usePaymentMethods({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+
+  // ── Aviso de TEF aprovado sem venda registrada (isolado, Bon Appetit) ──
+  // Detecta cobranca confirmada no PinPad mas sem venda salva no sistema
+  // (ex.: o app fechou/travou entre a aprovacao e o salvamento da venda) -
+  // avisa ANTES do operador cobrar de novo por engano. So LE
+  // tef_webservice_logs/pdv_sales (RLS ja permite pro usuario da propria
+  // empresa) - nao mexe em nada do fluxo real de cobranca (addSale,
+  // pinpadService, tef-webservice).
+  const TEF_ORPHAN_CHECK_COMPANY_IDS = new Set(['32b71649-461d-4cb6-b26c-12390b090feb']); // Bon Appetit
+  const [orphanTefAlert, setOrphanTefAlert] = useState<{ valor: number; nsu: string; hora: string } | null>(null);
+
+  useEffect(() => {
+    if (!company?.id || !TEF_ORPHAN_CHECK_COMPANY_IDS.has(company.id)) return undefined;
+    let cancelled = false;
+
+    async function checkOrphanTef() {
+      const sinceIso = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const { data: tefLogs } = await supabase
+        .from('tef_webservice_logs')
+        .select('created_at, response_payload')
+        .eq('company_id', company!.id)
+        .eq('action', 'get-status')
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false });
+
+      if (cancelled) return;
+      if (!tefLogs?.length) {
+        setOrphanTefAlert(null);
+        return;
+      }
+
+      const { data: recentSales } = await supabase
+        .from('pdv_sales')
+        .select('notes')
+        .eq('company_id', company!.id)
+        .gte('created_at', sinceIso);
+
+      if (cancelled) return;
+      const salesNotes = (recentSales || []).map((s: any) => s.notes || '');
+
+      for (const log of tefLogs) {
+        const payload = log.response_payload as any;
+        if (!payload?.success) continue;
+        const nsu = String(payload?.nsuHost || '');
+        if (!nsu) continue;
+        if (!salesNotes.some((n) => n.includes(nsu))) {
+          const centavos = Number(payload?.raw?.['003-000'] || 0);
+          setOrphanTefAlert({
+            valor: centavos / 100,
+            nsu,
+            hora: new Date(log.created_at as string).toLocaleTimeString('pt-BR', {
+              timeZone: 'America/Sao_Paulo',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          });
+          return;
+        }
+      }
+      setOrphanTefAlert(null);
+    }
+
+    checkOrphanTef();
+    const intervalId = window.setInterval(checkOrphanTef, 60000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [company?.id]);
+
   const {
     currentRegister,
     cashOpenKnown,
@@ -1438,6 +1508,24 @@ export default function FrenteCaixa() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Abrir Caixa
+            </Button>
+          </div>
+        )}
+
+        {orphanTefAlert && (
+          <div className="bg-destructive/10 border-b border-destructive/30 px-4 py-2 text-sm text-destructive flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                <strong>Atenção:</strong> cartão aprovado (R$ {orphanTefAlert.valor.toFixed(2).replace('.', ',')}, NSU {orphanTefAlert.nsu}, às {orphanTefAlert.hora}) sem venda registrada no sistema. Não cobre de novo sem antes conferir o comprovante do PinPad.
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setOrphanTefAlert(null)}
+            >
+              Já conferi
             </Button>
           </div>
         )}
