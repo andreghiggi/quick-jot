@@ -1,0 +1,67 @@
+name: Rollback (reverter deploy)
+
+# Uso: Actions -> Rollback (reverter deploy) -> Run workflow.
+#
+# Sem preencher nada: reverte só o ultimo commit de main (desfaz a ultima
+# mudanca publicada).
+#
+# Preenchendo "target_commit" com o SHA de um commit anterior (pego na aba
+# Actions, num run verde de "Deploy to VPS" que voce aprovou e sabe que
+# estava tudo bem): reverte TUDO que foi commitado depois dele, de uma vez
+# so, mesmo que tenham sido varios commits pequenos da Lovable no meio.
+#
+# Este workflow so cria um commit de reversao e publica em main - ele NAO
+# fala direto com a VPS. Isso automaticamente dispara os workflows normais
+# de deploy (front e functions), que continuam exigindo a mesma aprovacao
+# manual (Production) de sempre antes de qualquer coisa ir pro ar.
+#
+# Se der conflito (alguem mudou a mesma linha depois), o job falha com uma
+# mensagem clara no log - nesse caso o revert precisa ser feito manualmente.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_commit:
+        description: 'SHA do ultimo commit BOM conhecido (reverte tudo depois dele). Vazio = reverte só o ultimo commit.'
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    name: Criar commit de reversao
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (historico completo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configura autor do commit
+        run: |
+          git config user.name "rollback-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+      - name: Reverte
+        run: |
+          set -e
+          TARGET="${{ inputs.target_commit }}"
+
+          if [ -z "$TARGET" ]; then
+            echo "==> Nenhum target_commit informado: revertendo so o ultimo commit (HEAD)"
+            git revert --no-edit HEAD
+          else
+            echo "==> Verificando que $TARGET existe no historico..."
+            git cat-file -e "$TARGET^{commit}"
+
+            echo "==> Revertendo tudo entre $TARGET (exclusivo) e HEAD, num commit so"
+            git revert --no-commit "$TARGET"..HEAD
+            git commit -m "rollback: reverte main para o estado do commit $TARGET"
+          fi
+
+          echo "==> Publicando commit de reversao"
+          git push origin main
+
+          echo "==> Pronto. Os workflows de deploy (front e functions) vao"
+          echo "    pedir aprovacao manual normalmente antes de ir pro ar."
