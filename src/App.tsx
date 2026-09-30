@@ -43,7 +43,11 @@ function RootRedirect() {
   if (isWaiter()) return <Navigate to="/garcom" replace />;
   if (!pdvV2Loading && pdvV2Enabled) return <Navigate to="/pdv-v2" replace />;
   // Loja SÓ Mercado (sem Cardápio e sem PDV V2) → abre direto na Frente de Caixa.
-  if (!mercadoLoading && !cardapioLoading && mercadoEnabled && !cardapioEnabled) {
+  // Precisa esperar pdvV2Loading resolver e confirmar pdvV2Enabled=false antes
+  // de decidir — senão, numa loja com PDV V2 ativo mas cujo hook ainda não
+  // carregou, essa checagem (que só depende de mercado/cardápio) dispara
+  // primeiro e manda pra Frente de Caixa por engano, mesmo a loja tendo PDV V2.
+  if (!pdvV2Loading && !mercadoLoading && !cardapioLoading && !pdvV2Enabled && mercadoEnabled && !cardapioEnabled) {
     return <Navigate to="/frente-caixa" replace />;
   }
 
