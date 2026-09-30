@@ -1,0 +1,90 @@
+name: Deploy Supabase Migrations
+
+# IMPORTANTE: isto aplica mudanca de ESTRUTURA DE BANCO DE DADOS. Diferente
+# do deploy do front/functions, uma migracao ja aplicada NAO desfaz sozinha
+# com o workflow de Rollback (que so reverte codigo/git) - se uma migracao
+# der problema depois de aplicada, a recuperacao e restaurar o backup que
+# este workflow tira automaticamente ANTES de aplicar qualquer coisa, nao
+# o botao de reverter.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/deploy-supabase-migrations.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Aplicar migracoes pendentes na VPS
+    runs-on: ubuntu-latest
+    # Mesma trava de aprovacao manual dos outros dois deploys (Settings >
+    # Environments > Production > Required reviewers).
+    environment: Production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Backup + aplicar apenas migracoes pendentes (nunca reaplica as ja feitas)
+        run: |
+          tar -C supabase/migrations -czf /tmp/migrations.tar.gz .
+          scp -i ~/.ssh/deploy_key /tmp/migrations.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/migrations.tar.gz
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -e
+
+            echo "==> Backup automatico do banco antes de qualquer migracao"
+            /usr/local/sbin/comandatech-pg-dump.sh
+
+            echo "==> Extraindo migracoes recebidas"
+            rm -rf /tmp/migrations
+            mkdir -p /tmp/migrations
+            tar -xzf /tmp/migrations.tar.gz -C /tmp/migrations
+            rm -f /tmp/migrations.tar.gz
+
+            echo "==> Garantindo tabela de controle (quais migracoes ja rodaram)"
+            docker exec supabase-db-1 psql -U postgres -v ON_ERROR_STOP=1 -c "
+              CREATE TABLE IF NOT EXISTS public._schema_migrations_applied (
+                filename text PRIMARY KEY,
+                applied_at timestamptz NOT NULL DEFAULT now()
+              );
+            "
+
+            echo "==> Aplicando so as migracoes que ainda nao rodaram, em ordem"
+            pending=0
+            for f in $(ls /tmp/migrations/*.sql 2>/dev/null | sort); do
+              name=$(basename "$f")
+              already=$(docker exec supabase-db-1 psql -U postgres -tAc "select 1 from public._schema_migrations_applied where filename='$name';")
+              if [ "$already" = "1" ]; then
+                echo "  -> $name ja aplicada, pulando"
+                continue
+              fi
+
+              pending=$((pending+1))
+              echo "  -> Aplicando $name"
+              docker cp "$f" supabase-db-1:/tmp/_migrate_current.sql
+
+              if ! docker exec supabase-db-1 psql -U postgres -v ON_ERROR_STOP=1 \
+                    -c "BEGIN;" \
+                    -f /tmp/_migrate_current.sql \
+                    -c "INSERT INTO public._schema_migrations_applied(filename) VALUES ('$name'); COMMIT;"; then
+                echo "==> ERRO ao aplicar $name — abortando."
+                echo "    O backup ja foi feito no inicio deste job; se precisar reverter,"
+                echo "    restaure o dump mais recente em /var/backups/comandatech-pg/."
+                exit 1
+              fi
+              docker exec supabase-db-1 rm -f /tmp/_migrate_current.sql
+            done
+
+            rm -rf /tmp/migrations
+            echo "==> Concluido. $pending migracao(oes) nova(s) aplicada(s)."
+          ENDSSH
