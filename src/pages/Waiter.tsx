@@ -104,7 +104,12 @@ export default function Waiter() {
   const [optionalsDialogGroups, setOptionalsDialogGroups] = useState<OptionalGroup[]>([]);
   const cartEndRef = useRef<HTMLDivElement>(null);
 
-  const isI9 = true;
+  // ISOLAMENTO: essa tela customizada (post-add sheet, layout do carrinho,
+  // etc.) e so pro i9 — estava fixo em "true" e valia pra TODAS as lojas
+  // que usam Garcom, escondendo o botao "Finalizar e Imprimir" padrao de
+  // todo mundo. Corrigido pra checar a loja de verdade.
+  const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isI9 = company?.id === I9_COMPANY_ID;
 
   // Modo comanda individual (cartões) — só lojas liberadas + opção ligada.
   const comandaCards = useComandaCards(company?.id);
