@@ -500,6 +500,10 @@ export default function Waiter() {
 
       setCart([]);
       setAddItemDialogOpen(false);
+      // Finalizar e Imprimir: fecha também a tela da comanda e volta pro
+      // início do Garçom. Sem isso, a comanda reaparecia sozinha (o dialog
+      // dela só fica escondido enquanto addItemDialogOpen é true, não fechado).
+      if (shouldPrint) setSelectedTab(null);
     } catch (error) {
       toast.error('Erro ao adicionar itens');
     } finally {
