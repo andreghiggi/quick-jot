@@ -212,7 +212,21 @@ export function FrenteCaixaCheckoutDialog({
     });
   }, [isCreditSale, creditMethod]);
   const remaining = Math.max(0, total - allocated);
-  const over = allocated > total + 0.005;
+  /** Dinheiro pode "sobrar" (vira troco) sem ser erro — diferente de TEF/PIX/
+   *  crediário, onde pagar a mais não faz sentido (não dá pra devolver troco
+   *  numa maquininha). Por isso o excedente só é inválido quando não vem de
+   *  dinheiro. */
+  const cashAllocated = useMemo(
+    () =>
+      activePaymentMethods.reduce((sum, m) => {
+        const isCash = (m.name || '').trim().toLowerCase() === 'dinheiro';
+        return isCash ? sum + parseCurrencyInput(lines[m.id]?.text || '') : sum;
+      }, 0),
+    [lines, activePaymentMethods],
+  );
+  const nonCashAllocated = allocated - cashAllocated;
+  const troco = Math.max(0, allocated - total);
+  const over = nonCashAllocated > total + 0.005;
   /** No crediário: precisa cliente (nome + telefone) e o valor da forma
    *  crediário deve ser 100% do total (não permite mix). */
   const exact = isCreditSale
@@ -223,7 +237,7 @@ export function FrenteCaixaCheckoutDialog({
       && !!customerPhone.trim()
       && !!customerDocument.trim()
       && !!customerAddress.trim()
-    : total > 0 && Math.abs(allocated - total) < 0.005;
+    : total > 0 && nonCashAllocated <= total + 0.005 && allocated >= total - 0.005;
 
   // reset ao abrir
   useEffect(() => {
@@ -450,10 +464,22 @@ export function FrenteCaixaCheckoutDialog({
       }
 
       // Monta linhas para runMultiPayment
+      // Dinheiro com troco: o que o operador digitou é o valor recebido
+      // (ex.: R$ 200 pra uma conta de R$ 153), não o que de fato entra no
+      // caixa como pagamento. Abate o troco da(s) linha(s) de Dinheiro pra
+      // não inflar o total recebido registrado na venda.
+      let trocoToDeduct = troco;
       const mpLines: MultiPaymentInputLine[] = activePaymentMethods
         .map((m) => {
-          const amount = parseCurrencyInput(lines[m.id]?.text || '');
+          let amount = parseCurrencyInput(lines[m.id]?.text || '');
           if (amount <= 0) return null;
+          const isCash = (m.name || '').trim().toLowerCase() === 'dinheiro';
+          if (isCash && trocoToDeduct > 0.005) {
+            const deduct = Math.min(trocoToDeduct, amount);
+            amount -= deduct;
+            trocoToDeduct -= deduct;
+            if (amount <= 0.005) return null;
+          }
           const itg = (m as any).integration_type as string | undefined;
           // `manualCard`: contingência escolhida pelo operador quando o servidor
           // TEF está indisponível — a mesma forma é cobrada na maquininha à parte,
@@ -515,6 +541,9 @@ export function FrenteCaixaCheckoutDialog({
         });
       }
 
+      const trocoNote = troco > 0.005
+        ? `Troco: ${brl(troco)} (pago em dinheiro: ${brl(cashAllocated)})`
+        : '';
       await onConfirm({
         paymentMethodId: mp.primary.payment_method_id,
         paymentName: mp.primary.payment_name,
@@ -524,7 +553,7 @@ export function FrenteCaixaCheckoutDialog({
         customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
         customerDocument: customerDocument.trim() || undefined,
-        notes: notes.trim() || undefined,
+        notes: [notes.trim(), trocoNote].filter(Boolean).join(' | ') || undefined,
         combinedNotesFragment: mp.combinedNotesFragment,
         fiscalMode,
         mpLines: mp.lines || [],
@@ -778,7 +807,11 @@ export function FrenteCaixaCheckoutDialog({
                             : 'text-destructive font-semibold border-b-2 border-destructive pb-0.5'
                       }
                     >
-                      {over ? `Excede: ${brl(allocated - total)}` : `Falta: ${brl(remaining)}`}
+                      {over
+                        ? `Excede: ${brl(nonCashAllocated - total)}`
+                        : troco > 0.005
+                          ? `Troco: ${brl(troco)}`
+                          : `Falta: ${brl(remaining)}`}
                     </span>
                   </div>
 
