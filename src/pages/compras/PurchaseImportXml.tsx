@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { extractFunctionError } from '@/utils/edgeFunctionError';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -287,30 +288,9 @@ export default function PurchaseImportXml() {
         // `null`. Precisamos ler o corpo do erro para mostrar a mensagem real
         // ("SEFAZ ainda não liberou o XML completo" / "Faça a Confirmação").
         if (error || !data || data.error) {
-          let bodyMsg: string | null = null;
-          let bodyCode: string | null = null;
-          if (data?.error) {
-            bodyMsg = data.error;
-            bodyCode = data?.code || null;
-          } else if ((error as any)?.context?.body) {
-            try {
-              const parsed = typeof (error as any).context.body === 'string'
-                ? JSON.parse((error as any).context.body)
-                : (error as any).context.body;
-              bodyMsg = parsed?.error || null;
-              bodyCode = parsed?.code || null;
-            } catch { /* noop */ }
-          } else if ((error as any)?.context && typeof (error as any).context.text === 'function') {
-            try {
-              const t = await (error as any).context.text();
-              const parsed = JSON.parse(t);
-              bodyMsg = parsed?.error || null;
-              bodyCode = parsed?.code || null;
-            } catch { /* noop */ }
-          }
-          const finalMsg = bodyMsg
-            || (error as any)?.message
-            || 'Não foi possível baixar o XML desta NF-e.';
+          const { message: finalMsg, code: bodyCode } = await extractFunctionError(
+            error, data, 'Não foi possível baixar o XML desta NF-e.',
+          );
           if (bodyCode === 'NOT_AVAILABLE' || bodyCode === 'AWAITING_SEFAZ' || /confirmac|resNFe|resumo|duplicidade/i.test(finalMsg)) {
             setXmlUnavailable({
               message: finalMsg,
@@ -341,12 +321,14 @@ export default function PurchaseImportXml() {
             body: { companyId: company.id, action: 'download_xml', documentoId: id },
           });
           if (error || !data || data.error) {
-            const finalMsg = data?.error || (error as any)?.message || 'XML ainda não disponível.';
-            if (data?.code === 'NOT_AVAILABLE' || data?.code === 'AWAITING_SEFAZ' || /confirmac|resNFe|resumo|duplicidade/i.test(finalMsg)) {
+            const { message: finalMsg, code: bodyCode } = await extractFunctionError(
+              error, data, 'XML ainda não disponível.',
+            );
+            if (bodyCode === 'NOT_AVAILABLE' || bodyCode === 'AWAITING_SEFAZ' || /confirmac|resNFe|resumo|duplicidade/i.test(finalMsg)) {
               setXmlUnavailable({
                 message: finalMsg,
-                needsConfirmacao: data?.code !== 'AWAITING_SEFAZ',
-                code: data?.code || null,
+                needsConfirmacao: bodyCode !== 'AWAITING_SEFAZ',
+                code: bodyCode,
               });
               setLoading(false);
               return;
@@ -379,7 +361,8 @@ export default function PurchaseImportXml() {
         },
       });
       if (mErr || mData?.error) {
-        throw new Error(mData?.error || (mErr as any)?.message || 'Falha ao confirmar operação');
+        const { message } = await extractFunctionError(mErr, mData, 'Falha ao confirmar operação');
+        throw new Error(message);
       }
       toast.success('Confirmação da Operação enviada. Baixando XML…');
       // pequeno delay para a SEFAZ liberar o XML completo

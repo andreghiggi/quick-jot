@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { extractFunctionError } from '@/utils/edgeFunctionError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -133,8 +134,10 @@ export default function DfeManifestacao() {
     const { data, error } = await supabase.functions.invoke('dfe-fiscalflow-proxy', {
       body: { companyId: company!.id, ...payload },
     });
-    if (error) throw new Error(error.message);
-    if (data?.error) throw new Error(data.error);
+    if (error || data?.error) {
+      const { message } = await extractFunctionError(error, data, 'Falha ao comunicar com o provedor fiscal');
+      throw new Error(message);
+    }
     return data;
   }
 
