@@ -320,13 +320,48 @@ export default function Waiter() {
   const handleAddToCart = (product: typeof products[0]) => {
     // Check if product has optional groups (match by product ID or category ID)
     const catId = categoryIdByName[product.category];
-    const productGroups = optionalGroups.filter(g => 
+    const productGroups = optionalGroups.filter(g =>
       g.active && (g.productIds.includes(product.id) || (catId && g.categoryIds.includes(catId)))
     );
-    
-    if (productGroups.length > 0) {
+
+    // Produtos antigos usam "adicionais" por produto (tabela product_optionals,
+    // ex.: Bacon Extra/Queijo Extra), sistema separado dos grupos acima — mesmo
+    // que o Pedido Express já consulta. Sem isso, esses adicionais não apareciam
+    // aqui na comanda. Vira um grupo sintético pra reusar o diálogo existente.
+    const legacyOptionals = (product.optionals || []).filter(o => o.active);
+    const allGroups = legacyOptionals.length > 0
+      ? [
+          ...productGroups,
+          {
+            id: `legacy-${product.id}`,
+            companyId: company?.id || '',
+            name: 'Adicionais',
+            minSelect: 0,
+            maxSelect: 0,
+            active: true,
+            displayOrder: 0,
+            layout: 'vertical' as const,
+            items: legacyOptionals.map((o, idx) => ({
+              id: o.id,
+              groupId: `legacy-${product.id}`,
+              name: o.name,
+              price: o.price,
+              active: o.active,
+              displayOrder: idx,
+            })),
+            categoryIds: [],
+            productIds: [product.id],
+            productOverrides: [],
+            maxQuantityPerItem: 1,
+            waiterOnly: false,
+            sectionOrder: [],
+          },
+        ]
+      : productGroups;
+
+    if (allGroups.length > 0) {
       setOptionalsDialogProduct(product);
-      setOptionalsDialogGroups(productGroups);
+      setOptionalsDialogGroups(allGroups);
       return;
     }
 
