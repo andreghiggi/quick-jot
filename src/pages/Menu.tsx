@@ -1191,6 +1191,29 @@ export default function Menu() {
       deliveryTypeLabel = `Entrega ${neighborhood?.neighborhoodName || 'Bairro'}`;
     }
 
+    // Cardápio público fica em aba aberta por horas (cliente navega, decide,
+    // volta depois). Sem isso, um pedido podia ser enviado com o bundle JS
+    // antigo em memória mesmo horas após um novo deploy — ex.: um fix de
+    // pagamento/troco que já estava no ar, mas a aba nunca recarregou pra
+    // pegá-lo. Confere a versão publicada antes de gravar o pedido.
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(`/index.html?_=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
+      clearTimeout(timeout);
+      const html = await res.text();
+      const latestMatch = html.match(/assets\/index-[\w-]+\.js/);
+      const currentScript = document.querySelector('script[src*="assets/index-"]');
+      const currentSrc = currentScript?.getAttribute('src') || '';
+      if (latestMatch && currentSrc && !currentSrc.includes(latestMatch[0])) {
+        toast.error('Uma nova versão do cardápio chegou. Atualizando a página — é só confirmar o pedido de novo.');
+        setTimeout(() => window.location.reload(), 1200);
+        return;
+      }
+    } catch {
+      // Rede lenta/instável: não bloqueia o pedido por causa da checagem.
+    }
+
     // Save order to database
     setIsSubmitting(true);
     try {
