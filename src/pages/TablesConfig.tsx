@@ -39,12 +39,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { useComandaCards } from '@/hooks/useComandaCards';
+import { useNumberedTables } from '@/hooks/useNumberedTables';
 
 export default function TablesConfig() {
   const { company } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const cardapioMesaEnabled = isModuleEnabled('cardapio_mesa');
   const comandaCards = useComandaCards(company?.id);
+  const numberedTables = useNumberedTables(company?.id);
   const mesaUrl = company?.slug ? `${window.location.origin}/mesa/${company.slug}` : '';
 
   const handleCopyLink = async () => {
@@ -212,6 +214,31 @@ export default function TablesConfig() {
                 }}
               />
               <span className="text-sm">{comandaCards.enabled ? 'Ligado' : 'Desligado'}</span>
+            </CardContent>
+          </Card>
+        )}
+
+        {numberedTables.allowed && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Usar mesas numeradas</CardTitle>
+              <CardDescription>
+                {comandaCards.enabled
+                  ? 'Com os dois ligados, ao clicar numa mesa no Garçom aparece a escolha: mesa normal ou comanda com cartão.'
+                  : 'Fluxo clássico de mesa numerada, sem pedir número de cartão.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center gap-3">
+              <Switch
+                checked={numberedTables.enabled}
+                disabled={numberedTables.loading}
+                onCheckedChange={async (v) => {
+                  const ok = await numberedTables.setEnabled(v);
+                  if (ok) toast.success(v ? 'Mesas numeradas ativadas' : 'Mesas numeradas desativadas');
+                  else toast.error('Não foi possível salvar a opção');
+                }}
+              />
+              <span className="text-sm">{numberedTables.enabled ? 'Ligado' : 'Desligado'}</span>
             </CardContent>
           </Card>
         )}

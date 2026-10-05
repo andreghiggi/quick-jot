@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useComandaCards } from '@/hooks/useComandaCards';
+import { useNumberedTables } from '@/hooks/useNumberedTables';
 import { ComandaNumberInput } from '@/components/comanda/ComandaNumberInput';
 import { formatComandaNumber } from '@/utils/comandaCode';
 
@@ -115,6 +116,10 @@ export default function Waiter() {
   const comandaCards = useComandaCards(company?.id);
   const [comandaTable, setComandaTable] = useState<typeof tables[0] | null>(null);
   const [comandaBusy, setComandaBusy] = useState(false);
+  // "Usar mesas numeradas" — irmão do toggle acima. Com os dois ligados,
+  // clicar numa mesa pergunta se é mesa normal ou comanda com cartão.
+  const numberedTables = useNumberedTables(company?.id);
+  const [tableModeChoice, setTableModeChoice] = useState<typeof tables[0] | null>(null);
 
   async function handleComandaNumber(n: number) {
     if (!comandaTable || !user?.id) return;
@@ -256,11 +261,9 @@ export default function Waiter() {
     }
   };
 
-  const handleTableClick = (table: typeof tables[0]) => {
-    if (comandaCards.active) {
-      setComandaTable(table);
-      return;
-    }
+  // Fluxo clássico de mesa (sem comanda com cartão): abre a comanda já
+  // existente da mesa, ou o diálogo de nova comanda.
+  const openNormalTableFlow = (table: typeof tables[0]) => {
     // Guard anti-duplicação: SEMPRE checa se já existe comanda aberta
     // para esta mesa (pode ter sido criada via QR Mesa e o status local
     // ainda não foi atualizado pelo realtime). Se houver, abre a
@@ -280,6 +283,19 @@ export default function Waiter() {
       setSelectedTableId(table.id);
       setNewTabDialogOpen(true);
     }
+  };
+
+  const handleTableClick = (table: typeof tables[0]) => {
+    if (comandaCards.active && numberedTables.active) {
+      // Os dois toggles ligados: pergunta ao garçom qual fluxo usar agora.
+      setTableModeChoice(table);
+      return;
+    }
+    if (comandaCards.active) {
+      setComandaTable(table);
+      return;
+    }
+    openNormalTableFlow(table);
   };
 
   const handleCreateTab = async () => {
@@ -665,6 +681,38 @@ export default function Waiter() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mesas numeradas + comanda individual ligados juntos: escolher o fluxo */}
+      <Dialog open={!!tableModeChoice} onOpenChange={(o) => !o && setTableModeChoice(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mesa {tableModeChoice?.number}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-2">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                if (tableModeChoice) openNormalTableFlow(tableModeChoice);
+                setTableModeChoice(null);
+              }}
+            >
+              Mesa normal
+            </Button>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                if (tableModeChoice) setComandaTable(tableModeChoice);
+                setTableModeChoice(null);
+              }}
+            >
+              Comanda com cartão
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Comanda individual: pede o número do cartão da mesa */}
       <Dialog open={!!comandaTable} onOpenChange={(o) => !o && setComandaTable(null)}>
