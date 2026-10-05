@@ -39,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PDVV2PaymentDialog } from '@/components/pdv-v2/PDVV2PaymentDialog';
+import { PDVV2PaymentDialog, type ImportedFractionLine } from '@/components/pdv-v2/PDVV2PaymentDialog';
 import { ComandaChargeDialog, type ComandaChargeReady } from '@/components/comanda/ComandaChargeDialog';
 import { useComandaCards } from '@/hooks/useComandaCards';
 import { PDVV2ClosedTabsDialog, ClosedTabSale } from '@/components/pdv-v2/PDVV2ClosedTabsDialog';
@@ -188,6 +188,10 @@ export default function PDVV2() {
   const [openingAmount, setOpeningAmount] = useState('');
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [importingTab, setImportingTab] = useState<(OccupiedTab & { _splitPerson?: number; _splitTotal?: number; _splitPerPerson?: number }) | null>(null);
+  // I9: fração(ões) importada(s) de outra comanda, reportadas pelo
+  // PDVV2PaymentDialog (ver prop onImportedFractionsChange).
+  const [importedFractionLines, setImportedFractionLines] = useState<ImportedFractionLine[]>([]);
+  const [importedChargeId, setImportedChargeId] = useState<string | null>(null);
   const [closedTabsOpen, setClosedTabsOpen] = useState(false);
   const [i9PartialItemIds, setI9PartialItemIds] = useState<string[]>([]);
   const [i9SplitInfo, setI9SplitInfo] = useState<{ perPerson: number; remaining: number; total: number } | null>(null);
@@ -629,7 +633,7 @@ export default function PDVV2() {
           setPendingPostSale(null);
         }
         setImportingTab(null);
-        return;
+        return saleId;
       } else if (shouldPrint) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
         const printItems = [
@@ -652,6 +656,7 @@ export default function PDVV2() {
       toast.success('Comanda importada e fechada!');
       setImportingTab(null);
     }
+    return saleId;
     } finally {
       confirmImportTabGuardRef.current = false;
     }
@@ -778,7 +783,10 @@ export default function PDVV2() {
     }
   }
 
-  const isI9 = true;
+  // Estava fixo em `true`, valendo pra qualquer empresa usando o checkout
+  // do PDVV2 (mesmo bug já corrigido em src/pages/Waiter.tsx, commit 49b77982).
+  // Reusa a constante já declarada acima (isI9Company).
+  const isI9 = isI9Company;
 
   async function confirmComandaCharge({
     paymentMethodId, paymentName, discount, finalTotal, documentMode, printDocument,
@@ -1210,9 +1218,49 @@ export default function PDVV2() {
       return;
     }
 
-    await confirmImportTab(params);
+    return await confirmImportTab(params);
     } finally {
       confirmImportTabI9GuardRef.current = false;
+    }
+  }
+
+  /**
+   * Envolve `confirmImportTabI9` quando há fração(ões) importada(s) de outra
+   * comanda (PDVV2PaymentDialog → onImportedFractionsChange). Mescla as
+   * linhas importadas no `extraItems` (mesmo mecanismo já usado por
+   * "+ Adicionar Item" — entra no total, no recibo e na venda normalmente)
+   * e, depois que a venda é criada com sucesso, finaliza a cobrança da
+   * fração via `finalize_comanda_charge` (desconta da comanda de origem e
+   * fecha a reserva). Só é usada quando `importedChargeId` existe; nos
+   * demais casos o comportamento é idêntico ao `confirmImportTabI9` original.
+   */
+  async function confirmImportTabI9WithFractions(
+    params: Parameters<typeof confirmImportTabI9>[0],
+  ) {
+    if (!importedChargeId || importedFractionLines.length === 0) {
+      await confirmImportTabI9(params);
+      return;
+    }
+    const chargeId = importedChargeId;
+    const mergedExtraItems = [
+      ...(params.extraItems || []),
+      ...importedFractionLines.map((f) => ({
+        product_id: f.productId,
+        product_name: `${f.productName} (1/${f.den} importado da comanda ${f.sourceComanda})`,
+        quantity: f.quantity,
+        unit_price: Math.round((f.amountCents / 100 / f.quantity) * 100) / 100,
+      })),
+    ];
+    const saleId = await confirmImportTabI9({ ...params, extraItems: mergedExtraItems });
+    if (saleId) {
+      const { error: finErr } = await supabase.rpc('finalize_comanda_charge' as any, {
+        _charge_id: chargeId, _sale_id: saleId,
+      });
+      if (finErr) {
+        toast.error(`Venda salva, mas a comanda de origem não foi atualizada: ${finErr.message}. Confira manualmente.`);
+      }
+      setImportedFractionLines([]);
+      setImportedChargeId(null);
     }
   }
 
@@ -1585,6 +1633,8 @@ export default function PDVV2() {
           if (!o) {
             setImportingTab(null);
             setI9PartialItemIds([]);
+            setImportedFractionLines([]);
+            setImportedChargeId(null);
             if (!i9SplitTransitionRef.current) {
               setI9SplitInfo(null);
               setI9OriginalTabId(null);
@@ -1594,6 +1644,11 @@ export default function PDVV2() {
         companyId={companyId}
         total={importingTab?.total || 0}
         printLayout={settings.printLayout}
+        currentTabId={importingTab?.id}
+        onImportedFractionsChange={(lines, chargeId) => {
+          setImportedFractionLines(lines);
+          setImportedChargeId(chargeId);
+        }}
         title={
           i9SplitInfo
             ? `Pessoa ${i9SplitInfo.total - i9SplitInfo.remaining + 1} de ${i9SplitInfo.total}`
@@ -1605,7 +1660,7 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
-        onConfirm={isI9 ? confirmImportTabI9 : confirmImportTab}
+        onConfirm={isI9 ? confirmImportTabI9WithFractions : confirmImportTab}
         onSplitPayments={() => {
           // Fecha o checkout single-payment e abre o multi-pagamento
           // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.

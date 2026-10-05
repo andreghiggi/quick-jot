@@ -10,15 +10,60 @@ import { usePaymentMethods, PaymentChannel } from '@/hooks/usePaymentMethods';
 import { brl as formatPrice, maskCurrencyInput, parseCurrencyInput } from './_format';
 import { PDVV2DocumentModeSelector, DocumentMode } from './PDVV2DocumentModeSelector';
 import { PDVV2AddItemSearch, ExtraItem } from './PDVV2AddItemSearch';
-import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight, Split } from 'lucide-react';
+import { Plug, Loader2, Users, ListChecks, Printer, ArrowLeftRight, Split, Trash2 } from 'lucide-react';
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import type { NFCeTefData } from '@/services/nfceService';
 import { toast } from 'sonner';
 import { openCashDrawer } from '@/utils/cashDrawer';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useFiscalEnabled } from '@/hooks/useFiscalEnabled';
+import { supabase } from '@/integrations/supabase/client';
+import { ComandaNumberInput } from '@/components/comanda/ComandaNumberInput';
+import { formatComandaNumber } from '@/utils/comandaCode';
+import { COMANDA_ALLOWED_FRACTION_DENS } from '@/utils/comandaIndividualAllowList';
 
 type CheckoutItem = { name: string; quantity: number; unit_price: number; id?: string; paid?: boolean; paidQty?: number };
+
+/** Uma linha de produto trazida (fração) de outra comanda ainda aberta. */
+export interface ImportedFractionLine {
+  reservationId: string;
+  sourceItemId: string;
+  sourceComanda: number;
+  productId: string | null;
+  productName: string;
+  den: number;
+  quantity: number;
+  amountCents: number;
+}
+
+interface ImportSourceTab {
+  id: string;
+  comanda_number: number;
+  items: Array<{ id: string; product_id: string | null; product_name: string; quantity: number; unit_price: number; total_price: number; paid: boolean }>;
+}
+
+async function fetchOpenComandaForImport(companyId: string, n: number): Promise<ImportSourceTab | null> {
+  const { data } = await (supabase as any)
+    .from('tabs')
+    .select('id, comanda_number, items:tab_items(id, product_id, product_name, quantity, unit_price, total_price, paid)')
+    .eq('company_id', companyId)
+    .eq('status', 'open')
+    .eq('comanda_number' as any, n)
+    .maybeSingle();
+  if (!data) return null;
+  const d: any = data;
+  return {
+    id: d.id,
+    comanda_number: d.comanda_number,
+    items: (d.items || []).map((i: any) => ({
+      ...i,
+      quantity: Number(i.quantity) || 0,
+      unit_price: Number(i.unit_price) || 0,
+      total_price: Number(i.total_price) || 0,
+      paid: !!i.paid,
+    })),
+  };
+}
 
 interface PDVV2PaymentDialogProps {
   open: boolean;
@@ -57,6 +102,20 @@ interface PDVV2PaymentDialogProps {
   transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
   /** Layout de impressão (`print_layout`) — repassado ao botão "Imprimir comanda". */
   printLayout?: 'v1' | 'v2' | 'v3';
+  /**
+   * ID da comanda/mesa sendo cobrada agora. Necessário para "Importar parte
+   * de outra comanda" (Lancheria I9) — usado para abrir a cobrança via RPC
+   * `create_comanda_charge`. Sem isso, a seção de import não aparece.
+   */
+  currentTabId?: string;
+  /**
+   * Chamado sempre que as frações importadas de outra comanda mudam (nova
+   * importação, remoção, ou diálogo fechado/cancelado). O caller é quem
+   * decide o que fazer com essas linhas (somar ao total da venda) e quando
+   * finalizar/cancelar a cobrança (`finalize_comanda_charge`/`cancel_comanda_charge`)
+   * usando o `chargeId` repassado.
+   */
+  onImportedFractionsChange?: (lines: ImportedFractionLine[], chargeId: string | null) => void;
   /**
    * Multi-pagamento (v1.6 beta). Quando informado, exibe um link discreto
    * abaixo do seletor de forma de pagamento ("Dividir em várias formas").
@@ -141,10 +200,20 @@ export function PDVV2PaymentDialog({
   transferLog,
   onSplitPayments,
   printLayout,
+  currentTabId,
+  onImportedFractionsChange,
 }: PDVV2PaymentDialogProps) {
   const effectiveTefFirstFlow = tefFirstFlow ?? chargeTefBeforePopups;
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
+  // I9: importar fração de produto de outra comanda ainda aberta.
+  const [importOpen, setImportOpen] = useState(false);
+  const [importChargeId, setImportChargeId] = useState<string | null>(null);
+  const [importChargeTabId, setImportChargeTabId] = useState<string | null>(null);
+  const [importFractions, setImportFractions] = useState<ImportedFractionLine[]>([]);
+  const [importSource, setImportSource] = useState<ImportSourceTab | null>(null);
+  const [importDen, setImportDen] = useState<number>(4);
+  const [importBusy, setImportBusy] = useState(false);
   const [selectedItemQtys, setSelectedItemQtys] = useState<Map<number, number>>(new Map());
   // Quantidades selecionadas dos itens adicionados durante o checkout (extras).
   // Chave = id do ExtraItem.
@@ -236,9 +305,13 @@ export function PDVV2PaymentDialog({
         if (deliveryFilter === 'pickup') return m.show_for_pickup !== false;
         return m.show_for_delivery !== false;
       });
-  // Rollout isolado: máscara de moeda em tempo real apenas para a Lancheria da I9.
-  const useCurrencyMask = true;
-  const isLancheriaI9 = true;
+  // Rollout isolado: máscara de moeda em tempo real, opções avançadas de
+  // cobrança (split por pessoa/item, importar fração de outra comanda) e
+  // "Imprimir comanda" — apenas para a Lancheria da I9. Estava fixo em
+  // `true`, valendo pra qualquer empresa usando este checkout. Reusa a
+  // constante já declarada acima (I9_COMPANY_ID).
+  const isLancheriaI9 = companyId === I9_COMPANY_ID;
+  const useCurrencyMask = isLancheriaI9;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
@@ -349,7 +422,101 @@ export function PDVV2PaymentDialog({
     });
   }, [extraItems]);
 
-  const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0);
+  // I9: import de fração de outra comanda — reseta tudo quando o checkout
+  // fecha. Se havia uma cobrança aberta (reservas feitas) que nunca foi
+  // finalizada (pagamento concluído), libera as reservas.
+  useEffect(() => {
+    if (open) return;
+    if (importChargeId) {
+      void supabase.rpc('cancel_comanda_charge' as any, { _charge_id: importChargeId });
+    }
+    setImportOpen(false);
+    setImportChargeId(null);
+    setImportChargeTabId(null);
+    setImportFractions([]);
+    setImportSource(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    onImportedFractionsChange?.(importFractions, importChargeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importFractions, importChargeId]);
+
+  function rpcErrorMsg(err: unknown): string {
+    const msg = (err as any)?.message || String(err);
+    return msg.replace(/^.*?:\s*/, '') || 'Erro';
+  }
+
+  /** Garante uma cobrança criada para a comanda atual (cria na 1ª importação). */
+  async function ensureImportCharge(): Promise<string | null> {
+    if (importChargeId && importChargeTabId === currentTabId) return importChargeId;
+    if (!companyId || !currentTabId) return null;
+    const { data, error } = await supabase.rpc('create_comanda_charge' as any, {
+      _company_id: companyId, _tab_ids: [currentTabId],
+    });
+    if (error || !data) {
+      toast.error(rpcErrorMsg(error));
+      return null;
+    }
+    const newId = data as unknown as string;
+    setImportChargeId(newId);
+    setImportChargeTabId(currentTabId);
+    return newId;
+  }
+
+  async function loadImportSource(n: number) {
+    if (!companyId) return;
+    const tab = await fetchOpenComandaForImport(companyId, n);
+    if (!tab) {
+      toast.error(`Comanda ${formatComandaNumber(n)} não está aberta`);
+      return;
+    }
+    if (tab.id === currentTabId) {
+      toast.error('Essa é a comanda que está sendo cobrada agora');
+      return;
+    }
+    setImportSource(tab);
+  }
+
+  async function reserveImportFraction(item: ImportSourceTab['items'][number]) {
+    if (!importSource) return;
+    setImportBusy(true);
+    try {
+      const chargeId = await ensureImportCharge();
+      if (!chargeId) return;
+      const { data, error } = await supabase.rpc('reserve_tab_fraction' as any, {
+        _charge_id: chargeId, _source_item_id: item.id, _num: 1, _den: importDen,
+      });
+      if (error || !data) {
+        toast.error(rpcErrorMsg(error));
+        return;
+      }
+      const r: any = data;
+      setImportFractions((prev) => [...prev, {
+        reservationId: r.id,
+        sourceItemId: item.id,
+        sourceComanda: importSource.comanda_number,
+        productId: item.product_id,
+        productName: item.product_name,
+        den: importDen,
+        quantity: Number(r.quantity),
+        amountCents: Number(r.amount_cents),
+      }]);
+      toast.success(`1/${importDen} de ${item.product_name} importado`);
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
+  async function removeImportFraction(f: ImportedFractionLine) {
+    await supabase.rpc('cancel_fraction_reservation' as any, { _reservation_id: f.reservationId });
+    setImportFractions((prev) => prev.filter((x) => x.reservationId !== f.reservationId));
+  }
+
+  const importFractionsTotal = importFractions.reduce((s, f) => s + f.amountCents / 100, 0);
+
+  const extrasTotal = extraItems.reduce((s, it) => s + it.unit_price * it.quantity, 0) + importFractionsTotal;
   const grossTotal = total + extrasTotal;
   const discountValue = useCurrencyMask
     ? parseCurrencyInput(discount)
@@ -722,6 +889,76 @@ export function PDVV2PaymentDialog({
             </Button>
           )}
 
+          {/* I9: importar fração de produto de outra comanda ainda aberta.
+              Só no modo de cobrança padrão — o total importado entra em
+              `grossTotal`/`finalTotal`, que não é usado nos modos split/items. */}
+          {isLancheriaI9 && currentTabId && !activeSplit && i9Mode === '' && (
+            <div className="space-y-2">
+              {importFractions.length > 0 && (
+                <div className="border rounded-md p-3 space-y-1">
+                  <p className="font-semibold text-sm">Partes importadas</p>
+                  {importFractions.map((f) => (
+                    <div key={f.reservationId} className="flex items-center justify-between text-sm gap-2">
+                      <span className="flex-1">
+                        1/{f.den} {f.productName}{' '}
+                        <span className="text-muted-foreground">(comanda {formatComandaNumber(f.sourceComanda)})</span>
+                      </span>
+                      <span className="tabular-nums">{formatPrice(f.amountCents / 100)}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeImportFraction(f)} aria-label="Remover parte">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setImportOpen((v) => !v)}
+              >
+                <Split className="h-4 w-4" /> Importar parte de outra comanda
+              </Button>
+              {importOpen && (
+                <div className="border rounded-md p-3 space-y-3 bg-muted/30">
+                  {!importSource ? (
+                    <>
+                      <p className="text-sm">Comanda de onde vem o item:</p>
+                      <ComandaNumberInput onSubmit={loadImportSource} submitLabel="Abrir" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Comanda {formatComandaNumber(importSource.comanda_number)}</p>
+                        <Button variant="ghost" size="sm" onClick={() => setImportSource(null)}>Trocar</Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-sm">Parte:</span>
+                        {COMANDA_ALLOWED_FRACTION_DENS.map((d) => (
+                          <Button key={d} type="button" size="sm" variant={importDen === d ? 'default' : 'outline'} onClick={() => setImportDen(d)}>
+                            1/{d}
+                          </Button>
+                        ))}
+                      </div>
+                      {importSource.items.filter((i) => !i.paid && i.total_price > 0).length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Sem itens disponíveis.</p>
+                      ) : (
+                        importSource.items.filter((i) => !i.paid && i.total_price > 0).map((i) => (
+                          <div key={i.id} className="flex items-center justify-between gap-2 text-sm">
+                            <span className="flex-1">{i.quantity}x {i.product_name} · {formatPrice(i.total_price)}</span>
+                            <Button type="button" size="sm" disabled={importBusy} onClick={() => reserveImportFraction(i)}>
+                              Trazer 1/{importDen}
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* I9: opções de cobrança avançada */}
           {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && !activeSplit && (
             <div className="space-y-3">
@@ -731,6 +968,8 @@ export function PDVV2PaymentDialog({
                   type="button"
                   size="sm"
                   variant={i9Mode === 'items' ? 'default' : 'outline'}
+                  disabled={importFractions.length > 0}
+                  title={importFractions.length > 0 ? 'Remova as partes importadas antes de trocar o modo de cobrança' : undefined}
                   onClick={() => {
                     setI9Mode(i9Mode === 'items' ? '' : 'items');
                     setSelectedItemQtys(new Map());
@@ -745,6 +984,8 @@ export function PDVV2PaymentDialog({
                   type="button"
                   size="sm"
                   variant={i9Mode === 'split' ? 'default' : 'outline'}
+                  disabled={importFractions.length > 0}
+                  title={importFractions.length > 0 ? 'Remova as partes importadas antes de trocar o modo de cobrança' : undefined}
                   onClick={() => {
                     setI9Mode(i9Mode === 'split' ? '' : 'split');
                     setSplitPeople(2);
