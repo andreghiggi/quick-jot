@@ -122,10 +122,17 @@ export default function Waiter() {
   // I9: só comandas ligado (mesas desligado) → garçom informa só o número da comanda.
   const comandaOnly = comandaCards.active && numberedTables.allowed && !numberedTables.enabled;
   const [comandaNoTableOpen, setComandaNoTableOpen] = useState(false);
+  // Mesas + comandas ligadas: "Nova Comanda" primeiro exige escolher a mesa.
+  const [pickTableOpen, setPickTableOpen] = useState(false);
 
   async function handleComandaNumber(n: number) {
     if (!user?.id) return;
     if (!comandaTable && !comandaNoTableOpen) return;
+    // Mesas + comandas ligadas: mesa obrigatória.
+    if (!comandaOnly && !comandaTable) {
+      toast.error('Selecione a mesa antes de informar a comanda.');
+      return;
+    }
     setComandaBusy(true);
     try {
       const tab = await openComandaTab({
@@ -305,6 +312,17 @@ export default function Waiter() {
 
   const handleCreateTab = async () => {
     if (!user?.id) return;
+    // I9: comandas numeradas ligadas → só abre pelo fluxo que exige o cartão.
+    if (comandaCards.active) {
+      toast.error('Informe a mesa e o número da comanda.');
+      return;
+    }
+    // I9: só mesas numeradas → mesa obrigatória.
+    if (numberedTables.active && !selectedTableId) {
+      toast.error('Selecione a mesa para abrir a comanda.');
+      return;
+    }
+
 
     setIsProcessing(true);
     const newTab = await createTab({
@@ -560,7 +578,7 @@ export default function Waiter() {
     <AppLayout 
       title="Garçom"
       actions={
-        <Button onClick={() => { if (comandaOnly) { setComandaNoTableOpen(true); return; } setSelectedTableId(''); setNewTabDialogOpen(true); }} className="gap-2">
+        <Button onClick={() => { if (comandaOnly) { setComandaNoTableOpen(true); return; } if (comandaCards.active) { setPickTableOpen(true); return; } setSelectedTableId(''); setNewTabDialogOpen(true); }} className="gap-2">
           <Plus className="w-4 h-4" />
           Nova Comanda
         </Button>
@@ -686,6 +704,23 @@ export default function Waiter() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mesas + comandas (I9): escolher a mesa primeiro; depois exige o cartão */}
+      <Dialog open={pickTableOpen} onOpenChange={setPickTableOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Comanda — escolha a mesa</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Mesa e número da comanda são obrigatórios.</p>
+          <div className="grid grid-cols-4 gap-2 py-2 max-h-[50dvh] overflow-y-auto">
+            {tables.map((t) => (
+              <Button key={t.id} variant="outline" onClick={() => { setPickTableOpen(false); setComandaTable(t); }}>
+                {t.number}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Só comandas (I9): pede apenas o número do cartão, sem mesa */}
       <Dialog open={comandaNoTableOpen} onOpenChange={setComandaNoTableOpen}>
