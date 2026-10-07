@@ -787,6 +787,8 @@ export default function PDVV2() {
   // do PDVV2 (mesmo bug já corrigido em src/pages/Waiter.tsx, commit 49b77982).
   // Reusa a constante já declarada acima (isI9Company).
   const isI9 = isI9Company;
+  // Cobrança avançada de comanda (itens, pessoas, frações) liberada para todas as lojas.
+  const advancedComandaCharge = true;
 
   async function confirmComandaCharge({
     paymentMethodId, paymentName, discount, finalTotal, documentMode, printDocument,
@@ -1664,10 +1666,10 @@ export default function PDVV2() {
             : `Cobrar Comanda ${importingTab?.tabNumber}`
         }
         showDocumentMode
-        showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
+        showAddItem={!advancedComandaCharge || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
-        onConfirm={isI9 ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
+        onConfirm={advancedComandaCharge ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
         onSplitPayments={() => {
           // Fecha o checkout single-payment e abre o multi-pagamento
           // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.
@@ -1682,7 +1684,7 @@ export default function PDVV2() {
           totalPeople: i9SplitInfo.total,
           currentPerson: i9SplitInfo.total - i9SplitInfo.remaining + 1,
         } : undefined}
-        checkoutItems={isI9 && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
+        checkoutItems={advancedComandaCharge && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
         transferLog={importingTab ? (openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.transfer_log as any) || undefined : undefined}
       />
 
