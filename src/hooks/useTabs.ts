@@ -279,8 +279,8 @@ export function useTabs(options: UseTabsOptions = {}) {
    */
   async function openComandaTab(data: {
     comandaNumber: number;
-    tableId: string;
-    tableNumber: number;
+    tableId: string | null;
+    tableNumber: number | null;
     userId: string;
     userName: string;
     confirmTransfer: (fromTableNumber: number | null) => boolean | Promise<boolean>;
@@ -295,6 +295,11 @@ export function useTabs(options: UseTabsOptions = {}) {
       .maybeSingle();
     if (existing) {
       const ex: any = existing;
+      // Sem mesa (modo só comanda): reaproveita a comanda aberta como está.
+      if (!data.tableId) {
+        await fetchTabs();
+        return ex as Tab;
+      }
       if (ex.table_id !== data.tableId) {
         const fromNum = ex.table?.number ?? null;
         const ok = await data.confirmTransfer(fromNum);
@@ -335,7 +340,7 @@ export function useTabs(options: UseTabsOptions = {}) {
       toast.error(error.code === '23505' ? 'Essa comanda acabou de ser aberta em outro aparelho. Tente de novo.' : 'Erro ao abrir comanda');
       return null;
     }
-    await supabase.from('tables').update({ status: 'occupied' }).eq('id', data.tableId);
+    if (data.tableId) await supabase.from('tables').update({ status: 'occupied' }).eq('id', data.tableId);
     await fetchTabs();
     return newTab as unknown as Tab;
   }
