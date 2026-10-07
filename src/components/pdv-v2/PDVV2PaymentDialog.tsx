@@ -524,7 +524,7 @@ export function PDVV2PaymentDialog({
     : parseFloat(discount.replace(',', '.')) || 0;
   // I9: calcular total baseado no modo selecionado
   const i9SelectedTotal = (() => {
-    if (!isLancheriaI9 || i9Mode !== 'items' || !checkoutItems) return null;
+    if (!advancedComandaCharge || i9Mode !== 'items' || !checkoutItems) return null;
     let sum = 0;
     selectedItemQtys.forEach((qty, idx) => {
       const it = checkoutItems[idx];
@@ -539,7 +539,7 @@ export function PDVV2PaymentDialog({
   })();
 
   const i9SplitValue = (() => {
-    if (!isLancheriaI9 || i9Mode !== 'split') return null;
+    if (!advancedComandaCharge || i9Mode !== 'split') return null;
     // Limita partes ao restante disponível (evita cobrar além do total).
     const maxParts = activeSplit
       ? Math.max(1, activeSplit.totalPeople - activeSplit.currentPerson + 1)
@@ -605,7 +605,7 @@ export function PDVV2PaymentDialog({
         tefIntegration: isTef ? (integration as 'tef_pinpad' | 'tef_smartpos') : undefined,
         customerDocument: isNfce && (cleanDoc.length === 11 || cleanDoc.length === 14) ? cleanDoc : undefined,
         prechargedTef: effectivePrecharged,
-        splitInfo: isLancheriaI9 && i9Mode === 'split'
+        splitInfo: advancedComandaCharge && i9Mode === 'split'
           ? (() => {
               const totalPeople = activeSplit?.totalPeople ?? splitPeople;
               const basePerPerson = activeSplit
@@ -618,7 +618,7 @@ export function PDVV2PaymentDialog({
               return { perPerson: basePerPerson, totalPeople, partsToCharge: parts };
             })()
           : undefined,
-        itemsInfo: isLancheriaI9 && i9Mode === 'items' && checkoutItems
+        itemsInfo: advancedComandaCharge && i9Mode === 'items' && checkoutItems
           ? (() => {
               const items: Array<{ id: string; paidQty: number }> = [];
               selectedItemQtys.forEach((qty, idx) => {
@@ -630,7 +630,7 @@ export function PDVV2PaymentDialog({
               return items.length > 0 ? items : undefined;
             })()
           : undefined,
-        extraItemsInfo: isLancheriaI9 && i9Mode === 'items' && extraItems.length > 0
+        extraItemsInfo: advancedComandaCharge && i9Mode === 'items' && extraItems.length > 0
           ? (() => {
               const items: Array<{ id: string; paidQty: number }> = [];
               selectedExtraQtys.forEach((qty, id) => {
@@ -808,7 +808,7 @@ export function PDVV2PaymentDialog({
             )}
           </div>}
 
-          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
+          {advancedComandaCharge && checkoutItems && checkoutItems.length > 0 && (
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground">Itens</p>
               <div className="max-h-[6.5rem] overflow-y-auto overflow-x-hidden space-y-0.5">
@@ -893,7 +893,7 @@ export function PDVV2PaymentDialog({
           {/* I9: importar fração de produto de outra comanda ainda aberta.
               Só no modo de cobrança padrão — o total importado entra em
               `grossTotal`/`finalTotal`, que não é usado nos modos split/items. */}
-          {isLancheriaI9 && currentTabId && !activeSplit && i9Mode === '' && (
+          {advancedComandaCharge && currentTabId && !activeSplit && i9Mode === '' && (
             <div className="space-y-2">
               {importFractions.length > 0 && (
                 <div className="border rounded-md p-3 space-y-1">
@@ -961,7 +961,7 @@ export function PDVV2PaymentDialog({
           )}
 
           {/* I9: opções de cobrança avançada */}
-          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && !activeSplit && (
+          {advancedComandaCharge && checkoutItems && checkoutItems.length > 0 && !activeSplit && (
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Modo de cobrança</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1351,7 +1351,7 @@ export function PDVV2PaymentDialog({
           )}
 
           {/* I9: active split in progress (person 2+) — read-only summary */}
-          {isLancheriaI9 && activeSplit && (
+          {advancedComandaCharge && activeSplit && (
             <div className="rounded-md border border-primary/30 bg-primary/10 p-3 space-y-1">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-primary" />
@@ -1646,12 +1646,12 @@ export function PDVV2PaymentDialog({
               !paymentMethodId ||
               activePaymentMethods.length === 0 ||
               splitItemEditingIdx !== null ||
-              (isLancheriaI9 && i9Mode === 'split' && !activeSplit && splitPeople < 2)
+              (advancedComandaCharge && i9Mode === 'split' && !activeSplit && splitPeople < 2)
             }
             title={
               splitItemEditingIdx !== null
                 ? 'Aplique ou cancele a divisão do item antes de cobrar'
-                : (isLancheriaI9 && i9Mode === 'split' && !activeSplit && splitPeople < 2)
+                : (advancedComandaCharge && i9Mode === 'split' && !activeSplit && splitPeople < 2)
                 ? 'Informe pelo menos 2 pessoas para dividir'
                 : undefined
             }
