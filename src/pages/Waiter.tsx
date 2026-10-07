@@ -128,6 +128,11 @@ export default function Waiter() {
   async function handleComandaNumber(n: number) {
     if (!user?.id) return;
     if (!comandaTable && !comandaNoTableOpen) return;
+    // Mesas + comandas ligadas: mesa obrigatória.
+    if (!comandaOnly && !comandaTable) {
+      toast.error('Selecione a mesa antes de informar a comanda.');
+      return;
+    }
     setComandaBusy(true);
     try {
       const tab = await openComandaTab({
@@ -699,6 +704,23 @@ export default function Waiter() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mesas + comandas (I9): escolher a mesa primeiro; depois exige o cartão */}
+      <Dialog open={pickTableOpen} onOpenChange={setPickTableOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Comanda — escolha a mesa</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Mesa e número da comanda são obrigatórios.</p>
+          <div className="grid grid-cols-4 gap-2 py-2 max-h-[50dvh] overflow-y-auto">
+            {tables.map((t) => (
+              <Button key={t.id} variant="outline" onClick={() => { setPickTableOpen(false); setComandaTable(t); }}>
+                {t.number}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Só comandas (I9): pede apenas o número do cartão, sem mesa */}
       <Dialog open={comandaNoTableOpen} onOpenChange={setComandaNoTableOpen}>
