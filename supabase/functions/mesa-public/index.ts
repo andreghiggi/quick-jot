@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
         .from("tabs")
         .select("id, tab_number")
         .eq("company_id", companyId)
-        .eq("table_id", table.id)
+        .eq("table_id", table!.id)
         .eq("status", "open")
         .is("comanda_number", null)
         .maybeSingle();
@@ -261,9 +261,9 @@ Deno.serve(async (req) => {
           .from("tabs")
           .insert({
             company_id: companyId,
-            table_id: table.id,
+            table_id: table!.id,
             tab_number: tabNumber,
-            customer_name: `Mesa ${table.number} (QR)`,
+            customer_name: `Mesa ${table!.number} (QR)`,
             status: "open",
             created_by: SYSTEM_USER,
           })
@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
         await admin
           .from("tables")
           .update({ status: "occupied" })
-          .eq("id", table.id);
+          .eq("id", table!.id);
       }
 
       // Valida e insere itens — re-confere preço dos produtos no servidor
@@ -336,11 +336,11 @@ Deno.serve(async (req) => {
         await admin.from("print_queue").insert({
           company_id: companyId,
           html_content: productionTicketHtml,
-          label: ticketLabel || `Mesa ${table.number} (QR) - Comanda #${tabNumber}`,
+          label: ticketLabel || (table ? `Mesa ${table.number} (QR) - Comanda #${tabNumber}` : `Comanda #${tabNumber} (QR)`),
         });
       }
 
-      return json({ ok: true, tabId, tabNumber, tableNumber: table.number });
+      return json({ ok: true, tabId, tabNumber, tableNumber: table?.number ?? null });
     }
 
     if (action === "get-tab-items") {
