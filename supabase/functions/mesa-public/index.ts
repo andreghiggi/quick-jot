@@ -49,16 +49,13 @@ async function comandaCardsActive(admin: any, companyId: string): Promise<boolea
   return data === true;
 }
 
-// "Usar mesas numeradas" — rollout isolado (só Lancheria da I9).
-const NUMBERED_TABLES_ALLOWED = new Set(["8c9e7a0e-dbb6-49b9-8344-c23155a71164"]);
-
-/** true = loja usa mesas (padrão para todas as lojas fora da lista). */
+// "Usar mesas numeradas" — liberado para todas as lojas.
+/** true = loja usa mesas (padrão quando a opção nunca foi salva). */
 async function numberedTablesOn(admin: any, companyId: string): Promise<boolean> {
-  if (!NUMBERED_TABLES_ALLOWED.has(companyId)) return true;
   const { data } = await admin
     .from("store_settings").select("value")
     .eq("company_id", companyId).eq("key", "numbered_tables_enabled").maybeSingle();
-  return data?.value === "true";
+  return data ? data.value === "true" : true;
 }
 
 Deno.serve(async (req) => {

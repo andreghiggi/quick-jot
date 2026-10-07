@@ -312,6 +312,8 @@ export function PDVV2PaymentDialog({
   // constante já declarada acima (I9_COMPANY_ID).
   const isLancheriaI9 = companyId === I9_COMPANY_ID;
   const useCurrencyMask = isLancheriaI9;
+  // Cobrança avançada (itens, pessoas, importar parte de outra comanda) — todas as lojas.
+  const advancedComandaCharge = true;
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [discount, setDiscount] = useState('');
   const [amountReceived, setAmountReceived] = useState('');

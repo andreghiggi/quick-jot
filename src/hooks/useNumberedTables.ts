@@ -25,7 +25,8 @@ export function useNumberedTables(companyId?: string | null) {
       .eq('company_id', companyId)
       .eq('key', NUMBERED_TABLES_SETTING_KEY)
       .maybeSingle();
-    setEnabled(data?.value === 'true');
+    // Sem configuração salva = loja usa mesas (comportamento padrão).
+    setEnabled(data ? data.value === 'true' : true);
     setLoading(false);
   }, [companyId, allowed]);
 
