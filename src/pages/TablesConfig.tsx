@@ -197,10 +197,10 @@ export default function TablesConfig() {
         {comandaCards.allowed && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Usar cartões de comanda individuais</CardTitle>
+              <CardTitle className="text-base">Usar comandas numeradas</CardTitle>
               <CardDescription>
-                Cada cliente recebe um cartão numerado. O garçom e o QR Code da mesa pedem o número da
-                comanda, e o caixa cobra uma ou várias comandas pelo número ou código de barras.
+                Cada cliente recebe um cartão numerado. O garçom e o QR Code pedem o número da comanda,
+                e o caixa cobra uma ou várias comandas pelo número ou código de barras.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex items-center gap-3">
@@ -223,9 +223,13 @@ export default function TablesConfig() {
             <CardHeader>
               <CardTitle className="text-base">Usar mesas numeradas</CardTitle>
               <CardDescription>
-                {comandaCards.enabled
-                  ? 'Com os dois ligados, ao clicar numa mesa no Garçom aparece a escolha: mesa normal ou comanda com cartão.'
-                  : 'Fluxo clássico de mesa numerada, sem pedir número de cartão.'}
+                {comandaCards.enabled && numberedTables.enabled
+                  ? 'Mesas e comandas ligadas: o garçom e o cliente pelo QR informam o número da mesa e o número da comanda.'
+                  : numberedTables.enabled
+                    ? 'Só mesas: o garçom e o cliente pelo QR informam apenas o número da mesa.'
+                    : comandaCards.enabled
+                      ? 'Só comandas: o garçom e o cliente pelo QR informam apenas o número da comanda.'
+                      : 'Ligue para usar mesas numeradas no Garçom e no QR Code.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex items-center gap-3">

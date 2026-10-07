@@ -44,6 +44,9 @@ export default function MesaQR() {
   const [tableInput, setTableInput] = useState('');
   // Modo comanda individual (trava validada no servidor)
   const [comandaCards, setComandaCards] = useState(false);
+  // "Usar mesas numeradas" (I9). Demais lojas: sempre true.
+  const [numberedTables, setNumberedTables] = useState(true);
+  const comandaOnly = comandaCards && !numberedTables;
   const [comandaInput, setComandaInput] = useState('');
   const [comandaNumber, setComandaNumber] = useState<number | null>(null);
   const [selectedMesa, setSelectedMesa] = useState<MesaInfo | null>(null);
@@ -115,7 +118,7 @@ export default function MesaQR() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [successInfo, setSuccessInfo] = useState<{ tabNumber: number; tableNumber: number } | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{ tabNumber: number; tableNumber: number | null } | null>(null);
   const [addedDialog, setAddedDialog] = useState<{ name: string } | null>(null);
 
   // Detecta se há um garçom/admin logado pertencente à mesma loja.
@@ -159,6 +162,7 @@ export default function MesaQR() {
       setCompanyName(data.companyName);
       setModuleEnabled(!!data.moduleEnabled);
       setComandaCards(data.comandaCards === true);
+      setNumberedTables(data.numberedTables !== false);
       setMesas(data.mesas || []);
     } catch (e: any) {
       setBootError(e?.message || 'erro');
@@ -397,17 +401,17 @@ export default function MesaQR() {
 
           productionTicketHtml = generateProductionTicketHTML({
             tabNumber: 0,
-            tableNumber: selectedMesa.number,
+            tableNumber: comandaOnly ? 0 : selectedMesa.number,
             items: productionItems,
             createdAt: new Date(),
             paperSize: settings.printerPaperSize,
-            referenceLabel: `MESA ${selectedMesa.number} (QR)`,
+            referenceLabel: comandaOnly ? `COMANDA ${comandaNumber} (QR)` : `MESA ${selectedMesa.number} (QR)`,
             layout: settings.printLayout,
             orderType: 'table',
             showReadyTime: true,
             readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
           });
-          ticketLabel = `Mesa ${selectedMesa.number} (QR)`;
+          ticketLabel = comandaOnly ? `Comanda ${comandaNumber} (QR)` : `Mesa ${selectedMesa.number} (QR)`;
         } catch (e) {
           console.error('MesaQR production ticket build error:', e);
           productionTicketHtml = null;
@@ -419,7 +423,7 @@ export default function MesaQR() {
         body: {
           action: 'submit-order',
           companyId,
-          tableNumber: selectedMesa.number,
+          ...(comandaOnly ? {} : { tableNumber: selectedMesa.number }),
           ...(comandaCards ? { comandaNumber } : {}),
           items,
           productionTicketHtml,
@@ -481,7 +485,7 @@ export default function MesaQR() {
           <div className="flex justify-center"><CheckCircle className="w-16 h-16 text-green-500" /></div>
           <h2 className="text-xl font-bold">Pedido enviado!</h2>
           <p className="text-sm text-muted-foreground">
-            Mesa <strong>{successInfo.tableNumber}</strong> · Comanda <strong>#{successInfo.tabNumber}</strong>
+            {successInfo.tableNumber ? <>Mesa <strong>{successInfo.tableNumber}</strong> · </> : null}Comanda <strong>#{successInfo.tabNumber}</strong>
           </p>
           <p className="text-xs text-muted-foreground">Em breve seu pedido será preparado. Bom apetite!</p>
           <div className="flex flex-col gap-2 pt-4">
@@ -521,6 +525,16 @@ export default function MesaQR() {
     }
 
     function trySelect() {
+      if (comandaOnly) {
+        const c = parseComandaCode(comandaInput);
+        if (!c) {
+          toast.error('Informe o número da sua comanda (cartão)');
+          return;
+        }
+        setComandaNumber(c);
+        setSelectedMesa({ number: 0, status: 'available', hasOpenTab: false, tabNumber: null });
+        return;
+      }
       const n = parseInt(tableInput, 10);
       if (!Number.isFinite(n) || n <= 0) {
         toast.error('Informe um número de mesa válido');
@@ -680,7 +694,7 @@ export default function MesaQR() {
             <h1 className="text-xl font-bold">{companyName}</h1>
             <p className="text-sm text-muted-foreground">Cardápio de Mesa</p>
           </div>
-          <div className="space-y-2">
+          {!comandaOnly && (<div className="space-y-2">
             <Label htmlFor="mesa-num">Número da sua mesa</Label>
             <Input
               id="mesa-num"
@@ -693,7 +707,7 @@ export default function MesaQR() {
               className="text-center text-2xl h-14"
               onKeyDown={e => { if (e.key === 'Enter') trySelect(); }}
             />
-          </div>
+          </div>)}
           {comandaCards && (
             <div className="space-y-2">
               <Label htmlFor="comanda-num">Número da sua comanda (cartão)</Label>
@@ -710,7 +724,7 @@ export default function MesaQR() {
           )}
           <Button className="w-full h-12" onClick={trySelect}>Acessar cardápio</Button>
           <p className="text-xs text-center text-muted-foreground">
-            Confira o número da mesa no cartão sobre ela
+            {comandaOnly ? 'Confira o número no seu cartão de comanda' : 'Confira o número da mesa no cartão sobre ela'}
           </p>
         </CardContent></Card>
       </div>
@@ -723,8 +737,9 @@ export default function MesaQR() {
       {/* Faixa identificando a mesa */}
       <div className="bg-primary text-primary-foreground px-4 py-2 text-xs flex items-center justify-between gap-2">
         <span className="font-semibold truncate">
-          Mesa {selectedMesa.number}
-          {selectedMesa.hasOpenTab && ` · Comanda #${selectedMesa.tabNumber}`}
+          {comandaOnly ? `Comanda ${comandaNumber ?? ''}` : `Mesa ${selectedMesa.number}`}
+          {!comandaOnly && comandaCards && comandaNumber ? ` · Comanda ${comandaNumber}` : ''}
+          {!comandaCards && selectedMesa.hasOpenTab && ` · Comanda #${selectedMesa.tabNumber}`}
         </span>
         {isStaff && (
           <button
@@ -814,7 +829,7 @@ export default function MesaQR() {
       <Sheet open={cartOpen} onOpenChange={setCartOpen}>
         <SheetContent side="bottom" className="max-h-[85dvh] flex flex-col p-0">
           <SheetHeader className="px-4 py-3 border-b">
-            <SheetTitle>Seu pedido — Mesa {selectedMesa.number}</SheetTitle>
+            <SheetTitle>Seu pedido — {comandaOnly ? `Comanda ${comandaNumber ?? ''}` : `Mesa ${selectedMesa.number}`}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {cart.length === 0 && (

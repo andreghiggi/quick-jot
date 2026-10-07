@@ -119,24 +119,28 @@ export default function Waiter() {
   // "Usar mesas numeradas" — irmão do toggle acima. Com os dois ligados,
   // clicar numa mesa pergunta se é mesa normal ou comanda com cartão.
   const numberedTables = useNumberedTables(company?.id);
-  const [tableModeChoice, setTableModeChoice] = useState<typeof tables[0] | null>(null);
+  // I9: só comandas ligado (mesas desligado) → garçom informa só o número da comanda.
+  const comandaOnly = comandaCards.active && numberedTables.allowed && !numberedTables.enabled;
+  const [comandaNoTableOpen, setComandaNoTableOpen] = useState(false);
 
   async function handleComandaNumber(n: number) {
-    if (!comandaTable || !user?.id) return;
+    if (!user?.id) return;
+    if (!comandaTable && !comandaNoTableOpen) return;
     setComandaBusy(true);
     try {
       const tab = await openComandaTab({
         comandaNumber: n,
-        tableId: comandaTable.id,
-        tableNumber: comandaTable.number,
+        tableId: comandaTable?.id ?? null,
+        tableNumber: comandaTable?.number ?? null,
         userId: user.id,
         userName: profile?.full_name || 'Garçom',
         confirmTransfer: (from) =>
-          window.confirm(`A comanda ${formatComandaNumber(n)} está aberta na Mesa ${from ?? '?'}. Transferir para a Mesa ${comandaTable.number}?`),
+          window.confirm(`A comanda ${formatComandaNumber(n)} está aberta na Mesa ${from ?? '?'}. Transferir para a Mesa ${comandaTable?.number}?`),
       });
       if (tab) {
         setSelectedTab(tab);
         setComandaTable(null);
+        setComandaNoTableOpen(false);
       }
     } finally {
       setComandaBusy(false);
@@ -286,12 +290,13 @@ export default function Waiter() {
   };
 
   const handleTableClick = (table: typeof tables[0]) => {
-    if (comandaCards.active && numberedTables.active) {
-      // Os dois toggles ligados: pergunta ao garçom qual fluxo usar agora.
-      setTableModeChoice(table);
+    if (comandaOnly) {
+      // Só comandas: não usa mesa, pede apenas o número do cartão.
+      setComandaNoTableOpen(true);
       return;
     }
     if (comandaCards.active) {
+      // Comandas ligadas (com mesas): mesa + número da comanda obrigatórios.
       setComandaTable(table);
       return;
     }
@@ -555,7 +560,7 @@ export default function Waiter() {
     <AppLayout 
       title="Garçom"
       actions={
-        <Button onClick={() => { setSelectedTableId(''); setNewTabDialogOpen(true); }} className="gap-2">
+        <Button onClick={() => { if (comandaOnly) { setComandaNoTableOpen(true); return; } setSelectedTableId(''); setNewTabDialogOpen(true); }} className="gap-2">
           <Plus className="w-4 h-4" />
           Nova Comanda
         </Button>
@@ -682,34 +687,15 @@ export default function Waiter() {
         </Tabs>
       </div>
 
-      {/* Mesas numeradas + comanda individual ligados juntos: escolher o fluxo */}
-      <Dialog open={!!tableModeChoice} onOpenChange={(o) => !o && setTableModeChoice(null)}>
+      {/* Só comandas (I9): pede apenas o número do cartão, sem mesa */}
+      <Dialog open={comandaNoTableOpen} onOpenChange={setComandaNoTableOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Mesa {tableModeChoice?.number}</DialogTitle>
+            <DialogTitle>Comanda</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3 py-2">
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full"
-              onClick={() => {
-                if (tableModeChoice) openNormalTableFlow(tableModeChoice);
-                setTableModeChoice(null);
-              }}
-            >
-              Mesa normal
-            </Button>
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={() => {
-                if (tableModeChoice) setComandaTable(tableModeChoice);
-                setTableModeChoice(null);
-              }}
-            >
-              Comanda com cartão
-            </Button>
+          <div className="space-y-2 py-2">
+            <Label>Digite ou leia o número da comanda</Label>
+            <ComandaNumberInput onSubmit={handleComandaNumber} showCamera autoFocus disabled={comandaBusy} submitLabel="Abrir" />
           </div>
         </DialogContent>
       </Dialog>
