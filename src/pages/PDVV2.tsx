@@ -1242,6 +1242,13 @@ export default function PDVV2() {
       return;
     }
     const chargeId = importedChargeId;
+    // Fração importada só vale para cobrança integral da comanda: a
+    // finalização fecha a comanda inteira, então não pode ser combinada
+    // com divisão por pessoas ou pagamento parcial por itens.
+    if (params.splitInfo || (params.itemsInfo && params.itemsInfo.length > 0)) {
+      toast.error('Fração de outra comanda só pode ser usada na cobrança integral. Remova a divisão/seleção de itens.');
+      return;
+    }
     const mergedExtraItems = [
       ...(params.extraItems || []),
       ...importedFractionLines.map((f) => ({
@@ -1660,7 +1667,7 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
-        onConfirm={isI9 ? confirmImportTabI9WithFractions : confirmImportTab}
+        onConfirm={isI9 ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
         onSplitPayments={() => {
           // Fecha o checkout single-payment e abre o multi-pagamento
           // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.

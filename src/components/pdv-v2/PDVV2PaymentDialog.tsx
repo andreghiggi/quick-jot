@@ -422,14 +422,13 @@ export function PDVV2PaymentDialog({
     });
   }, [extraItems]);
 
-  // I9: import de fração de outra comanda — reseta tudo quando o checkout
-  // fecha. Se havia uma cobrança aberta (reservas feitas) que nunca foi
-  // finalizada (pagamento concluído), libera as reservas.
+  // I9: import de fração de outra comanda — reseta o estado local quando o
+  // checkout fecha. NÃO cancela a cobrança aqui: o diálogo fecha durante a
+  // própria finalização da venda, e cancelar nesse momento impedia o
+  // finalize_comanda_charge (comanda não fechava e origem não era abatida).
+  // Reservas abandonadas expiram sozinhas no servidor.
   useEffect(() => {
     if (open) return;
-    if (importChargeId) {
-      void supabase.rpc('cancel_comanda_charge' as any, { _charge_id: importChargeId });
-    }
     setImportOpen(false);
     setImportChargeId(null);
     setImportChargeTabId(null);
