@@ -1242,6 +1242,13 @@ export default function PDVV2() {
       return;
     }
     const chargeId = importedChargeId;
+    // Fração importada só vale para cobrança integral da comanda: a
+    // finalização fecha a comanda inteira, então não pode ser combinada
+    // com divisão por pessoas ou pagamento parcial por itens.
+    if (params.splitInfo || (params.itemsInfo && params.itemsInfo.length > 0)) {
+      toast.error('Fração de outra comanda só pode ser usada na cobrança integral. Remova a divisão/seleção de itens.');
+      return;
+    }
     const mergedExtraItems = [
       ...(params.extraItems || []),
       ...importedFractionLines.map((f) => ({
