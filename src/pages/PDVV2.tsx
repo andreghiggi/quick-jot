@@ -1667,7 +1667,7 @@ export default function PDVV2() {
         showAddItem={!isI9 || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
-        onConfirm={isI9 ? confirmImportTabI9WithFractions : confirmImportTab}
+        onConfirm={isI9 ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
         onSplitPayments={() => {
           // Fecha o checkout single-payment e abre o multi-pagamento
           // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.
