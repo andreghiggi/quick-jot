@@ -49,6 +49,18 @@ async function comandaCardsActive(admin: any, companyId: string): Promise<boolea
   return data === true;
 }
 
+// "Usar mesas numeradas" — rollout isolado (só Lancheria da I9).
+const NUMBERED_TABLES_ALLOWED = new Set(["8c9e7a0e-dbb6-49b9-8344-c23155a71164"]);
+
+/** true = loja usa mesas (padrão para todas as lojas fora da lista). */
+async function numberedTablesOn(admin: any, companyId: string): Promise<boolean> {
+  if (!NUMBERED_TABLES_ALLOWED.has(companyId)) return true;
+  const { data } = await admin
+    .from("store_settings").select("value")
+    .eq("company_id", companyId).eq("key", "numbered_tables_enabled").maybeSingle();
+  return data?.value === "true";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -120,12 +132,14 @@ Deno.serve(async (req) => {
       });
 
       const comandaCards = await comandaCardsActive(admin, company.id);
+      const numberedTables = await numberedTablesOn(admin, company.id);
 
       return json({
         companyId: company.id,
         companyName: company.name,
         moduleEnabled,
         comandaCards,
+        numberedTables,
         mesas,
       });
     }
@@ -137,7 +151,7 @@ Deno.serve(async (req) => {
       const productionTicketHtml: string | null = payload?.productionTicketHtml || null;
       const ticketLabel: string | null = payload?.ticketLabel || null;
 
-      if (!companyId || !Number.isFinite(tableNumber) || items.length === 0) {
+      if (!companyId || items.length === 0) {
         return json({ error: "invalid_payload" }, 400);
       }
 
@@ -150,17 +164,25 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!moduleRow?.enabled) return json({ error: "module_disabled" }, 403);
 
-      // Mesa válida?
-      const { data: table } = await admin
-        .from("tables")
-        .select("id, number, status")
-        .eq("company_id", companyId)
-        .eq("number", tableNumber)
-        .maybeSingle();
-      if (!table) return json({ error: "table_not_found" }, 404);
-
       // ---- Modo comanda individual (trava validada no servidor) ----
       const cardsActive = await comandaCardsActive(admin, companyId);
+      const tablesOn = await numberedTablesOn(admin, companyId);
+      // Só comandas (I9 com mesas desligado): não exige mesa.
+      const comandaOnly = cardsActive && !tablesOn;
+
+      let table: { id: string; number: number; status: string } | null = null;
+      if (!comandaOnly) {
+        if (!Number.isFinite(tableNumber)) return json({ error: "invalid_payload" }, 400);
+        const { data: t } = await admin
+          .from("tables")
+          .select("id, number, status")
+          .eq("company_id", companyId)
+          .eq("number", tableNumber)
+          .maybeSingle();
+        if (!t) return json({ error: "table_not_found" }, 404);
+        table = t;
+      }
+
       const hasComandaField = payload?.comandaNumber !== undefined && payload?.comandaNumber !== null && payload?.comandaNumber !== "";
       if (hasComandaField && !cardsActive) {
         return json({ error: "comanda_cards_disabled" }, 403);
@@ -176,7 +198,7 @@ Deno.serve(async (req) => {
           .eq("status", "open")
           .eq("comanda_number", comandaNumber)
           .maybeSingle();
-        if (openCard && openCard.table_id !== table.id) {
+        if (openCard && table && openCard.table_id !== table.id) {
           // Comanda aberta em outra mesa: não mexe, pede ao garçom.
           return json({ error: "comanda_in_other_table" }, 409);
         }
@@ -190,7 +212,7 @@ Deno.serve(async (req) => {
             .from("tabs")
             .insert({
               company_id: companyId,
-              table_id: table.id,
+              table_id: table?.id ?? null,
               tab_number: (lastTab?.tab_number || 0) + 1,
               comanda_number: comandaNumber,
               customer_name: `Comanda ${String(comandaNumber).padStart(3, "0")} (QR)`,
@@ -204,7 +226,7 @@ Deno.serve(async (req) => {
             return json({ error: tabErr?.code === "23505" ? "comanda_busy" : "create_tab_failed" }, tabErr?.code === "23505" ? 409 : 500);
           }
           cardTab = newTab;
-          await admin.from("tables").update({ status: "occupied" }).eq("id", table.id);
+          if (table) await admin.from("tables").update({ status: "occupied" }).eq("id", table.id);
         }
       }
 
