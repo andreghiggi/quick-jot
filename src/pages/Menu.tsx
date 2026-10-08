@@ -1383,8 +1383,11 @@ export default function Menu() {
         // entra no piloto do Recibo igual Rei do Açaí/Bon Appetit, independente
         // do toggle de comanda de produção.
         const IMPERIO_DO_ACAI_ID = '96e53bb2-2b71-4ed3-86cd-0f97858aca73';
+        // Lancheria da I9: teste do recibo obrigatório antes de liberar para todas.
+        const I9_RECEIPT_PILOT_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
         const isReceiptPilot =
-          company.id === REI_DO_ACAI_ID || company.id === BON_APPETIT_ID || company.id === IMPERIO_DO_ACAI_ID;
+          company.id === REI_DO_ACAI_ID || company.id === BON_APPETIT_ID || company.id === IMPERIO_DO_ACAI_ID ||
+          company.id === I9_RECEIPT_PILOT_ID;
         const shouldPrintProduction = settings.autoPrintProductionTicket && company.id !== REI_DO_ACAI_ID;
         if (shouldPrintProduction || isReceiptPilot) {
           try {

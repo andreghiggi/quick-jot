@@ -1456,7 +1456,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       }
       const REI_DO_ACAI_ID = 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
       const BON_APPETIT_ID = '32b71649-461d-4cb6-b26c-12390b090feb';
-      const isReceiptPilot = company?.id === REI_DO_ACAI_ID || company?.id === BON_APPETIT_ID;
+      const isReceiptPilot =
+        company?.id === REI_DO_ACAI_ID || company?.id === BON_APPETIT_ID ||
+        company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164'; // Lancheria da I9 (teste recibo)
 
       // Comanda de produção: opcional. O Rei não cria este papel no piloto.
       // Na Bon Appetit, a opção ligada também vale para pedidos finalizados na hora.
