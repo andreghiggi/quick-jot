@@ -1461,6 +1461,7 @@ export default function Menu() {
               };
             });
 
+            const enqueueProduction = async () => {
             if (shouldPrintProduction) {
               try {
                 const productionHtml = generateProductionTicketHTML({
@@ -1498,6 +1499,10 @@ export default function Menu() {
                 console.error('Erro ao enfileirar comanda de produção:', productionError);
               }
             }
+            };
+            // Lancheria da I9 (teste): recibo primeiro, comanda depois. Demais lojas: ordem atual.
+            const receiptFirst = company.id === I9_RECEIPT_PILOT_ID;
+            if (!receiptFirst) await enqueueProduction();
 
             // Recibo obrigatório: piloto no Rei e Bon Appetit; preserva Amore Mio.
             if (isReceiptPilot || isGdiReceiptCompany(company.id)) {
@@ -1539,7 +1544,9 @@ export default function Menu() {
               } catch (receiptErr) {
                 console.error('Receipt print queue error:', receiptErr);
                 toast.error('Pedido criado, mas o recibo não foi enviado para impressão.');
-              }
+            }
+            // Lancheria da I9: comanda de produção sai DEPOIS do recibo.
+            if (receiptFirst) await enqueueProduction();
             }
           } catch (printErr) {
             console.error('Erro ao criar os papéis obrigatórios do pedido:', printErr);
