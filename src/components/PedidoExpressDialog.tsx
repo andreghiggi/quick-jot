@@ -1462,6 +1462,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
       // Comanda de produção: opcional. O Rei não cria este papel no piloto.
       // Na Bon Appetit, a opção ligada também vale para pedidos finalizados na hora.
+      const enqueueProductionExpress = async () => {
       if (
         settings.autoPrintProductionTicket &&
         company?.id &&
@@ -1646,6 +1647,10 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           console.error('Erro ao enfileirar comanda de produção:', e);
         }
       }
+      };
+      // Lancheria da I9 (teste): recibo primeiro, comanda depois. Demais lojas: ordem atual.
+      const expressReceiptFirst = company?.id === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+      if (!expressReceiptFirst) await enqueueProductionExpress();
 
       // Recibo obrigatório e independente da comanda: piloto Rei do Açaí + Bon Appetit.
       if (isReceiptPilot && company?.id && !receiptEnqueuedRef) {
@@ -1704,6 +1709,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           toast.error('Pedido criado, mas o recibo não foi enviado para impressão.');
         }
       }
+      // Lancheria da I9: comanda de produção sai DEPOIS do recibo.
+      if (expressReceiptFirst) await enqueueProductionExpress();
 
 
       toast.success('Pedido Express criado com sucesso!');
