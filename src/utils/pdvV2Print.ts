@@ -22,6 +22,7 @@ export const GDI_COMPANY_IDS = new Set([
 const RICH_RECEIPT_COMPANY_IDS = new Set([
   ...GDI_COMPANY_IDS,
   '32b71649-461d-4cb6-b26c-12390b090feb', // Bon Appetit
+  '8c9e7a0e-dbb6-49b9-8344-c23155a71164', // Lancheria da I9 (piloto layout V2 = compacto-2.pdf)
 ]);
 
 export function isGdiReceiptCompany(companyId: string): boolean {
