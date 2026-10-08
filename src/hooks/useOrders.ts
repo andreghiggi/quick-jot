@@ -196,6 +196,11 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
   useEffect(() => {
     void fetchOrders();
+    // Sem companyId ainda (contexto de auth/empresa não resolveu): não cria o
+    // canal realtime. Sem essa guarda, o filtro virava literalmente
+    // "company_id=eq.undefined" — o Postgres rejeita (uuid inválido) e o
+    // canal fica tentando de novo sem parar, gerando ruído constante no banco.
+    if (!companyId) return;
 
     // Canal único por aba: nomes repetidos entre telas abertas fazem o servidor
     // recusar a segunda escuta e a tela fica parada até recarregar.
