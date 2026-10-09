@@ -181,10 +181,7 @@ export default function FrenteCaixa() {
         .order('created_at', { ascending: false });
 
       if (cancelled) return;
-      if (!tefLogs?.length) {
-        setOrphanTefAlert(null);
-        return;
-      }
+      if (!tefLogs?.length) return;
 
       const { data: recentSales } = await supabase
         .from('pdv_sales')
@@ -214,7 +211,6 @@ export default function FrenteCaixa() {
           return;
         }
       }
-      setOrphanTefAlert(null);
     }
 
     // Sem polling contínuo: checa só ao abrir a tela e ao abrir a cobrança.
@@ -277,6 +273,10 @@ export default function FrenteCaixa() {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  // Checagem sob demanda: só quando o operador abre a cobrança.
+  useEffect(() => {
+    if (paymentOpen) orphanCheckRef.current?.();
+  }, [paymentOpen]);
   const [confirmCancel, setConfirmCancel] = useState(false);
   // Pós-venda NFC-e (espelha o fluxo do PDV V2):
   // 1) mostra overlay "Emitindo NFC-e…" enquanto aguarda a resposta inicial da API
@@ -1566,7 +1566,7 @@ export default function FrenteCaixa() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setOrphanTefAlert(null)}
+              onClick={() => { setOrphanTefAlert(null); clearLocalPendingTef(); }}
             >
               Já conferi
             </Button>
