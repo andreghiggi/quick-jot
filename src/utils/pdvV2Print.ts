@@ -295,7 +295,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
         block += `<div class="item-notes">${isReiDoAcai || isV2SpecPilot ? '[OBS]' : ''}Obs: ${escapeHtml(cleanNotes)}${isReiDoAcai || isV2SpecPilot ? '[/OBS]' : ''}</div>`;
       }
       block += isI9PriceLast
-        ? `<div class="item-detail item-price-last">R$ ${lineTotal}</div></div>`
+        ? `<div class="item-detail item-price-last">-- R$ ${lineTotal} --</div></div>`
         : `<div class="item-detail">R$ ${lineTotal}</div></div>`;
       if (idx < payload.items.length - 1) {
         block += isV2SpecPilot
@@ -310,8 +310,11 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     deliveryFee > 0.009
       ? `<div class="total-line"><span>Entrega:</span><span>R$ ${deliveryFee.toFixed(2).replace('.', ',')}</span></div>`
       : '';
+  // Piloto I9: Subtotal só aparece quando há taxa de entrega.
   const subtotalHtml =
-    !isReiDoAcai || Math.abs(payload.total - subtotal) > 0.009
+    (payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+      ? deliveryFee > 0.009
+      : !isReiDoAcai || Math.abs(payload.total - subtotal) > 0.009)
       ? `<div class="total-line">
     <span>Subtotal:</span>
     <span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
