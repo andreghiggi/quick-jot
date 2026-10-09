@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.7"
+SCRIPT_VERSION = "1.8.8"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1691,13 +1691,18 @@ def _imprimir_html(html_content, station_id=None):
         # aceitam RAW (ex.: Microsoft Print to PDF).
         # ------------------------------------------------------------------
         usar_escpos = False
-        if COMPANY_ID in GDI_COMPANY_IDS and win32ui_ok:
+        # v1.8.8: comanda de producao usa o modo grafico em TODAS as lojas
+        # (padrao ComandaTech), com fallback automatico para ESC/POS.
+        _upper_html = html_content.upper()
+        is_comanda_producao = ("COMANDA DE PRODU" in _upper_html) and ("RECIBO" not in _upper_html)
+        usar_gdi_loja = COMPANY_ID in GDI_COMPANY_IDS or is_comanda_producao
+        if usar_gdi_loja and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
                 return True
             log("Modo grafico indisponivel — usando layout termico nativo", "AVISO")
             usar_escpos = True
-        elif COMPANY_ID in GDI_COMPANY_IDS:
+        elif usar_gdi_loja:
             carregar_config_loja()
             usar_escpos = True
 
