@@ -350,6 +350,8 @@ export function PDVV2FastCheckout({ companyId }: Props) {
       }
 
       toast.success('Venda rápida finalizada!');
+      // Notifica o PDV para atualizar caixa e faturamento em tempo real.
+      window.dispatchEvent(new Event('pdv:fast-sale-completed'));
     } catch (e) {
       console.error(e);
       toast.error('Erro ao finalizar venda');
