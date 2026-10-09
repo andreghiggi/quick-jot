@@ -316,7 +316,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
     return `
       <div class="item">
         <div class="item-header">
-          <span class="qty">${item.quantity}x</span>
+          <span class="qty">[ ${item.quantity}x ]</span>
           <span class="name">${item.productName}</span>
         </div>
         ${descriptionHTML}
