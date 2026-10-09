@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.12"
+SCRIPT_VERSION = "1.8.13"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1709,7 +1709,10 @@ def _imprimir_html(html_content, station_id=None):
         # (padrao ComandaTech), com fallback automatico para ESC/POS.
         _upper_html = html_content.upper()
         is_comanda_producao = ("COMANDA DE PRODU" in _upper_html) and ("RECIBO" not in _upper_html)
-        usar_gdi_loja = COMPANY_ID in GDI_COMPANY_IDS or is_comanda_producao
+        # v1.8.13: recibo usa modo grafico em TODAS as lojas com Layout V2.
+        carregar_config_loja()
+        is_layout_v2 = (str(PRINT_LAYOUT or "").strip().lower() == "v2")
+        usar_gdi_loja = COMPANY_ID in GDI_COMPANY_IDS or is_comanda_producao or is_layout_v2
         if usar_gdi_loja and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
