@@ -1034,7 +1034,8 @@ def extrair_blocos_v2(html_content):
     order_nodes = by_class("order-num")
     if store_nodes or order_nodes:
         rei_header_box = COMPANY_ID == "b2f97590-ff21-4951-95dc-e3e2b19d4ccb"
-        if rei_header_box:
+        v2_spec_pilot = COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164"
+        if rei_header_box or v2_spec_pilot:
             blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
         if store_nodes:
             blocos.append(block(store_nodes[0].text(), "store", "center"))
@@ -1064,7 +1065,7 @@ def extrair_blocos_v2(html_content):
             elif "PAGAMENTO" in text.upper() or "TROCO" in text.upper() or "CHAVE PIX" in text.upper():
                 blocos.append(block(text.upper(), "ready"))
 
-        if rei_header_box:
+        if rei_header_box or v2_spec_pilot:
             blocos.append({"text": "", "style": "box_end", "align": "left", "right": ""})
 
         for badge in by_class("delivery-badge"):
@@ -1098,7 +1099,11 @@ def extrair_blocos_v2(html_content):
                 if "add-group-label" in classes:
                     blocos.append(block("■ " + rotulo_grupo(sub), "group"))
                 elif "add-line" in classes:
-                    blocos.append(block(texto_proprio(sub) or sub.text(), "additional"))
+                    txt_add = texto_proprio(sub) or sub.text()
+                    if v2_spec_pilot:
+                        blocos.append(block("  " + txt_add.strip(), "additional"))
+                    else:
+                        blocos.append(block(txt_add, "additional"))
                 elif "item-notes" in classes:
                     nota = texto_proprio(sub) or sub.text()
                     estilo_nota = "inverse" if rei_header_box and "[OBS]" in nota else "description"
@@ -1197,6 +1202,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     "height": -max(10, int(pontos.get(estilo, 11) * dpi_y / 72)),
                     "weight": pesos.get(estilo, 500),
                     "underline": COMPANY_ID in ("b2f97590-ff21-4951-95dc-e3e2b19d4ccb", "8c9e7a0e-dbb6-49b9-8344-c23155a71164") and estilo == "group",
+                    "italic": COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164" and estilo == "additional",
                 })
             return cache_fontes[estilo]
 
