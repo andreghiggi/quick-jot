@@ -276,8 +276,13 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
         }
         additionalsHtml += '</div>';
       }
+      // Piloto I9: colchetes compactos [1x] sem negrito; valor no final em itálico menor.
+      const isI9PriceLast = payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+      const qtyLabel = isI9PriceLast
+        ? `<span class="qty-compact">[${it.quantity}x]</span> `
+        : isV2SpecPilot ? `[ ${it.quantity}x ] ` : `${it.quantity}x `;
       let block = `<div class="item">
-        <div class="item-name">${isV2SpecPilot ? `[ ${it.quantity}x ] ` : `${it.quantity}x `}${escapeHtml(it.name)}</div>`;
+        <div class="item-name">${qtyLabel}${escapeHtml(it.name)}</div>`;
       if (additionalsHtml) block += additionalsHtml;
       // Sanitiza: nunca repetir a lista de adicionais/opcionais dentro da observação.
       const cleanNotes = (it.notes || '')
@@ -289,7 +294,9 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
       if (cleanNotes) {
         block += `<div class="item-notes">${isReiDoAcai || isV2SpecPilot ? '[OBS]' : ''}Obs: ${escapeHtml(cleanNotes)}${isReiDoAcai || isV2SpecPilot ? '[/OBS]' : ''}</div>`;
       }
-      block += `<div class="item-detail">R$ ${lineTotal}</div></div>`;
+      block += isI9PriceLast
+        ? `<div class="item-detail item-price-last">R$ ${lineTotal}</div></div>`
+        : `<div class="item-detail">R$ ${lineTotal}</div></div>`;
       if (idx < payload.items.length - 1) {
         block += isV2SpecPilot
           ? '<div class="item-sep">--------------------------------</div>'
@@ -343,6 +350,8 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     .item { margin: 1.5mm 0; }
     .item-name { font-size: 11pt; font-weight: bold; text-transform: uppercase; }
     .item-detail { font-size: 10pt; margin-left: 2mm; font-weight: bold; }
+    .item-price-last { text-align: right; font-style: italic; font-weight: normal; font-size: 9pt; }
+    .qty-compact { font-weight: normal; }
     .item-notes { font-size: 9pt; font-style: italic; margin-left: 2mm; }
     .item-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; }
     .additionals { margin: 1mm 0 0 2mm; }
