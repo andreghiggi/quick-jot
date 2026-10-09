@@ -933,6 +933,7 @@ def extrair_blocos_v2(html_content):
     is_receipt = any(node.tag == "h2" and "RECIBO" in node.text().upper() for node in nodes)
 
     if not is_receipt and by_class("title"):
+        blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
         title = block(by_class("title")[0].text(), "title", "center")
         if title:
             blocos.append(title)
@@ -954,16 +955,18 @@ def extrair_blocos_v2(html_content):
         ready = by_class("ready-inline")
         if ready:
             blocos.append(block(normalizar_ready(ready[0].text()), "ready", "center"))
-        address = next((node for node in infos if "[ENDERECO]" in node.text()), None)
-        if address:
-            blocos.append(block(address.text(), "inverse"))
+        # Comanda de producao: sem endereco (apenas ENTREGA/RETIRADA no badge).
+        blocos.append({"text": "", "style": "box_end", "align": "left", "right": ""})
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
-        for item in by_class("item"):
-            # Ignora containers que apenas envolvem outros .item.
-            if any("item" in child.classes() for child in item.children):
-                continue
+        prod_items = [
+            it for it in by_class("item")
+            if not any("item" in child.classes() for child in it.children)
+        ]
+        for prod_index, item in enumerate(prod_items):
+            if prod_index > 0:
+                blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
             qty = next((texto_proprio(node) or node.text() for node in walk_item(item) if "qty" in node.classes()), "")
             name = next((texto_proprio(node) or node.text() for node in walk_item(item) if "name" in node.classes()), "")
             if qty or name:
