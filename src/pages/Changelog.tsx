@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/10/2026',
+    version: '1.74.13-beta',
+    type: 'improvement',
+    description: 'Frente de Caixa: a conferência de cartão aprovado sem venda deixou de consultar o servidor a cada minuto. Agora ela roda só ao abrir a tela e ao abrir a cobrança, e a aprovação do PinPad fica guardada no próprio computador até a venda ser salva — se a tela fechar ou a internet cair, o aviso aparece ao reabrir. Nada mudou na cobrança, no PinPad, no fiscal ou na impressão.',
+  },
+  {
+    date: '09/10/2026',
     version: '1.74.12-beta',
     type: 'fix',
     description: 'Venda Rápida: as vendas passam a somar no card “Faturamento” do PDV e no “Faturamento do Dia” do painel, sem contar nada em dobro. Ao finalizar uma venda rápida, o caixa e o valor da gaveta atualizam na hora, sem precisar recarregar a tela. Nenhum fluxo fiscal, TEF ou de impressão foi alterado.',
