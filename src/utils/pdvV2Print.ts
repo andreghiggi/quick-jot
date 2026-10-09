@@ -212,6 +212,8 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
   const fontSize = paperSize === '80mm' ? '11pt' : '10pt';
   const storeName = (payload.storeName || 'LOJA').toUpperCase();
   const isReiDoAcai = payload.companyId === 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
+  // Piloto da nova especificação do Layout V2 (validar na I9 antes de liberar a todas as lojas V2).
+  const isV2SpecPilot = payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const orderRef = payload.shortCode || String(payload.dailyNumber);
   const dt = new Date().toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -267,13 +269,15 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
             const mPrice = ad.match(/\s*R\$\s*([\d.,]+)\s*$/);
             const adClean = ad.replace(/\s*R\$\s*[\d.,]+\s*$/, '').trim();
             const priceSuffix = mPrice ? `  R$ ${mPrice[1]}` : '';
-            additionalsHtml += `<div class="add-line">+ ${escapeHtml(adClean.toUpperCase() + priceSuffix)}</div>`;
+            additionalsHtml += isV2SpecPilot
+              ? `<div class="add-line add-line-v2">+ ${escapeHtml(adClean + priceSuffix)}</div>`
+              : `<div class="add-line">+ ${escapeHtml(adClean.toUpperCase() + priceSuffix)}</div>`;
           }
         }
         additionalsHtml += '</div>';
       }
       let block = `<div class="item">
-        <div class="item-name">${it.quantity}x ${escapeHtml(it.name)}</div>`;
+        <div class="item-name">${isV2SpecPilot ? `[ ${it.quantity}x ] ` : `${it.quantity}x `}${escapeHtml(it.name)}</div>`;
       if (additionalsHtml) block += additionalsHtml;
       // Sanitiza: nunca repetir a lista de adicionais/opcionais dentro da observação.
       const cleanNotes = (it.notes || '')
@@ -287,7 +291,9 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
       }
       block += `<div class="item-detail">R$ ${lineTotal}</div></div>`;
       if (idx < payload.items.length - 1) {
-        block += '<div class="item-sep">................................</div>';
+        block += isV2SpecPilot
+          ? '<div class="item-sep">--------------------------------</div>'
+          : '<div class="item-sep">................................</div>';
       }
       return block;
     })
@@ -341,6 +347,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     .item-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; }
     .additionals { margin: 1mm 0 0 2mm; }
     .add-line { font-size: 10pt; font-weight: 900; line-height: 1.3; text-transform: uppercase; }
+    .add-line-v2 { font-style: italic; text-transform: none; font-weight: bold; margin-left: 2mm; }
     .add-group-label { font-size: 10pt; font-weight: bold; text-decoration: underline; margin-top: 1mm; }
     .total-line { display: flex; justify-content: space-between; font-size: 10pt; margin: 0.5mm 0; }
     .grand-total { display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }
