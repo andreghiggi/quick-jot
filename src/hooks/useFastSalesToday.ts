@@ -18,7 +18,8 @@ export function useFastSalesToday(companyId?: string | null) {
   const [total, setTotal] = useState(0);
 
   const load = useCallback(async () => {
-    if (!companyId) { setTotal(0); return; }
+    // Venda Rápida é exclusiva da Amore Mio: demais lojas não consultam.
+    if (!companyId || companyId !== AMORE_MIO_ID) { setTotal(0); return; }
     const { data, error } = await supabase
       .from('pdv_sales')
       .select('final_total, notes')
