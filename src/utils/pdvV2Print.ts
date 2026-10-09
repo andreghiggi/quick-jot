@@ -213,7 +213,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
   const storeName = (payload.storeName || 'LOJA').toUpperCase();
   const isReiDoAcai = payload.companyId === 'b2f97590-ff21-4951-95dc-e3e2b19d4ccb';
   // Piloto da nova especificação do Layout V2 (validar na I9 antes de liberar a todas as lojas V2).
-  const isV2SpecPilot = payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+  const isV2SpecPilot = true; // Layout V2 oficial para todas as lojas
   const orderRef = payload.shortCode || String(payload.dailyNumber);
   const dt = new Date().toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -605,13 +605,9 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
 function buildReceiptHTMLForCompany(payload: PrintPayload): string {
   // Quando o caller informa explicitamente o layout, respeita a escolha do lojista.
   if (payload.printLayout === 'v3') return buildReceiptHTMLv3(payload);
-  if (
-    payload.printLayout === 'v2' &&
-    RICH_RECEIPT_COMPANY_IDS.has(payload.companyId)
-  ) {
-    return buildReceiptHtmlV2Rich(payload);
-  }
-  if (payload.printLayout === 'v1' || payload.printLayout === 'v2') return buildReceiptHTML(payload);
+  // Layout V2 oficial: qualquer loja (atual ou nova) com V2 marcado usa o recibo V2 completo.
+  if (payload.printLayout === 'v2') return buildReceiptHtmlV2Rich(payload);
+  if (payload.printLayout === 'v1') return buildReceiptHTML(payload);
   // Compat legado: callers que ainda não passam printLayout caem no comportamento antigo
   // (I9 forçado em V3). Será removido quando todos os callers passarem o campo.
   if (payload.companyId === I9_COMPANY_ID_V3) return buildReceiptHTMLv3(payload);
