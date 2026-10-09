@@ -279,7 +279,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
       // Piloto I9: colchetes compactos [1x] sem negrito; valor no final em itálico menor.
       const isI9PriceLast = payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
       const qtyLabel = isI9PriceLast
-        ? `<span class="qty-compact">[${it.quantity}x]</span> `
+        ? `[${it.quantity}x] `
         : isV2SpecPilot ? `[ ${it.quantity}x ] ` : `${it.quantity}x `;
       let block = `<div class="item">
         <div class="item-name">${qtyLabel}${escapeHtml(it.name)}</div>`;
