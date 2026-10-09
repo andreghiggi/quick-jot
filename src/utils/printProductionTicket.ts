@@ -307,7 +307,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ? `<div class="additionals">${additionals.map(a => `<div class="add-line">&gt;&gt; ${a}</div>`).join('')}</div>`
         : '';
     const observationsHTML = observations.length > 0
-      ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">${o}</span></div>`).join('')}</div>`
+      ? `<div class="obs-block">${observations.map(o => `<div class="obs"><span class="obs-text">${/^obs\s*:/i.test(o) ? o : `Obs: ${o}`}</span></div>`).join('')}</div>`
       : '';
     const descriptionHTML = item.description
       ? `<div class="description"><strong>Descrição:</strong> ${item.description}</div>`

@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.9"
+SCRIPT_VERSION = "1.8.10"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -988,7 +988,10 @@ def extrair_blocos_v2(html_content):
                         bloco_add["indent"] = 2
                         blocos.append(bloco_add)
                 elif "obs-text" in classes:
-                    blocos.append(block(node.text(), "inverse"))
+                    _obs = (node.text() or "").strip()
+                    if _obs and not _obs.upper().startswith("OBS"):
+                        _obs = "Obs: " + _obs
+                    blocos.append(block(_obs, "inverse"))
         blocos.append(block("--- FIM ---", "footer", "center"))
         return [b for b in blocos if b]
 
