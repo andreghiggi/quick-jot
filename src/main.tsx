@@ -3,6 +3,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
+import { installApiStormGuard } from "@/utils/apiStormGuard";
+
+// Instalado antes de qualquer chamada à API (o cliente Supabase só faz
+// fetch de verdade dentro de efeitos do React, que rodam depois do render
+// abaixo) — ver src/utils/apiStormGuard.ts para o contexto completo.
+installApiStormGuard();
 
 // Logo após uma publicação o navegador pode tentar buscar um trecho antigo do
 // aplicativo que já não existe no servidor. Nesse caso recarregamos uma única
