@@ -1385,9 +1385,8 @@ export default function Menu() {
         const IMPERIO_DO_ACAI_ID = '96e53bb2-2b71-4ed3-86cd-0f97858aca73';
         // Lancheria da I9: teste do recibo obrigatório antes de liberar para todas.
         const I9_RECEIPT_PILOT_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
-        const isReceiptPilot =
-          company.id === REI_DO_ACAI_ID || company.id === BON_APPETIT_ID || company.id === IMPERIO_DO_ACAI_ID ||
-          company.id === I9_RECEIPT_PILOT_ID;
+        // Recibo do pedido é padrão do ComandaTech: automático para todas as lojas.
+        const isReceiptPilot = true;
         const shouldPrintProduction = settings.autoPrintProductionTicket && company.id !== REI_DO_ACAI_ID;
         if (shouldPrintProduction || isReceiptPilot) {
           try {
@@ -1501,11 +1500,11 @@ export default function Menu() {
             }
             };
             // Lancheria da I9 (teste): recibo primeiro, comanda depois. Demais lojas: ordem atual.
-            const receiptFirst = company.id === I9_RECEIPT_PILOT_ID;
+            const receiptFirst = true; // Padrão: recibo primeiro, comanda depois (se toggle ligado).
             if (!receiptFirst) await enqueueProduction();
 
             // Recibo obrigatório: piloto no Rei e Bon Appetit; preserva Amore Mio.
-            if (isReceiptPilot || isGdiReceiptCompany(company.id)) {
+            if (isReceiptPilot) {
               try {
                 const receiptItems = cart.map((item, idx) => ({
                   name: item.product.name,
