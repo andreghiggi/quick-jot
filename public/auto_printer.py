@@ -1109,7 +1109,7 @@ def extrair_blocos_v2(html_content):
                         blocos.append(block(txt_add, "additional"))
                 elif "item-notes" in classes:
                     nota = texto_proprio(sub) or sub.text()
-                    estilo_nota = "inverse" if rei_header_box and "[OBS]" in nota else "description"
+                    estilo_nota = "inverse" if (rei_header_box or v2_spec_pilot) and ("[OBS]" in nota or v2_spec_pilot) else "description"
                     blocos.append(block(nota, estilo_nota))
             if (rei_header_box or COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164") and item_index < len(receipt_items) - 1:
                 blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})

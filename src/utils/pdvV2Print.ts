@@ -287,7 +287,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
         .join(' | ')
         .trim();
       if (cleanNotes) {
-        block += `<div class="item-notes">${isReiDoAcai ? '[OBS]' : ''}Obs: ${escapeHtml(cleanNotes)}${isReiDoAcai ? '[/OBS]' : ''}</div>`;
+        block += `<div class="item-notes">${isReiDoAcai || isV2SpecPilot ? '[OBS]' : ''}Obs: ${escapeHtml(cleanNotes)}${isReiDoAcai || isV2SpecPilot ? '[/OBS]' : ''}</div>`;
       }
       block += `<div class="item-detail">R$ ${lineTotal}</div></div>`;
       if (idx < payload.items.length - 1) {
