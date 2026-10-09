@@ -1109,7 +1109,7 @@ def extrair_blocos_v2(html_content):
                         blocos.append(block(txt_add, "additional"))
                 elif "item-notes" in classes:
                     nota = texto_proprio(sub) or sub.text()
-                    estilo_nota = "inverse" if rei_header_box and "[OBS]" in nota else "description"
+                    estilo_nota = "inverse" if (rei_header_box or v2_spec_pilot) and ("[OBS]" in nota or v2_spec_pilot) else "description"
                     blocos.append(block(nota, estilo_nota))
             if (rei_header_box or COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164") and item_index < len(receipt_items) - 1:
                 blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
@@ -1204,7 +1204,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     "name": "Courier New",
                     "height": -max(10, int(pontos.get(estilo, 11) * dpi_y / 72)),
                     "weight": pesos.get(estilo, 500),
-                    "underline": COMPANY_ID in ("b2f97590-ff21-4951-95dc-e3e2b19d4ccb", "8c9e7a0e-dbb6-49b9-8344-c23155a71164") and estilo == "group",
+                    "underline": estilo == "group",
                     "italic": COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164" and estilo == "additional",
                 })
             return cache_fontes[estilo]

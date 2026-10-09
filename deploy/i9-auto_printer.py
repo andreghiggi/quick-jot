@@ -82,12 +82,126 @@ def _import_win32print():
     return win32print
 
 
+def criar_win32gui_shim(win32gui, win32print, win32con):
+    """Fallback sem win32ui (Windows sem MFC/mfc140u.dll).
+
+    win32print + win32gui funcionam normalmente nessas maquinas. Este adaptador
+    expoe apenas os metodos usados por imprimir_gdi, mantendo o layout identico.
+    """
+
+    def criar_fonte(spec):
+        lf = win32gui.LOGFONT()
+        lf.lfFaceName = spec.get("name", "Courier New")
+        lf.lfHeight = int(spec.get("height", 0))
+        lf.lfWeight = int(spec.get("weight", 400))
+        lf.lfItalic = 1 if spec.get("italic") else 0
+        lf.lfUnderline = 1 if spec.get("underline") else 0
+        lf.lfStrikeOut = 1 if spec.get("strikeout") else 0
+        lf.lfCharSet = int(spec.get("charset", 1))
+        return win32gui.CreateFontIndirect(lf)
+
+    class GuiDC:
+        def __init__(self):
+            self.hdc = None
+
+        def CreatePrinterDC(self, printer_name):
+            try:
+                self.hdc = win32gui.CreateDC("WINSPOOL", printer_name, None)
+            except Exception:
+                self.hdc = win32gui.CreateDC("", printer_name, None)
+
+        def GetDeviceCaps(self, cap):
+            return win32print.GetDeviceCaps(self.hdc, cap)
+
+        def SelectObject(self, obj):
+            return win32gui.SelectObject(self.hdc, obj)
+
+        def GetTextMetrics(self):
+            tm = win32gui.GetTextMetrics(self.hdc)
+            if isinstance(tm, dict):
+                normalized = dict(tm)
+                for key, value in list(tm.items()):
+                    if not key.startswith("tm"):
+                        normalized["tm" + key] = value
+                normalized.setdefault("tmHeight", normalized.get("Height", 0))
+                normalized.setdefault("tmExternalLeading", normalized.get("ExternalLeading", 0))
+                normalized.setdefault("tmAscent", normalized.get("Ascent", 0))
+                normalized.setdefault("tmDescent", normalized.get("Descent", 0))
+                return normalized
+            return tm
+
+        def GetTextExtent(self, text):
+            return win32gui.GetTextExtentPoint32(self.hdc, str(text))
+
+        def StartDoc(self, title):
+            return win32print.StartDoc(self.hdc, (title, None, None, 0))
+
+        def StartPage(self):
+            return win32print.StartPage(self.hdc)
+
+        def EndPage(self):
+            return win32print.EndPage(self.hdc)
+
+        def EndDoc(self):
+            return win32print.EndDoc(self.hdc)
+
+        def DeleteDC(self):
+            if self.hdc:
+                win32gui.DeleteDC(self.hdc)
+                self.hdc = None
+
+        def GetSafeHdc(self):
+            return self.hdc
+
+        def SetTextColor(self, color):
+            return win32gui.SetTextColor(self.hdc, color)
+
+        def SetBkMode(self, mode):
+            return win32gui.SetBkMode(self.hdc, mode)
+
+        def TextOut(self, x, y, text):
+            return win32gui.ExtTextOut(self.hdc, int(x), int(y), 0, None, str(text))
+
+        def FillSolidRect(self, rect, color):
+            brush = win32gui.CreateSolidBrush(int(color))
+            try:
+                win32gui.FillRect(
+                    self.hdc,
+                    (int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3])),
+                    brush,
+                )
+            finally:
+                try:
+                    win32gui.DeleteObject(brush)
+                except Exception:
+                    pass
+
+    class GuiShim:
+        @staticmethod
+        def CreateDC():
+            return GuiDC()
+
+        @staticmethod
+        def CreateFont(spec):
+            return criar_fonte(spec)
+
+    return GuiShim
+
+
 def _import_win32ui():
     _prepare_pywin32_dll_path()
     import win32con
-    import win32ui
 
-    return win32ui, win32con
+    try:
+        import win32ui
+
+        return win32ui, win32con
+    except Exception:
+        # Windows sem MFC: usa o adaptador win32gui (mesmo layout grafico).
+        import win32gui
+        import win32print
+
+        return criar_win32gui_shim(win32gui, win32print, win32con), win32con
 
 
 _prepare_pywin32_dll_path()
@@ -95,20 +209,20 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.7.8"
+SCRIPT_VERSION = "1.8.7"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
-API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bXJ0eGR6bGthc3V6dXR4dmhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3OTExODMsImV4cCI6MjA4MDM2NzE4M30.VsnT1zdVUwJdv8gBlg8CthBx_bccZp-LsOs2PRq1Uik" # Injetado pelo frontend
+API_KEY = "" # Injetado pelo frontend
 LOG_FILE = "printer_log.txt"
-STORE_NAME = "Lancheria I9"
+STORE_NAME = ""
 STORE_INFO = {}
 COMPANY_ID = "8c9e7a0e-dbb6-49b9-8344-c23155a71164" # Injetado pelo frontend
 PRINTER_MAP_FILE = "printer_map.json"
 
 # Tamanho de papel configurado na loja (store_settings.printer_paper_size).
 # Usado pelo renderizador grafico para dimensionar fonte, colunas e faixas.
-PAPER_SIZE = "80mm"
-PRINT_LAYOUT = "v3"
+PAPER_SIZE = "58mm"
+PRINT_LAYOUT = "v1"
 CONFIG_LAST_SYNC = 0
 CONFIG_TTL = 300  # segundos
 
@@ -122,6 +236,7 @@ STATIONS_TTL = 300  # segundos
 GDI_COMPANY_IDS = {
     "f5f9eec3-67bc-497a-88a6-ce41d3b15df8",  # Amore Mio
     "b2f97590-ff21-4951-95dc-e3e2b19d4ccb",  # Rei do Acai
+    "8c9e7a0e-dbb6-49b9-8344-c23155a71164",  # Lancheria da i9 (loja de testes, usa Microsoft Print to PDF)
 }
 
 # Lojas que DESCARTAM o backlog ao iniciar o script (nao imprimem acumulo antigo).
@@ -134,6 +249,7 @@ SKIP_BACKLOG_COMPANY_IDS = {"f5f9eec3-67bc-497a-88a6-ce41d3b15df8"}  # Amore Mio
 pedidos_impressos_sessao = []
 ids_com_falha = set()
 ids_processados = set()
+QUEUE_CONNECTION_CONFIRMED = False
 
 def log(mensagem, tipo="INFO"):
     agora = datetime.now().strftime("%H:%M:%S")
@@ -159,7 +275,7 @@ def mostrar_status(company_id):
     if pedidos_impressos_sessao:
         print("  ÚLTIMOS 3:")
         for p in pedidos_impressos_sessao[-3:]:
-            print(f"    - #{p['numero']} ({p['cliente']}) às {p['hora']}")
+            print(f"    - {p}")
     print("-" * 60)
     print("  Pressione Ctrl+C para encerrar com segurança")
     print("=" * 60)
@@ -210,20 +326,41 @@ def buscar_pedidos_nao_impressos(company_id):
 
 def processar_fila(company_id):
     """Busca e processa itens na print_queue ainda nao impressos"""
+    global QUEUE_CONNECTION_CONFIRMED
     try:
-        url = f"{API_URL}/print_queue?company_id=eq.{company_id}&printed=eq.false&select=*"
-        response = requests.get(url, headers=get_headers())
+        url = f"{API_URL}/print_queue?company_id=eq.{company_id}&printed=eq.false&select=*&order=created_at.asc"
+        response = requests.get(url, headers=get_headers(), timeout=30)
         if response.status_code == 200:
             fila = response.json()
+            if not QUEUE_CONNECTION_CONFIRMED:
+                log("Conexao com a fila de impressao confirmada", "FILA")
+                QUEUE_CONNECTION_CONFIRMED = True
+            if fila:
+                log(f"Encontrada(s) {len(fila)} comanda(s) pendente(s)", "FILA")
             for item in fila:
                 if item['id'] in ids_processados: continue
-                
+
                 log(f"Imprimindo da fila: {item.get('label', 'Sem título')}", "FILA")
                 if imprimir_html(item.get('html_content', ''), item.get('station_id')):
+                    # Trava imediata: assim que o papel sai, o job nunca mais e reimpresso,
+                    # mesmo que a rede demore para confirmar a baixa na fila.
                     ids_processados.add(item['id'])
-                    marcar_fila_impressa(item['id'])
-                    remover_da_fila(item['id'])
+                    pedidos_impressos_sessao.append(item.get('label', item['id']))
+                    if marcar_fila_impressa(item['id']):
+                        remover_da_fila(item['id'])
+                        log(f"Comanda concluida: {item.get('label', item['id'])}", "OK")
+                    else:
+                        log(
+                            f"A comanda saiu na impressora, mas a fila nao confirmou a conclusao: {item['id']}",
+                            "ERRO",
+                        )
+                else:
+                    log(
+                        f"Falha ao enviar a comanda para a impressora: {item.get('label', item['id'])}",
+                        "ERRO",
+                    )
             return len(fila)
+        log(f"Erro ao consultar fila: HTTP {response.status_code} - {response.text[:200]}", "ERRO")
     except Exception as e:
         log(f"Erro ao processar fila: {e}", "ERRO")
     return 0
@@ -232,16 +369,27 @@ def marcar_fila_impressa(item_id):
     """Marca o job como impresso (evita reimpressao caso o DELETE seja bloqueado por RLS)"""
     try:
         url = f"{API_URL}/print_queue?id=eq.{item_id}"
-        requests.patch(url, headers=get_headers(), json={"printed": True})
+        response = requests.patch(
+            url,
+            headers=get_headers(),
+            json={"printed": True, "printed_at": datetime.now().isoformat()},
+            timeout=30,
+        )
+        if response.status_code in (200, 204):
+            return True
+        log(f"Fila nao confirmou conclusao: HTTP {response.status_code} - {response.text[:200]}", "ERRO")
     except Exception as e:
         log(f"Erro ao marcar job como impresso: {e}", "ERRO")
+    return False
 
 def remover_da_fila(item_id):
     try:
         url = f"{API_URL}/print_queue?id=eq.{item_id}"
-        requests.delete(url, headers=get_headers())
-    except:
-        pass
+        response = requests.delete(url, headers=get_headers(), timeout=30)
+        if response.status_code not in (200, 204):
+            log(f"Historico da fila foi mantido (HTTP {response.status_code})", "INFO")
+    except Exception as e:
+        log(f"Historico da fila foi mantido: {e}", "INFO")
 
 def marcar_como_impresso(order_id):
     try:
@@ -439,6 +587,44 @@ def normalizar_marcadores(texto):
     return texto
 
 
+def sanitizar_icones(texto):
+    """Troca emojis/icones por texto simples e remove o que a impressora nao tem.
+
+    Sem isso a POS-58 imprime "?" no lugar do raio, da sacola, etc.
+    """
+    if not texto:
+        return texto
+    trocas = {
+        "\u26a1": "",   # raio (pedido express)
+        "\U0001f6cd": "",  # sacola
+        "\U0001f6d2": "",  # carrinho
+        "\U0001f3e0": "",  # casa
+        "\U0001f4cd": "",  # pin de local
+        "\U0001f4de": "Tel:",
+        "\U0001f514": "",  # sino
+        "\U0001f37d": "",  # prato
+        "\u2b50": "",
+        "\u2705": "",
+        "\u25a0": "",
+        "\u25aa": "",
+    }
+    for origem, destino in trocas.items():
+        texto = texto.replace(origem, destino)
+    # Remove qualquer caractere que a tabela da impressora nao represente
+    limpo = []
+    for ch in texto:
+        if ch in "\n\r\t":
+            limpo.append(ch)
+            continue
+        try:
+            ch.encode("cp850")
+            limpo.append(ch)
+        except Exception:
+            pass
+    import re as _re_icon
+    return _re_icon.sub(r"[ \t]{2,}", "  ", "".join(limpo))
+
+
 def montar_linhas_estilizadas(texto, colunas=32):
     """
     Converte o texto da comanda em linhas com PAPEL LOGICO (estilo por
@@ -453,6 +639,9 @@ def montar_linhas_estilizadas(texto, colunas=32):
     import re as _re
     import textwrap as _tw
 
+    texto = sanitizar_icones(texto or "")
+
+
     # Colunas efetivas por estilo (fontes maiores cabem menos caracteres)
     fator = {
         "titulo": 0.72,
@@ -466,6 +655,9 @@ def montar_linhas_estilizadas(texto, colunas=32):
         "obs": 0.90,
         "normal": 1.0,
         "rodape": 1.0,
+        "loja": 0.90,
+        "grupo": 0.90,
+        "sep": 1.0,
     }
 
     saida = []
@@ -480,6 +672,7 @@ def montar_linhas_estilizadas(texto, colunas=32):
             saida.append((parte, estilo))
 
     linhas_src = texto.split("\n")
+    primeira_linha_util = True
     idx = 0
     while idx < len(linhas_src):
         linha = linhas_src[idx].strip()
@@ -495,13 +688,16 @@ def montar_linhas_estilizadas(texto, colunas=32):
                 idx += 1
 
         upper = linha.upper()
+        eh_primeira = primeira_linha_util
+        primeira_linha_util = False
 
         # Rodape antigo ("--- FIM ---") e removido: o padrao e adicionado no final
         if _re.match(r"^-{2,}\s*FIM.*$", upper):
             continue
 
-        # Linhas de separador do parser antigo
-        if set(linha) <= {"=", "-", ".", "_"} and len(linha) > 3:
+        # Linhas de separador -> tracejado do layout padrao
+        if set(linha) <= {"=", "-", ".", "_", "*"} and len(linha) > 3:
+            saida.append(("-" * colunas, "sep"))
             continue
 
         # Titulo da comanda
@@ -519,6 +715,19 @@ def montar_linhas_estilizadas(texto, colunas=32):
         if upper.strip("= ") in ("RETIRADA", "ENTREGA", "MESA", "BALCAO", "BALCÃO", "DELIVERY"):
             add(f">> {upper.strip('= ')} <<", "tipo")
             continue
+
+        # Modalidade descritiva ("PEDIDO EXPRESS", "RETIRADA NO LOCAL",
+        # "ENTREGA / DELIVERY") -> negrito, sem virar titulo gigante
+        if (
+            (upper.startswith("PEDIDO") and "#" not in linha)
+            or upper.startswith("RETIRADA")
+            or upper.startswith("ENTREGA")
+            or upper.startswith("DELIVERY")
+            or upper.startswith("MESA ")
+        ):
+            add(upper, "item")
+            continue
+
 
         # Numero do pedido / comanda
         if upper.startswith("PEDIDO") or upper.startswith("COMANDA #") or upper.startswith("#"):
@@ -564,6 +773,24 @@ def montar_linhas_estilizadas(texto, colunas=32):
             add(">> " + linha.lstrip("> ").upper(), "add")
             continue
 
+        # Adicionais no formato "+ ITEM"
+        if linha.startswith("+"):
+            add("+ " + linha.lstrip("+ ").upper(), "add")
+            continue
+
+        # Titulo de grupo de opcionais ("Escolha a base:", "Adicionais Premium:")
+        if linha.endswith(":") and not _re.match(
+            r"^(TEL|FONE|PAGAMENTO|SUBTOTAL|TOTAL|TAXA|DESCONTO|TROCO|ENDERECO|CLIENTE|OBS)",
+            upper,
+        ):
+            add(linha.rstrip(":").strip(), "grupo")
+            continue
+
+        # Nome da loja (primeira linha util do cupom)
+        if eh_primeira:
+            add(upper, "loja")
+            continue
+
         add(linha, "normal")
 
     saida.append(("", "espaco"))
@@ -589,9 +816,11 @@ def extrair_blocos_v2(html_content):
             return set(self.attrs.get("class", "").split())
 
         def text(self):
-            values = list(self.parts)
-            for child in self.children:
-                values.append(child.text())
+            # `parts` guarda texto e filhos NA ORDEM do documento: sem isso
+            # "<span>Tel:</span> 9999" virava "9999 Tel:".
+            values = []
+            for part in self.parts:
+                values.append(part.text() if isinstance(part, Node) else part)
             return _re.sub(r"\s+", " ", _html.unescape(" ".join(values))).strip()
 
     class TreeParser(HTMLParser):
@@ -611,8 +840,10 @@ def extrair_blocos_v2(html_content):
                 return
             node = Node(tag, attrs, self.current)
             self.current.children.append(node)
+            self.current.parts.append(node)
             if tag not in self.VOID:
                 self.current = node
+
 
         def handle_endtag(self, tag):
             if tag in ("style", "script", "head", "title"):
@@ -639,13 +870,40 @@ def extrair_blocos_v2(html_content):
         for child in node.children:
             yield from walk(child)
 
+    def walk_item(node, raiz=True):
+        """Percorre um item SEM descer em itens aninhados.
+
+        Quando o HTML chega com uma tag nao fechada, o item seguinte vira filho
+        do anterior. Sem esta barreira, o cupom inteiro era reimpresso dentro do
+        primeiro item (conteudo duplicado no mesmo papel).
+        """
+        yield node
+        for child in node.children:
+            if not raiz and "item" in child.classes():
+                continue
+            if "item" in child.classes():
+                continue
+            yield from walk_item(child, False)
+
+    def texto_proprio(node):
+        """Somente o texto direto do no, ignorando filhos."""
+        valores = [p for p in node.parts if not isinstance(p, Node)]
+        return _re.sub(r"\s+", " ", _html.unescape(" ".join(valores))).strip()
+
+    def rotulo_grupo(node):
+        """Le o nome do grupo pelo marcador, nunca arrastando o texto dos filhos."""
+        bruto = texto_proprio(node) or node.text()
+        m = _re.search(r"\[ADDGROUP_LABEL\](.*?)\[/ADDGROUP_LABEL\]", bruto)
+        return (m.group(1) if m else bruto).strip()
+
     nodes = list(walk(parser.root))
+
 
     def by_class(name):
         return [node for node in nodes if name in node.classes()]
 
     def clean_marker(value):
-        value = _re.sub(r"\[/?(?:CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL)\]", "", value)
+        value = _re.sub(r"\[/?(?:CLIENTE|ENDERECO|ADD|ADDGROUP_LABEL|OBS)\]", "", value)
         return _re.sub(r"\s+", " ", value).strip()
 
     def normalizar_ready(value):
@@ -656,11 +914,19 @@ def extrair_blocos_v2(html_content):
             return f"Pronto até: {m.group(1)}"
         return value
 
+    def prefixo_cliente(value):
+        """Garante o prefixo 'CLIENTE:' na faixa invertida do recibo."""
+        value = clean_marker(value)
+        if value and not _re.match(r"^\s*cliente\s*:", value, _re.I):
+            value = f"CLIENTE: {value}"
+        return value
+
     def block(text, style="normal", align="left", right=None):
         text = clean_marker(text)
         if text or right:
             return {"text": text, "style": style, "align": align, "right": clean_marker(right or "")}
         return None
+
 
 
     blocos = []
@@ -681,7 +947,7 @@ def extrair_blocos_v2(html_content):
             blocos.append(block(table_infos[0].text(), "type", "center"))
         customer = next((node for node in infos if "[CLIENTE]" in node.text()), None)
         if customer:
-            blocos.append(block(customer.text(), "inverse"))
+            blocos.append(block(prefixo_cliente(customer.text()), "inverse"))
         datetimes = [node for node in by_class("datetime") if "ready-inline" not in node.classes()]
         if datetimes:
             blocos.append(block(datetimes[0].text(), "datetime", "center"))
@@ -698,20 +964,20 @@ def extrair_blocos_v2(html_content):
             # Ignora containers que apenas envolvem outros .item.
             if any("item" in child.classes() for child in item.children):
                 continue
-            qty = next((node.text() for node in walk(item) if "qty" in node.classes()), "")
-            name = next((node.text() for node in walk(item) if "name" in node.classes()), "")
+            qty = next((texto_proprio(node) or node.text() for node in walk_item(item) if "qty" in node.classes()), "")
+            name = next((texto_proprio(node) or node.text() for node in walk_item(item) if "name" in node.classes()), "")
             if qty or name:
                 # Uma unica coluna com quebra de linha: evita corte do nome na margem.
                 linha_item = " ".join(p for p in (clean_marker(qty), clean_marker(name)) if p)
                 blocos.append({"text": linha_item, "style": "item_qty", "align": "left", "right": ""})
-            for node in walk(item):
+            for node in walk_item(item):
                 classes = node.classes()
                 if "description" in classes:
-                    blocos.append(block(node.text(), "description"))
+                    blocos.append(block(texto_proprio(node) or node.text(), "description"))
                 elif "add-group-label" in classes:
-                    blocos.append(block("■ " + node.text(), "group"))
+                    blocos.append(block("■ " + rotulo_grupo(node), "group"))
                 elif "add-line" in classes:
-                    blocos.append(block(node.text().replace(">>", "+", 1), "additional"))
+                    blocos.append(block((texto_proprio(node) or node.text()).replace(">>", "+", 1), "additional"))
                 elif "obs-text" in classes:
                     blocos.append(block(node.text(), "inverse"))
         blocos.append(block("--- FIM ---", "footer", "center"))
@@ -735,7 +1001,7 @@ def extrair_blocos_v2(html_content):
                 spans = [node.text() for node in child.children if node.tag == "span"]
                 blocos.append({"text": spans[0] if spans else "TOTAL", "style": "total", "align": "left", "right": spans[1] if len(spans) > 1 else ""})
             elif "[CLIENTE]" in text:
-                blocos.append(block(text, "inverse"))
+                blocos.append(block(prefixo_cliente(text), "inverse"))
             elif "[ENDERECO]" in text:
                 blocos.append(block(text, "inverse"))
             elif text.upper().startswith("PRONTO AT") or _re.match(r"^\d{1,2}:\d{2}\s*pronto", text, _re.I):
@@ -767,53 +1033,87 @@ def extrair_blocos_v2(html_content):
     store_nodes = by_class("store-name")
     order_nodes = by_class("order-num")
     if store_nodes or order_nodes:
+        rei_header_box = COMPANY_ID == "b2f97590-ff21-4951-95dc-e3e2b19d4ccb"
+        v2_spec_pilot = COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164"
+        if rei_header_box or v2_spec_pilot:
+            blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
         if store_nodes:
             blocos.append(block(store_nodes[0].text(), "store", "center"))
         if order_nodes:
             blocos.append(block(order_nodes[0].text(), "order", "center"))
         for origem in by_class("origem"):
-            blocos.append(block(origem[0].text(), "type", "center"))
+            blocos.append(block(origem.text(), "type", "center"))
         for date_node in by_class("date"):
-            blocos.append(block(date_node[0].text(), "datetime", "center"))
+            blocos.append(block(date_node.text(), "datetime", "center"))
         for ready in by_class("ready-inline"):
-            blocos.append(block(normalizar_ready(ready[0].text()), "ready", "center"))
+            blocos.append(block(normalizar_ready(ready.text()), "ready", "center"))
+
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
-        for node in nodes:
+        # Somente nos folha (<p>) evitam duplicar o mesmo texto vindo dos pais.
+        folhas = [
+            node for node in nodes
+            if node.tag == "p" and not any(child.text() for child in node.children if child.tag != "span")
+        ]
+        for node in folhas:
             text = node.text()
             if "[CLIENTE]" in text:
-                blocos.append(block(text, "inverse"))
+                blocos.append(block(prefixo_cliente(text), "inverse"))
             elif _re.search(r"\bTEL\s*:", text, _re.I):
                 blocos.append(block(text, "normal"))
-            elif "PAGAMENTO" in text.upper():
+            elif "PAGAMENTO" in text.upper() or "TROCO" in text.upper() or "CHAVE PIX" in text.upper():
                 blocos.append(block(text.upper(), "ready"))
 
+        if rei_header_box or v2_spec_pilot:
+            blocos.append({"text": "", "style": "box_end", "align": "left", "right": ""})
+
         for badge in by_class("delivery-badge"):
-            blocos.append(block(badge[0].text(), "type", "center"))
-        for node in nodes:
+            blocos.append(block(badge.text(), "type", "center"))
+
+        for node in folhas:
             if "[ENDERECO]" in node.text():
                 blocos.append(block(node.text(), "inverse"))
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
-        for item in by_class("item"):
-            if any("item" in child.classes() for child in item.children):
-                continue
-            name_node = next((n for n in walk(item) if "item-name" in n.classes()), None)
-            detail_node = next((n for n in walk(item) if "item-detail" in n.classes()), None)
+        receipt_items = [
+            item for item in by_class("item")
+            if not any("item" in child.classes() for child in item.children)
+        ]
+        for item_index, item in enumerate(receipt_items):
+            name_node = next((n for n in walk_item(item) if "item-name" in n.classes()), None)
+            detail_node = next((n for n in walk_item(item) if "item-detail" in n.classes()), None)
             if name_node:
-                blocos.append(block(name_node.text(), "item_qty", "left"))
-            for sub in walk(item):
+                # Valor do item na MESMA linha do nome (alinhado a direita).
+                blocos.append({
+                    "text": clean_marker(texto_proprio(name_node) or name_node.text()),
+                    "style": "item_qty",
+                    "align": "left",
+                    "right": clean_marker(texto_proprio(detail_node) or detail_node.text()) if detail_node else "",
+                })
+            elif detail_node:
+                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(texto_proprio(detail_node) or detail_node.text())})
+            for sub in walk_item(item):
                 classes = sub.classes()
                 if "add-group-label" in classes:
-                    blocos.append(block("■ " + sub.text(), "group"))
+                    blocos.append(block("■ " + rotulo_grupo(sub), "group"))
                 elif "add-line" in classes:
-                    blocos.append(block(sub.text(), "additional"))
+                    txt_add = texto_proprio(sub) or sub.text()
+                    if v2_spec_pilot:
+                        bloco_add = block(txt_add.strip(), "additional")
+                        if bloco_add:
+                            bloco_add["indent"] = 2
+                            blocos.append(bloco_add)
+                    else:
+                        blocos.append(block(txt_add, "additional"))
                 elif "item-notes" in classes:
-                    blocos.append(block(sub.text(), "description"))
-            if detail_node:
-                blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(detail_node.text())})
+                    nota = texto_proprio(sub) or sub.text()
+                    estilo_nota = "inverse" if (rei_header_box or v2_spec_pilot) and ("[OBS]" in nota or v2_spec_pilot) else "description"
+                    blocos.append(block(nota, estilo_nota))
+            if (rei_header_box or COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164") and item_index < len(receipt_items) - 1:
+                blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+
 
         blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
@@ -868,13 +1168,24 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         margem = max(4, int(dpi_x * 2.0 / 25.4))
         largura_util = max(80, largura_canvas - (margem * 2))
 
-        pontos = {
-            "store": 17, "title": 17, "type": 17, "order": 17,
-            "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
-            "item_qty": 15, "item": 14, "description": 12,
-            "group": 13, "additional": 13, "normal": 14,
-            "total": 17, "footer": 14, "sep": 12,
-        }
+        if largura_mm >= 80:
+            pontos = {
+                "store": 17, "title": 17, "type": 17, "order": 17,
+                "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
+                "item_qty": 15, "item": 14, "description": 12,
+                "group": 13, "additional": 13, "normal": 14,
+                "total": 17, "footer": 14, "sep": 12,
+            }
+        else:
+            # Papel 58mm: fontes menores para o nome do item e o valor caberem
+            # na mesma linha, evitando quebras soltas linha a linha.
+            pontos = {
+                "store": 15, "title": 15, "type": 11, "order": 15,
+                "code": 10, "inverse": 14, "datetime": 12, "ready": 11,
+                "item_qty": 12, "item": 12, "description": 10,
+                "group": 11, "additional": 11, "normal": 12,
+                "total": 13, "footer": 11, "sep": 10,
+            }
         pesos = {
             "store": 800, "title": 800, "type": 800, "order": 800,
             "code": 500, "inverse": 800, "datetime": 700, "ready": 800,
@@ -893,6 +1204,8 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     "name": "Courier New",
                     "height": -max(10, int(pontos.get(estilo, 11) * dpi_y / 72)),
                     "weight": pesos.get(estilo, 500),
+                    "underline": estilo == "group",
+                    "italic": COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164" and estilo == "additional",
                 })
             return cache_fontes[estilo]
 
@@ -925,11 +1238,28 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             ]
 
         y = margem
+        box_start_y = None
         for bloco in blocos:
             estilo = bloco.get("style", "normal")
             texto = bloco.get("text", "")
             direita = bloco.get("right", "")
             alinhamento = bloco.get("align", "left")
+            if estilo == "box_start":
+                box_start_y = y
+                y += max(3, margem // 2)
+                continue
+            if estilo == "box_end":
+                if box_start_y is not None:
+                    y += max(3, margem // 2)
+                    borda = max(2, int(dpi_x * 0.45 / 25.4))
+                    box_x = max(0, margem // 3)
+                    box_right = largura_canvas - box_x
+                    dc.FillSolidRect((box_x, box_start_y, box_right, box_start_y + borda), 0x000000)
+                    dc.FillSolidRect((box_x, y - borda, box_right, y), 0x000000)
+                    dc.FillSolidRect((box_x, box_start_y, box_x + borda, y), 0x000000)
+                    dc.FillSolidRect((box_right - borda, box_start_y, box_right, y), 0x000000)
+                    box_start_y = None
+                continue
             dc.SelectObject(fonte(estilo))
             tm = dc.GetTextMetrics()
             altura_linha = max(12, tm["tmHeight"] + tm["tmExternalLeading"])
@@ -941,18 +1271,20 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 texto = "-" * max(8, largura_util // traco_px)
                 direita = ""
 
+            recuo_px = dc.GetTextExtent(" " * int(bloco.get("indent", 0) or 0))[0] if bloco.get("indent") else 0
             direita_propria = False
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
-                limite_esquerda = largura_util - direita_px - max(6, margem)
+                folga_colunas = max(12, dc.GetTextExtent("  ")[0])
+                limite_esquerda = largura_util - direita_px - folga_colunas
                 if limite_esquerda < int(largura_util * 0.35):
                     # Nao cabe lado a lado: valor vai para a linha seguinte, alinhado a direita.
                     direita_propria = True
-                    linhas = quebrar(texto, estilo, largura_util)
+                    linhas = quebrar(texto, estilo, largura_util - recuo_px)
                 else:
-                    linhas = quebrar(texto, estilo, limite_esquerda)
+                    linhas = quebrar(texto, estilo, limite_esquerda - recuo_px)
             else:
-                linhas = quebrar(texto, estilo, largura_util)
+                linhas = quebrar(texto, estilo, largura_util - recuo_px)
 
             total_linhas = len(linhas) + (1 if direita_propria else 0)
             bloco_altura = altura_linha * total_linhas + espaco_depois
@@ -976,7 +1308,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 elif alinhamento == "right":
                     x = margem + max(0, largura_util - linha_px)
                 else:
-                    x = margem
+                    x = margem + recuo_px
                 dc.TextOut(x, y + indice * altura_linha, linha)
 
             if direita:
@@ -1000,6 +1332,228 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
     except Exception as e:
         log(f"Falha no modo grafico (GDI): {e}", "ERRO")
         return False
+
+
+# ==============================================================================
+# FALLBACK ESC/POS (quando o modo grafico GDI nao esta disponivel)
+# Mantem negrito, centralizacao e faixa invertida usando os recursos da
+# propria impressora termica, em vez de sair texto plano.
+# ISOLAMENTO: usado apenas para lojas de GDI_COMPANY_IDS sem win32ui.
+# ==============================================================================
+ESC = b"\x1b"
+GS = b"\x1d"
+
+
+def _escpos_encode(texto):
+    try:
+        return texto.encode("cp850", "replace")
+    except Exception:
+        return texto.encode("latin-1", "replace")
+
+
+def montar_escpos(texto, colunas=32):
+    """Converte o texto da comanda em bytes ESC/POS estilizados."""
+    try:
+        linhas = montar_linhas_estilizadas(texto, colunas=colunas)
+    except Exception as e:
+        log(f"Falha ao montar ESC/POS: {e}", "AVISO")
+        return None
+
+    if not linhas:
+        return None
+
+    out = bytearray()
+    out += ESC + b"@"  # reset
+    # Tabela de caracteres: sem isso a impressora interpreta os acentos em outra
+    # pagina de codigo e sai "ACAI" com simbolos estranhos.
+    out += ESC + b"t" + bytes([2])   # CP850 (multilingual)
+
+    def align(n):
+        out.extend(ESC + b"a" + bytes([n]))
+
+    def bold(on):
+        out.extend(ESC + b"E" + bytes([1 if on else 0]))
+
+    def size(n):
+        out.extend(GS + b"!" + bytes([n]))
+
+    def inverse(on):
+        out.extend(GS + b"B" + bytes([1 if on else 0]))
+
+    def underline(on):
+        out.extend(ESC + b"-" + bytes([1 if on else 0]))
+
+    for linha, estilo in linhas:
+        if estilo == "espaco" or not linha:
+            out += b"\n"
+            continue
+
+        sublinhado = False
+        if estilo in ("titulo", "pedido"):
+            align(1); bold(True); size(0x11)
+        elif estilo == "loja":
+            align(0); bold(True); size(0x00)
+        elif estilo == "tipo":
+            align(1); bold(True); inverse(True); size(0x01)
+        elif estilo == "cliente":
+            align(0); bold(True); inverse(True); size(0x00)
+        elif estilo == "grupo":
+            align(0); bold(True); size(0x00); underline(True); sublinhado = True
+        elif estilo == "item":
+            align(0); bold(True); size(0x00)
+        elif estilo in ("pronto", "add"):
+            align(0); bold(True); size(0x00)
+        elif estilo == "sep":
+            align(0); bold(False); size(0x00)
+        elif estilo == "rodape":
+            align(1); bold(False); size(0x00)
+        elif estilo == "datetime":
+            align(1); bold(False); size(0x00)
+        else:
+            align(0); bold(False); size(0x00)
+
+        conteudo = linha
+        if estilo in ("tipo", "cliente"):
+            # faixa preenchida ate a largura do papel
+            conteudo = f" {linha} ".center(colunas)[:colunas]
+        elif estilo == "grupo":
+            conteudo = f"■ {linha}"  # quadrado cheio (0xFE no CP850)
+        elif estilo == "sep":
+            conteudo = "-" * colunas
+
+        out += _escpos_encode(conteudo) + b"\n"
+
+        if sublinhado:
+            underline(False)
+        inverse(False)
+        bold(False)
+        size(0x00)
+        align(0)
+
+    out += b"\n\n\n\n"
+    return bytes(out)
+
+
+def montar_escpos_blocos(blocos, colunas=32):
+    """
+    Converte os blocos semanticos de extrair_blocos_v2() em bytes ESC/POS.
+
+    Diferente de montar_escpos() (que le texto plano), aqui a hierarquia do
+    recibo e preservada: rotulo a esquerda + valor a direita na MESMA linha,
+    linhas tracejadas, faixa invertida do cliente e adicionais em negrito.
+    Nao depende de win32ui/GDI: usa apenas recursos nativos da impressora.
+    """
+    if not blocos:
+        return None
+
+    import textwrap as _tw
+
+    out = bytearray()
+    out += ESC + b"@"                 # reset
+    out += ESC + b"t" + bytes([2])    # CP850 (acentos corretos)
+
+    def align(n):
+        out.extend(ESC + b"a" + bytes([n]))
+
+    def bold(on):
+        out.extend(ESC + b"E" + bytes([1 if on else 0]))
+
+    def size(n):
+        out.extend(GS + b"!" + bytes([n]))
+
+    def inverse(on):
+        out.extend(GS + b"B" + bytes([1 if on else 0]))
+
+    def underline(on):
+        out.extend(ESC + b"-" + bytes([1 if on else 0]))
+
+    def emitir(texto):
+        out.extend(_escpos_encode(texto) + b"\n")
+
+    def reset_estilos():
+        underline(False)
+        inverse(False)
+        bold(False)
+        size(0x00)
+        align(0)
+
+    # estilo -> (align, bold, size, inverse, underline, colunas efetivas)
+    ESTILOS = {
+        "store":       (1, True,  0x00, False, False, colunas),
+        "title":       (1, True,  0x11, False, False, max(8, colunas // 2)),
+        "order":       (1, True,  0x11, False, False, max(8, colunas // 2)),
+        "type":        (1, True,  0x00, False, False, colunas),
+        "datetime":    (1, False, 0x00, False, False, colunas),
+        "ready":       (0, True,  0x00, False, False, colunas),
+        "inverse":     (0, True,  0x00, True,  False, colunas - 2),
+        "code":        (1, False, 0x00, False, False, colunas),
+        "item_qty":    (0, True,  0x00, False, False, colunas),
+        "item":        (0, True,  0x00, False, False, colunas),
+        "description": (0, False, 0x00, False, False, colunas),
+        "group":       (0, True,  0x00, False, True,  colunas - 2),
+        "additional":  (0, True,  0x00, False, False, colunas - 2),
+        "total":       (0, True,  0x00, False, False, colunas),
+        "footer":      (1, False, 0x00, False, False, colunas),
+        "normal":      (0, False, 0x00, False, False, colunas),
+    }
+
+    for bloco in blocos:
+        estilo = bloco.get("style", "normal")
+        texto = sanitizar_icones(bloco.get("text", "") or "").strip()
+        direita = sanitizar_icones(bloco.get("right", "") or "").strip()
+
+
+        if estilo == "sep":
+            reset_estilos()
+            emitir("-" * colunas)
+            continue
+
+        if not texto and not direita:
+            out.extend(b"\n")
+            continue
+
+        al, neg, tam, inv, sub, largura = ESTILOS.get(estilo, ESTILOS["normal"])
+        align(al)
+        bold(neg)
+        size(tam)
+        if inv:
+            inverse(True)
+        if sub:
+            underline(True)
+
+        if estilo == "group":
+            texto = "■ " + texto.lstrip("■ ").strip()
+
+        if estilo == "inverse":
+            # Faixa preenchida ocupando a largura do papel, quebrando nomes longos.
+            partes = _tw.wrap(texto, max(8, colunas - 2)) or [texto]
+            for parte in partes:
+                emitir(f" {parte} ".center(colunas)[:colunas])
+
+        elif direita:
+            # Rotulo a esquerda e valor a direita NA MESMA LINHA.
+            espaco = colunas - len(direita) - 1
+            if espaco >= 4 and len(texto) <= espaco:
+                emitir(texto.ljust(colunas - len(direita)) + direita)
+            else:
+                # Nome comprido: quebra em varias linhas e o valor fica
+                # alinhado a direita na ultima linha, sem cortar o produto.
+                partes = _tw.wrap(texto, max(8, colunas)) if texto else []
+                for parte in partes:
+                    emitir(parte)
+                emitir(direita.rjust(colunas)[:colunas])
+
+        else:
+            for parte in (_tw.wrap(texto, max(8, largura)) or [texto]):
+                emitir(parte)
+
+        reset_estilos()
+
+    out += b"\n\n\n\n"
+    return bytes(out)
+
+
+
 
 
 def _imprimir_html(html_content, station_id=None):
@@ -1128,39 +1682,82 @@ def _imprimir_html(html_content, station_id=None):
         texto_puro += "\n\n\n\n\n"
 
         # ------------------------------------------------------------------
-        # MODO GRAFICO (GDI) - exclusivo para lojas em GDI_COMPANY_IDS
-        # Corrige PDF de 0 bytes (Microsoft Print to PDF nao aceita RAW)
-        # e mantem o layout visual do V2 na POS 58mm.
+        # LAYOUT COMPLETO EM MODO TERMICO NATIVO (ESC/POS)
+        # A POS-58 reproduz faixa invertida, negrito, tracejado e acentos sem
+        # depender de win32ui/GDI. O GDI segue disponivel para drivers que nao
+        # aceitam RAW (ex.: Microsoft Print to PDF).
         # ------------------------------------------------------------------
+        usar_escpos = False
         if COMPANY_ID in GDI_COMPANY_IDS and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
                 return True
-            log("Fallback para modo RAW apos falha no modo grafico", "AVISO")
-        elif COMPANY_ID in GDI_COMPANY_IDS and not win32ui_ok:
-            log("Modo GDI ignorado (win32ui/DLL) — impressao RAW direta", "AVISO")
+            log("Modo grafico indisponivel — usando layout termico nativo", "AVISO")
+            usar_escpos = True
+        elif COMPANY_ID in GDI_COMPANY_IDS:
+            carregar_config_loja()
+            usar_escpos = True
+
+
 
         try:
             hPrinter = win32print.OpenPrinter(printer_name)
         except Exception as e:
-            log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
-            return False
+            if station_id:
+                log(
+                    f"Impressora mapeada '{printer_name}' indisponível: {e}. Tentando a impressora padrão.",
+                    "AVISO",
+                )
+                try:
+                    printer_name = win32print.GetDefaultPrinter()
+                    hPrinter = win32print.OpenPrinter(printer_name)
+                    log(f"Fallback para impressora padrão: {printer_name}", "DEFAULT")
+                except Exception as fallback_error:
+                    log(f"Não foi possível abrir a impressora padrão: {fallback_error}", "ERRO")
+                    return False
+            else:
+                log(f"Não foi possível abrir a impressora '{printer_name}': {e}", "ERRO")
+                return False
             
         try:
             # Tenta enviar como RAW para a impressora
             hJob = win32print.StartDocPrinter(hPrinter, 1, ("ComandaTech Print", None, "RAW"))
             win32print.StartPagePrinter(hPrinter)
             
-            # Converte para bytes usando CP850 (comum em impressoras térmicas no BR) ou Latin-1
-            # Tenta CP850 primeiro para melhores caracteres de borda se houver
-            try:
-                raw_data = texto_puro.encode('cp850', 'replace')
-            except:
-                raw_data = texto_puro.encode('latin-1', 'replace')
+            raw_data = None
+            if usar_escpos:
+                colunas = 42 if str(PAPER_SIZE).startswith("80") else 32
+                # 1a opcao: blocos semanticos (valor alinhado a direita,
+                # tracejados, faixas) extraidos direto do HTML do recibo.
+                try:
+                    blocos_layout = extrair_blocos_v2(html_content) if "<" in html_content else []
+                except Exception as bloco_err:
+                    blocos_layout = []
+                    log(f"Falha ao ler o layout do recibo: {bloco_err}", "AVISO")
+                if blocos_layout:
+                    raw_data = montar_escpos_blocos(blocos_layout, colunas=colunas)
+                    if raw_data:
+                        log(f"Layout completo aplicado ({colunas} colunas)", "IMPRESSORA")
+                # 2a opcao: texto plano estilizado (compatibilidade).
+                if not raw_data:
+                    raw_data = montar_escpos(texto_puro, colunas=colunas)
+                    if raw_data:
+                        log(f"Layout ESC/POS simples aplicado ({colunas} colunas)", "IMPRESSORA")
+
+            if not raw_data:
+                try:
+                    raw_data = texto_puro.encode('cp850', 'replace')
+                except:
+                    raw_data = texto_puro.encode('latin-1', 'replace')
+
                 
             win32print.WritePrinter(hPrinter, raw_data)
             win32print.EndPagePrinter(hPrinter)
             win32print.EndDocPrinter(hPrinter)
+            log(
+                f"Comanda enviada para '{printer_name}' ({len(raw_data)} bytes)",
+                "IMPRESSORA",
+            )
         finally:
             win32print.ClosePrinter(hPrinter)
         return True
@@ -1170,22 +1767,11 @@ def _imprimir_html(html_content, station_id=None):
 
 def processar_pedido(pedido, store_name, store_info):
     order_code = pedido.get('order_code', '---')
-    log(f"Processando pedido #{order_code}...", "PEDIDO")
-    
-    # Se o pedido já vem com HTML de impressão no banco (campo opcional futuro)
-    # ou se precisamos gerar o HTML aqui. Por enquanto, a maioria vem pela print_queue
-    # Mas para pedidos do cardápio que não geraram print_queue:
-    
-    # Marcar como impresso para não repetir
-    marcar_como_impresso(pedido['id'])
-    
-    info_sessao = {
-        "numero": order_code,
-        "cliente": pedido.get('customer_name', 'Cliente'),
-        "hora": datetime.now().strftime("%H:%M")
-    }
-    pedidos_impressos_sessao.append(info_sessao)
-    return True
+    log(
+        f"Pedido #{order_code} sem comanda na fila; mantido como nao impresso para evitar perda silenciosa",
+        "AVISO",
+    )
+    return False
 
 def main(company_id, company_name):
     global STORE_NAME, COMPANY_ID
@@ -1198,12 +1784,31 @@ def main(company_id, company_name):
         return
 
     log(f"Versão do script: {SCRIPT_VERSION}", "OK")
+
+    if not COMPANY_ID:
+        print("!" * 60)
+        print("  ATENCAO: o identificador da loja nao foi encontrado.")
+        print("  Baixe o pacote de impressao novamente pelo painel.")
+        print("!" * 60)
+        log("COMPANY_ID vazio — layout completo indisponivel", "AVISO")
+    elif COMPANY_ID in GDI_COMPANY_IDS:
+        # A impressora termica reproduz o layout completo por conta propria
+        # (ESC/POS). O modo grafico do Windows e apenas um extra opcional,
+        # entao a ausencia dele nao e mais tratada como problema.
+        try:
+            _import_win32ui()
+            log("Modo grafico do Windows disponivel", "OK")
+        except Exception as ui_err:
+            log(f"Layout completo pelo modo termico nativo ({ui_err})", "INFO")
+
+
     print("=" * 50)
     print(f"  Intervalo: {CHECK_INTERVAL} segundos")
     print("  Pressione Ctrl+C para parar")
     print(f"  Log: {LOG_FILE}")
     print("=" * 50)
     print()
+
     
     STORE_NAME = company_name
 
@@ -1225,23 +1830,14 @@ def main(company_id, company_name):
         scale_thread.start()
 
         while True:
-            # 1. Pedidos do cardápio online / express / garçom
-            pedidos = buscar_pedidos_nao_impressos(company_id)
-            pedidos = [p for p in pedidos if p.get('id') not in ids_com_falha]
-            
-            if pedidos:
-                log(f"Encontrados {len(pedidos)} pedido(s) para imprimir!", "INFO")
-                for pedido in pedidos:
-                    ok = processar_pedido(pedido, STORE_NAME, STORE_INFO)
-                    if not ok:
-                        ids_com_falha.add(pedido.get('id'))
-                        log(f"Pedido {pedido.get('order_code','')} adicionado à lista de falhas", "AVISO")
-                mostrar_status(company_id)
-            
-            # 2. Fila de impressão (garçom / mesa - print_queue)
+            # A print_queue contem a comanda pronta e e a unica fonte que pode
+            # confirmar uma impressao real. Nao marque orders isolados como
+            # impressos: isso escondia pedidos sem enviar papel para a impressora.
             fila_count = processar_fila(company_id)
-            
-            if not pedidos and fila_count == 0:
+
+            if fila_count > 0:
+                mostrar_status(company_id)
+            else:
                 contador += 1
                 if contador >= 12:
                     mostrar_status(company_id)
