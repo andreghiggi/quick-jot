@@ -1101,7 +1101,10 @@ def extrair_blocos_v2(html_content):
                 elif "add-line" in classes:
                     txt_add = texto_proprio(sub) or sub.text()
                     if v2_spec_pilot:
-                        blocos.append(block("  " + txt_add.strip(), "additional"))
+                        bloco_add = block(txt_add.strip(), "additional")
+                        if bloco_add:
+                            bloco_add["indent"] = 2
+                            blocos.append(bloco_add)
                     else:
                         blocos.append(block(txt_add, "additional"))
                 elif "item-notes" in classes:
@@ -1268,6 +1271,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 texto = "-" * max(8, largura_util // traco_px)
                 direita = ""
 
+            recuo_px = dc.GetTextExtent(" " * int(bloco.get("indent", 0) or 0))[0] if bloco.get("indent") else 0
             direita_propria = False
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
@@ -1276,11 +1280,11 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 if limite_esquerda < int(largura_util * 0.35):
                     # Nao cabe lado a lado: valor vai para a linha seguinte, alinhado a direita.
                     direita_propria = True
-                    linhas = quebrar(texto, estilo, largura_util)
+                    linhas = quebrar(texto, estilo, largura_util - recuo_px)
                 else:
-                    linhas = quebrar(texto, estilo, limite_esquerda)
+                    linhas = quebrar(texto, estilo, limite_esquerda - recuo_px)
             else:
-                linhas = quebrar(texto, estilo, largura_util)
+                linhas = quebrar(texto, estilo, largura_util - recuo_px)
 
             total_linhas = len(linhas) + (1 if direita_propria else 0)
             bloco_altura = altura_linha * total_linhas + espaco_depois
@@ -1304,7 +1308,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 elif alinhamento == "right":
                     x = margem + max(0, largura_util - linha_px)
                 else:
-                    x = margem
+                    x = margem + recuo_px
                 dc.TextOut(x, y + indice * altura_linha, linha)
 
             if direita:
