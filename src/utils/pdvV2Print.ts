@@ -277,7 +277,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
         additionalsHtml += '</div>';
       }
       // Piloto I9: colchetes compactos [1x] sem negrito; valor no final em itálico menor.
-      const isI9PriceLast = payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
+      const isI9PriceLast = isV2SpecPilot; // Layout V2 oficial: preço no final
       const qtyLabel = isI9PriceLast
         ? `[${it.quantity}x] `
         : isV2SpecPilot ? `[ ${it.quantity}x ] ` : `${it.quantity}x `;
@@ -312,7 +312,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
       : '';
   // Piloto I9: Subtotal só aparece quando há taxa de entrega.
   const subtotalHtml =
-    (payload.companyId === '8c9e7a0e-dbb6-49b9-8344-c23155a71164'
+    (isV2SpecPilot
       ? deliveryFee > 0.009
       : !isReiDoAcai || Math.abs(payload.total - subtotal) > 0.009)
       ? `<div class="total-line">

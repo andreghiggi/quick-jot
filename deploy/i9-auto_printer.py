@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.11"
+SCRIPT_VERSION = "1.8.12"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1097,7 +1097,7 @@ def extrair_blocos_v2(html_content):
             name_node = next((n for n in walk_item(item) if "item-name" in n.classes()), None)
             detail_node = next((n for n in walk_item(item) if "item-detail" in n.classes()), None)
             # Piloto I9: valor do item vai para o FINAL do bloco (italico, menor).
-            i9_preco_final = COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164"
+            i9_preco_final = v2_spec_pilot  # Layout V2 oficial
             if name_node:
                 # Valor do item na MESMA linha do nome (alinhado a direita).
                 blocos.append({
