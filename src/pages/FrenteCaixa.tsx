@@ -164,6 +164,7 @@ export default function FrenteCaixa() {
   // pinpadService, tef-webservice).
   const TEF_ORPHAN_CHECK_COMPANY_IDS = new Set(['32b71649-461d-4cb6-b26c-12390b090feb']); // Bon Appetit
   const [orphanTefAlert, setOrphanTefAlert] = useState<{ valor: number; nsu: string; hora: string } | null>(null);
+  const orphanCheckRef = useRef<null | (() => Promise<void>)>(null);
 
   useEffect(() => {
     if (!company?.id || !TEF_ORPHAN_CHECK_COMPANY_IDS.has(company.id)) return undefined;
@@ -180,10 +181,7 @@ export default function FrenteCaixa() {
         .order('created_at', { ascending: false });
 
       if (cancelled) return;
-      if (!tefLogs?.length) {
-        setOrphanTefAlert(null);
-        return;
-      }
+      if (!tefLogs?.length) return;
 
       const { data: recentSales } = await supabase
         .from('pdv_sales')
@@ -213,16 +211,53 @@ export default function FrenteCaixa() {
           return;
         }
       }
-      setOrphanTefAlert(null);
     }
 
+    // Sem polling contínuo: checa só ao abrir a tela e ao abrir a cobrança.
+    orphanCheckRef.current = checkOrphanTef;
     checkOrphanTef();
-    const intervalId = window.setInterval(checkOrphanTef, 60000);
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      orphanCheckRef.current = null;
     };
   }, [company?.id]);
+
+  // Gravação local: aprovação do PinPad guardada no navegador até a venda
+  // ser salva. Ao reabrir a tela, avisa sem consultar o servidor.
+  const localTefKey = company?.id ? `fc:pending-tef:${company.id}` : null;
+  const saveLocalPendingTef = (payload: TefPrintPromptPayload) => {
+    if (!localTefKey) return;
+    try {
+      const text = (payload.receiptLines || []).join('\n');
+      const nsu = text.match(/NSU[^0-9]*(\d{3,})/i)?.[1] || '';
+      const valorMatch = text.match(/R\$\s*([\d.]+,\d{2})/);
+      const valor = valorMatch ? Number(valorMatch[1].replace(/\./g, '').replace(',', '.')) : 0;
+      localStorage.setItem(localTefKey, JSON.stringify({ at: Date.now(), nsu, valor }));
+    } catch { /* noop */ }
+  };
+  const clearLocalPendingTef = () => {
+    if (!localTefKey) return;
+    try { localStorage.removeItem(localTefKey); } catch { /* noop */ }
+  };
+  useEffect(() => {
+    if (!localTefKey) return;
+    try {
+      const raw = localStorage.getItem(localTefKey);
+      if (!raw) return;
+      const p = JSON.parse(raw) as { at: number; nsu: string; valor: number };
+      if (!p?.at || Date.now() - p.at > 60 * 60 * 1000) {
+        localStorage.removeItem(localTefKey);
+        return;
+      }
+      setOrphanTefAlert({
+        valor: p.valor || 0,
+        nsu: p.nsu || '—',
+        hora: new Date(p.at).toLocaleTimeString('pt-BR', {
+          timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit',
+        }),
+      });
+    } catch { /* noop */ }
+  }, [localTefKey]);
 
   const {
     currentRegister,
@@ -238,6 +273,10 @@ export default function FrenteCaixa() {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [lastTouchedId, setLastTouchedId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  // Checagem sob demanda: só quando o operador abre a cobrança.
+  useEffect(() => {
+    if (paymentOpen) orphanCheckRef.current?.();
+  }, [paymentOpen]);
   const [confirmCancel, setConfirmCancel] = useState(false);
   // Pós-venda NFC-e (espelha o fluxo do PDV V2):
   // 1) mostra overlay "Emitindo NFC-e…" enquanto aguarda a resposta inicial da API
@@ -271,6 +310,8 @@ export default function FrenteCaixa() {
     if (!useConsolidatedPostSale) return;
     setTefPromptCapture((payload) => {
       tefCapturedRef.current = payload;
+      // Guarda a aprovação no próprio navegador até a venda ser gravada.
+      saveLocalPendingTef(payload);
     });
     return () => {
       setTefPromptCapture(null);
@@ -969,6 +1010,8 @@ export default function FrenteCaixa() {
       'mercado',
     );
     if (saleId) {
+      // Venda gravada: limpa a pendência TEF guardada localmente.
+      clearLocalPendingTef();
       // Crediário — cria o título em Contas a Receber logo após a venda.
       if (isCreditSale && company?.id) {
         try {
@@ -1523,7 +1566,7 @@ export default function FrenteCaixa() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setOrphanTefAlert(null)}
+              onClick={() => { setOrphanTefAlert(null); clearLocalPendingTef(); }}
             >
               Já conferi
             </Button>
