@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.10"
+SCRIPT_VERSION = "1.8.11"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1096,13 +1096,15 @@ def extrair_blocos_v2(html_content):
         for item_index, item in enumerate(receipt_items):
             name_node = next((n for n in walk_item(item) if "item-name" in n.classes()), None)
             detail_node = next((n for n in walk_item(item) if "item-detail" in n.classes()), None)
+            # Piloto I9: valor do item vai para o FINAL do bloco (italico, menor).
+            i9_preco_final = COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164"
             if name_node:
                 # Valor do item na MESMA linha do nome (alinhado a direita).
                 blocos.append({
                     "text": clean_marker(texto_proprio(name_node) or name_node.text()),
                     "style": "item_qty",
                     "align": "left",
-                    "right": clean_marker(texto_proprio(detail_node) or detail_node.text()) if detail_node else "",
+                    "right": "" if i9_preco_final else (clean_marker(texto_proprio(detail_node) or detail_node.text()) if detail_node else ""),
                 })
             elif detail_node:
                 blocos.append({"text": "", "style": "item", "align": "left", "right": clean_marker(texto_proprio(detail_node) or detail_node.text())})
@@ -1123,6 +1125,8 @@ def extrair_blocos_v2(html_content):
                     nota = texto_proprio(sub) or sub.text()
                     estilo_nota = "inverse" if (rei_header_box or v2_spec_pilot) and ("[OBS]" in nota or v2_spec_pilot) else "description"
                     blocos.append(block(nota, estilo_nota))
+            if i9_preco_final and detail_node:
+                blocos.append({"text": "", "style": "item_price", "align": "left", "right": clean_marker(texto_proprio(detail_node) or detail_node.text())})
             if (rei_header_box or v2_spec_pilot) and item_index < len(receipt_items) - 1:
                 blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
@@ -1185,7 +1189,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 "store": 17, "title": 17, "type": 17, "order": 17,
                 "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
                 "item_qty": 15, "item": 14, "description": 12,
-                "group": 13, "additional": 13, "normal": 14,
+                "group": 13, "additional": 13, "normal": 14, "item_price": 12,
                 "total": 17, "footer": 14, "sep": 12,
             }
         else:
@@ -1195,14 +1199,14 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 "store": 15, "title": 15, "type": 11, "order": 15,
                 "code": 10, "inverse": 14, "datetime": 12, "ready": 11,
                 "item_qty": 12, "item": 12, "description": 10,
-                "group": 11, "additional": 11, "normal": 12,
+                "group": 11, "additional": 11, "normal": 12, "item_price": 10,
                 "total": 13, "footer": 11, "sep": 10,
             }
         pesos = {
             "store": 800, "title": 800, "type": 800, "order": 800,
             "code": 500, "inverse": 800, "datetime": 700, "ready": 800,
             "item_qty": 800, "item": 600, "description": 500,
-            "group": 800, "additional": 700, "normal": 700,
+            "group": 800, "additional": 700, "normal": 700, "item_price": 400,
             "total": 800, "footer": 700, "sep": 700,
         }
         invertidos = {"inverse"}
@@ -1217,7 +1221,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     "height": -max(10, int(pontos.get(estilo, 11) * dpi_y / 72)),
                     "weight": pesos.get(estilo, 500),
                     "underline": estilo == "group",
-                    "italic": estilo == "additional",
+                    "italic": estilo in ("additional", "item_price"),
                 })
             return cache_fontes[estilo]
 
@@ -1504,6 +1508,7 @@ def montar_escpos_blocos(blocos, colunas=32):
         "description": (0, False, 0x00, False, False, colunas),
         "group":       (0, True,  0x00, False, True,  colunas - 2),
         "additional":  (0, True,  0x00, False, False, colunas - 2),
+        "item_price":  (0, False, 0x00, False, False, colunas),
         "total":       (0, True,  0x00, False, False, colunas),
         "footer":      (1, False, 0x00, False, False, colunas),
         "normal":      (0, False, 0x00, False, False, colunas),
