@@ -1204,7 +1204,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     "name": "Courier New",
                     "height": -max(10, int(pontos.get(estilo, 11) * dpi_y / 72)),
                     "weight": pesos.get(estilo, 500),
-                    "underline": estilo == "group",
+                    "underline": COMPANY_ID in ("b2f97590-ff21-4951-95dc-e3e2b19d4ccb", "8c9e7a0e-dbb6-49b9-8344-c23155a71164") and estilo == "group",
                     "italic": COMPANY_ID == "8c9e7a0e-dbb6-49b9-8344-c23155a71164" and estilo == "additional",
                 })
             return cache_fontes[estilo]
