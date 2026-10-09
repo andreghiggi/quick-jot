@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const FAST_SALE_EVENT = 'pdv:fast-sale-completed';
+const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
 
 /** Início do dia atual em America/Sao_Paulo (UTC-3) como ISO. */
 function startOfTodaySP(): string {
@@ -36,6 +37,7 @@ export function useFastSalesToday(companyId?: string | null) {
 
   useEffect(() => {
     load();
+    if (companyId !== AMORE_MIO_ID) return;
     const onSale = () => load();
     window.addEventListener(FAST_SALE_EVENT, onSale);
     const iv = window.setInterval(load, 60000);
