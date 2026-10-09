@@ -47,6 +47,7 @@ import { PedidoExpressDialog } from '@/components/PedidoExpressDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed, Zap } from 'lucide-react';
 import { PDVV2FastCheckout } from '@/components/pdv-v2/PDVV2FastCheckout';
+import { useFastSalesToday, FAST_SALE_EVENT } from '@/hooks/useFastSalesToday';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { enqueueProductionByStation } from '@/utils/printRouting';
@@ -271,12 +272,21 @@ export default function PDVV2() {
   // 'delivered' do dia. Vendas cobradas mas não entregues NÃO entram aqui — elas continuam
   // aparecendo normalmente no Relatório de Fechamento de Caixa (fonte pdv_sales).
   // Comandas de mesa possuem card próprio (tablesMetrics.revenueToday) e não se misturam.
+  // Vendas Rápidas (pdv_sales sem pedido) também entram no faturamento do dia.
+  const fastSalesToday = useFastSalesToday(companyId);
   const revenue = useMemo(() => {
     return dashboardOrders.reduce((sum, o) => {
       if (o.status !== 'delivered') return sum;
       return sum + (Number((o as any).total) || 0);
-    }, 0);
-  }, [dashboardOrders]);
+    }, 0) + fastSalesToday;
+  }, [dashboardOrders, fastSalesToday]);
+
+  // Venda Rápida finalizada → recarrega caixa (vendas + gaveta) sem F5.
+  useEffect(() => {
+    const onFastSale = () => { refetchCash(); };
+    window.addEventListener(FAST_SALE_EVENT, onFastSale);
+    return () => window.removeEventListener(FAST_SALE_EVENT, onFastSale);
+  }, [refetchCash]);
 
   const filteredOrders = useMemo(
     () => (filter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === filter)),
