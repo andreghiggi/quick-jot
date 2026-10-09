@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '09/10/2026',
+    version: '1.74.12-beta',
+    type: 'fix',
+    description: 'Venda Rápida: as vendas passam a somar no card “Faturamento” do PDV e no “Faturamento do Dia” do painel, sem contar nada em dobro. Ao finalizar uma venda rápida, o caixa e o valor da gaveta atualizam na hora, sem precisar recarregar a tela. Nenhum fluxo fiscal, TEF ou de impressão foi alterado.',
+  },
+  {
     date: '23/09/2026',
     version: '1.74.11-beta',
     type: 'fix',
