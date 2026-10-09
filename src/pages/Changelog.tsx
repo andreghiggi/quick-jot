@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/10/2026',
+    version: '1.74.14-beta',
+    type: 'improvement',
+    description: 'Menos tráfego: o painel e o PDV deixaram de consultar a Venda Rápida a cada minuto nas lojas que não usam esse recurso (segue ativo só na Amore Mio). Pedidos antigos de setembro que ficaram como "não impressos" foram baixados e uma rotina automática duplicada de NFC-e foi removida. Nada mudou em vendas, fiscal, TEF ou impressão.',
+  },
+  {
+    date: '09/10/2026',
     version: '1.74.13-beta',
     type: 'improvement',
     description: 'Frente de Caixa: a conferência de cartão aprovado sem venda deixou de consultar o servidor a cada minuto. Agora ela roda só ao abrir a tela e ao abrir a cobrança, e a aprovação do PinPad fica guardada no próprio computador até a venda ser salva — se a tela fechar ou a internet cair, o aviso aparece ao reabrir. Nada mudou na cobrança, no PinPad, no fiscal ou na impressão.',
