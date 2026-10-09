@@ -312,7 +312,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
     const descriptionHTML = item.description
       ? `<div class="description"><strong>Descrição:</strong> ${item.description}</div>`
       : '';
-    const separatorHTML = index < data.items.length - 1 ? '<div class="item-sep">................................</div>' : '';
+    const separatorHTML = index < data.items.length - 1 ? '<div class="item-sep">--------------------------------</div>' : '';
     return `
       <div class="item">
         <div class="item-header">
@@ -450,7 +450,6 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${data.customerName ? `<div class="info">[CLIENTE]${data.customerName}[/CLIENTE]</div>` : ''}
         <div class="datetime">${dateStr} às ${timeStr}</div>
         ${readyHeaderHTML}
-        ${data.deliveryAddress && data.layout === 'v2' ? `<div class="info">[ENDERECO]${data.deliveryAddress}[/ENDERECO]</div>` : ''}
       </div>
       <!--BOX_END-->
       ${data.paymentNote ? `<div class="obs-block"><div class="obs"><span class="obs-text">${data.paymentNote}</span></div></div>` : ''}
