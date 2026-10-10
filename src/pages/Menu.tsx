@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { z } from 'zod';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { printOnlyReceipt, isGdiReceiptCompany } from '@/utils/pdvV2Print';
