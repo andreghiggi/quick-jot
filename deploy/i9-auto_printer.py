@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.13"
+SCRIPT_VERSION = "1.8.14"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1053,15 +1053,20 @@ def extrair_blocos_v2(html_content):
             blocos.append(block(store_nodes[0].text(), "store", "center"))
         if order_nodes:
             blocos.append(block(order_nodes[0].text(), "order", "center"))
-        for origem in by_class("origem"):
-            blocos.append(block(origem.text(), "type", "center"))
         for date_node in by_class("date"):
             blocos.append(block(date_node.text(), "datetime", "center"))
+        origens = by_class("origem")
+        if origens and by_class("comanda-transfer-sep"):
+            blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+        for origem in origens:
+            blocos.append(block(origem.text(), "type", "center"))
         for ready in by_class("ready-inline"):
             blocos.append(block(normalizar_ready(ready.text()), "ready", "center"))
 
-
-        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+        # v1.8.14: conferencia de comanda sem tracejado interno (exceto transferencias).
+        is_comanda_conf = bool(by_class("comanda-header"))
+        if not is_comanda_conf:
+            blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
         # Somente nos folha (<p>) evitam duplicar o mesmo texto vindo dos pais.
         folhas = [
@@ -1143,11 +1148,14 @@ def extrair_blocos_v2(html_content):
             if len(spans) >= 2:
                 blocos.append(block(spans[0], "total", "left", spans[1]))
 
-        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
         footers = by_class("footer")
-        if footers:
+        if by_class("no-footer"):
+            pass  # v1.8.14: conferencia de comanda termina no TOTAL
+        elif footers:
+            blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
             blocos.append(block(footers[0].text(), "footer", "center"))
         else:
+            blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
             blocos.append(block("Obrigado pela preferência!", "footer", "center"))
 
         return [b for b in blocos if b]
