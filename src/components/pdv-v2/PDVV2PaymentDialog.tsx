@@ -22,7 +22,7 @@ import { ComandaNumberInput } from '@/components/comanda/ComandaNumberInput';
 import { formatComandaNumber } from '@/utils/comandaCode';
 import { COMANDA_ALLOWED_FRACTION_DENS } from '@/utils/comandaIndividualAllowList';
 
-type CheckoutItem = { name: string; quantity: number; unit_price: number; id?: string; paid?: boolean; paidQty?: number };
+type CheckoutItem = { name: string; quantity: number; unit_price: number; notes?: string | null; id?: string; paid?: boolean; paidQty?: number };
 
 /** Uma linha de produto trazida (fração) de outra comanda ainda aberta. */
 export interface ImportedFractionLine {
@@ -102,6 +102,8 @@ interface PDVV2PaymentDialogProps {
   transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name: string }>;
   /** Layout de impressão (`print_layout`) — repassado ao botão "Imprimir comanda". */
   printLayout?: 'v1' | 'v2' | 'v3';
+  /** Piloto I9: dados do cabeçalho da conferência de comanda impressa. */
+  comandaInfo?: { tableNumber?: number | null; comandaNumber?: number | null; openedAt?: string | null; storeName?: string };
   /**
    * ID da comanda/mesa sendo cobrada agora. Necessário para "Importar parte
    * de outra comanda" (Lancheria I9) — usado para abrir a cobrança via RPC
@@ -198,6 +200,7 @@ export function PDVV2PaymentDialog({
   onConfirm,
   activeSplit,
   transferLog,
+  comandaInfo,
   onSplitPayments,
   printLayout,
   currentTabId,
@@ -874,13 +877,21 @@ export function PDVV2PaymentDialog({
                   orderCode: title || 'Comanda',
                   dailyNumber: 0,
                   customerName: title || 'Comanda',
-                  items: checkoutItems.map(i => ({
+                  items: checkoutItems.filter(i => i.unit_price >= 0).map(i => ({
                     name: i.name,
                     quantity: i.quantity,
                     price: i.unit_price,
+                    notes: i.notes || undefined,
                   })),
                   total: total,
                   printLayout,
+                  storeName: comandaInfo?.storeName,
+                  comandaHeader: {
+                    tableNumber: comandaInfo?.tableNumber ?? null,
+                    comandaNumber: comandaInfo?.comandaNumber ?? null,
+                    openedAt: comandaInfo?.openedAt ?? null,
+                    transferLog: transferLog || [],
+                  },
                 });
                 toast.success('Comanda enviada para impressão!');
               }}

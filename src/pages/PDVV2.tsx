@@ -1694,7 +1694,8 @@ export default function PDVV2() {
           totalPeople: i9SplitInfo.total,
           currentPerson: i9SplitInfo.total - i9SplitInfo.remaining + 1,
         } : undefined}
-        checkoutItems={advancedComandaCharge && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, id: i.id, paid: !!(i as any).paid })) : undefined}
+        checkoutItems={advancedComandaCharge && importingTab ? openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.items?.map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price, notes: i.notes, id: i.id, paid: !!(i as any).paid })) : undefined}
+        comandaInfo={importingTab ? (() => { const t: any = openTabs.find(x => x.id === (i9OriginalTabId || importingTab.id)); return { tableNumber: t?.table?.number ?? importingTab.tableNumber ?? null, comandaNumber: t?.comanda_number ?? t?.tab_number ?? null, openedAt: t?.created_at ?? null, storeName: company?.name }; })() : undefined}
         transferLog={importingTab ? (openTabs.find(t => t.id === (i9OriginalTabId || importingTab.id))?.transfer_log as any) || undefined : undefined}
       />
 

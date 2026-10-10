@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/10/2026',
+    version: '1.74.17-beta',
+    type: 'feature',
+    description: 'Piloto Lancheria da I9: o botão "Imprimir comanda" na cobrança agora imprime a conferência com mesa e comanda, horário de abertura e trocas de mesa dentro da caixa do cabeçalho, e os itens no mesmo formato do recibo do pedido (com observações). Demais lojas sem mudança.',
+  },
+  {
+    date: '09/10/2026',
     version: '1.74.16-beta',
     type: 'fix',
     description: 'Faturamento: itens extras adicionados na hora de cobrar um pedido agora entram no total do pedido e no faturamento do painel. Mesas e comandas seguem com o faturamento próprio na aba Mesas do PDV. Nada mudou em caixa, fiscal, TEF ou impressão.',
