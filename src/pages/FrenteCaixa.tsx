@@ -1022,7 +1022,8 @@ export default function FrenteCaixa() {
           //   - Configuração de parcelamento da forma "Crediário" cadastrada
           try {
             const crediarioMethod = (allPaymentMethods || []).find(
-              (m) => (m as any).payment_type === 'crediario',
+              (m) => (m as any).payment_type === 'crediario'
+                || String(m.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes('crediar'),
             );
             const installConfig = {
               installments_count:

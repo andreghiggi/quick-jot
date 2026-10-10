@@ -118,11 +118,17 @@ export function FrenteCaixaCheckoutDialog({
    * (sem NFC-e e exigindo cliente).
    */
   // Crediário só aparece quando a chave nativa está ligada (e Financeiro ativo).
+  const isCredMethod = (m: any) => {
+    if (!m) return false;
+    if (m.payment_type === 'crediario') return true;
+    const n = String(m.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return n.includes('crediar');
+  };
   const activePaymentMethods = useMemo(
     () =>
       creditSaleAvailable
         ? allActivePaymentMethods
-        : allActivePaymentMethods.filter((m) => (m as any).payment_type !== 'crediario'),
+        : allActivePaymentMethods.filter((m) => !isCredMethod(m)),
     [allActivePaymentMethods, creditSaleAvailable],
   );
 
@@ -134,7 +140,7 @@ export function FrenteCaixaCheckoutDialog({
   /** Detecta se alguma linha lançada é de uma forma "Crediário".
    *  Se houver, a venda inteira vira crediário (regra: 100% do total). */
   const creditMethod = useMemo(
-    () => activePaymentMethods.find((m) => (m as any).payment_type === 'crediario'),
+    () => activePaymentMethods.find((m) => isCredMethod(m)),
     [activePaymentMethods],
   );
 
@@ -660,7 +666,7 @@ export function FrenteCaixaCheckoutDialog({
                       const letter = LETTERS[idx] || '';
                       const itg = (m as any).integration_type as string | undefined;
                       const isTef = itg === 'tef_pinpad' || itg === 'tef_smartpos';
-                      const isCred = (m as any).payment_type === 'crediario';
+                      const isCred = isCredMethod(m);
                       const lineAmount = parseCurrencyInput(lines[m.id]?.text || '');
                       const mod = tefMod[m.id] || { modality: 'avista' as const, installments: 2 };
                       return (
@@ -711,6 +717,45 @@ export function FrenteCaixaCheckoutDialog({
                             className="w-40 text-right bg-muted/40 border-border focus:border-primary"
                           />
                           </div>
+                  {isCred && isCreditSale && (
+                    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
+                      <div className="text-xs font-medium text-primary flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Crediário — parcelamento
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Nº de parcelas</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={60}
+                            value={creditInstallments}
+                            onChange={(e) =>
+                              setCreditInstallments(Math.max(1, Math.min(60, Number(e.target.value) || 1)))
+                            }
+                            disabled={processing}
+                            className="bg-background border-border"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">1º vencimento</Label>
+                          <Input
+                            type="date"
+                            value={creditFirstDue}
+                            onChange={(e) => setCreditFirstDue(e.target.value)}
+                            disabled={processing}
+                            className="bg-background border-border"
+                          />
+                        </div>
+                      </div>
+                      {creditInstallments > 1 && total > 0 && (
+                        <div className="text-[11px] text-muted-foreground">
+                          {creditInstallments}× de aprox. {brl(total / creditInstallments)} — demais parcelas seguem o intervalo da forma cadastrada.
+                        </div>
+                      )}
+                    </div>
+                  )}
                           {isTef && lineAmount > 0 && (
                             <div className="ml-0 flex flex-wrap items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Modalidade:</span>
@@ -997,45 +1042,6 @@ export function FrenteCaixaCheckoutDialog({
               />
               {step === 3 && (
                 <div className="ml-9 space-y-2 max-w-xl">
-                  {isCreditSale && (
-                    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
-                      <div className="text-xs font-medium text-primary flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        Crediário — parcelamento
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Nº de parcelas</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={60}
-                            value={creditInstallments}
-                            onChange={(e) =>
-                              setCreditInstallments(Math.max(1, Math.min(60, Number(e.target.value) || 1)))
-                            }
-                            disabled={processing}
-                            className="bg-background border-border"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">1º vencimento</Label>
-                          <Input
-                            type="date"
-                            value={creditFirstDue}
-                            onChange={(e) => setCreditFirstDue(e.target.value)}
-                            disabled={processing}
-                            className="bg-background border-border"
-                          />
-                        </div>
-                      </div>
-                      {creditInstallments > 1 && total > 0 && (
-                        <div className="text-[11px] text-muted-foreground">
-                          {creditInstallments}× de aprox. {brl(total / creditInstallments)} — demais parcelas seguem o intervalo da forma cadastrada.
-                        </div>
-                      )}
-                    </div>
-                  )}
                   <Label className="text-xs text-muted-foreground">Observação</Label>
                   <textarea
                     value={notes}
