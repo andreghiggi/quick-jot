@@ -9,7 +9,7 @@ Criar o módulo **Floricultura** como um perfil visual e de linguagem adicional.
 - Manter o padrão atual quando a configuração estiver ausente, evitando qualquer mudança nas empresas existentes.
 
 ## 2. Identidade visual verde
-- Usar como cor principal do perfil Floricultura o verde escuro extraído da logo que será anexada.
+- Usar como referência o verde escuro predominante da logo enviada, aproximadamente **#023C1A**; na implementação, ajustar apenas luminosidade/contraste quando necessário para leitura em telas claras e escuras.
 - Aplicar o verde somente à identidade visual: botões principais, destaques, links, seleções, navegação e elementos que hoje usam a cor principal do ComandaTech.
 - Preservar vermelho em erros, exclusões, cancelamentos e alertas perigosos.
 - Respeitar a personalização de cor já existente no catálogo público: definir uma precedência clara entre a cor salva pela loja e o padrão verde da Floricultura, sem alterar lojas de restaurante.
@@ -41,5 +41,5 @@ Criar o módulo **Floricultura** como um perfil visual e de linguagem adicional.
 ## Detalhes técnicos
 - O módulo será identificado internamente como `floricultura` em `company_modules`, seguindo o padrão modular já usado pelo sistema.
 - Um contexto/helper central fornecerá o perfil da empresa, os termos visíveis e os tokens de identidade; as telas consumirão esse ponto único.
-- A cor final ficará pendente apenas até o envio da logo. Depois dela, o tom será extraído e confirmado visualmente antes da implementação.
+- As três imagens enviadas serão usadas como referência visual; nesta fase, não serão adicionadas ao sistema nem substituirão a logo atual.
 - Nenhuma entrada será criada em **Novidades** e nada será publicado sem ordem explícita.
