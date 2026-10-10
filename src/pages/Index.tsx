@@ -10,6 +10,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { OrderTabs } from '@/components/OrderTabs';
 import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 import { useFastSalesToday } from '@/hooks/useFastSalesToday';
+import { useTabSalesToday } from '@/hooks/useTabSalesToday';
 
 const Index = () => {
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
@@ -42,9 +43,10 @@ const Index = () => {
   const readyCount = activeOrders.filter(o => o.status === 'ready').length;
   const deliveredCount = todayOrders.filter(o => o.status === 'delivered').length;
   const fastSalesToday = useFastSalesToday(company?.id);
+  const tabSalesToday = useTabSalesToday(company?.id);
   const revenue = todayOrders
     .filter(o => o.status === 'delivered')
-    .reduce((sum, o) => sum + o.total, 0) + fastSalesToday;
+    .reduce((sum, o) => sum + o.total, 0) + fastSalesToday + tabSalesToday;
 
   if (loading) {
     return (

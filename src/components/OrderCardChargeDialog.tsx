@@ -429,6 +429,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         payment_status: isFullyPaid ? 'paid' : 'partial',
         paid_amount: isFullyPaid ? baseTotalAfterExtras : nextPaidAmount,
         paid_items: { ...((order.paidItems as any) || {}), paid_qtys: nextPaidItems },
+        // Itens extras adicionados na cobrança passam a compor o total do pedido
+        // (faturamento do Dashboard/PDV soma orders.total).
+        ...(extrasTotal > 0 ? { total: baseTotalAfterExtras } : {}),
       };
       if (shouldFinalizeOnCharge && isFullyPaid) {
         orderUpdate.status = 'delivered';
