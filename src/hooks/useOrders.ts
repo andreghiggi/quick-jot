@@ -529,17 +529,17 @@ export function useOrders(options: UseOrdersOptions = {}) {
     console.log(`[Orders] Order ${orderId} auto-registered to cash register`);
   }
 
-  async function sendConfirmationWhatsApp(orderId: string): Promise<boolean> {
+  async function sendConfirmationWhatsApp(orderId: string, opts?: { auto?: boolean }): Promise<boolean> {
     try {
-      const order = orders.find((o) => o.id === orderId);
+      const order = ordersRef.current.find((o) => o.id === orderId);
       if (!order?.customerPhone || !companyId) {
-        toast.error('Pedido sem telefone ou empresa não identificada');
+        if (!opts?.auto) toast.error('Pedido sem telefone ou empresa não identificada');
         return false;
       }
 
       // Guard: if already confirmed, skip sending
       if (order.confirmedAt) {
-        toast.info('Este pedido já foi confirmado anteriormente.');
+        if (!opts?.auto) toast.info('Este pedido já foi confirmado anteriormente.');
         return false;
       }
 
@@ -674,6 +674,18 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
 
       if (message) {
+        // Confirmação automática: reserva o pedido antes de enviar, para que
+        // duas telas abertas nunca disparem a mensagem duas vezes.
+        if (opts?.auto) {
+          const { data: claimed } = await supabase
+            .from('orders')
+            .update({ confirmed_at: new Date().toISOString() } as any)
+            .eq('id', orderId)
+            .is('confirmed_at', null)
+            .select('id');
+          if (!claimed || claimed.length === 0) return false;
+        }
+
         await supabase.functions.invoke('whatsapp-evolution', {
           body: {
             action: 'send_message',
@@ -685,16 +697,20 @@ export function useOrders(options: UseOrdersOptions = {}) {
           },
         });
 
-        // Persist confirmed_at to prevent duplicate sends on refresh
-        await supabase
-          .from('orders')
-          .update({ confirmed_at: new Date().toISOString() } as any)
-          .eq('id', orderId);
+        if (!opts?.auto) {
+          // Persist confirmed_at to prevent duplicate sends on refresh
+          await supabase
+            .from('orders')
+            .update({ confirmed_at: new Date().toISOString() } as any)
+            .eq('id', orderId);
+        }
 
         // Update local state
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, confirmedAt: new Date() } : o));
 
-        toast.success('Confirmação enviada via WhatsApp!');
+        toast.success(opts?.auto
+          ? `Pedido #${order.shortCode || order.orderCode || order.dailyNumber} confirmado automaticamente`
+          : 'Confirmação enviada via WhatsApp!');
         return true;
       }
       return false;
