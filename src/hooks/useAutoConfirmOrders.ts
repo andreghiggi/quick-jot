@@ -19,8 +19,8 @@ export function useAutoConfirmOrders(params: {
 }) {
   const { companyId, orders, confirm } = params;
   const allowed = isAutoConfirmAllowedCompany(companyId);
-  const { settings } = useStoreSettings({ companyId: allowed ? companyId : null });
-  const { isCurrentlyOpen, loading: hoursLoading } = useBusinessHours({ companyId: allowed ? companyId : undefined });
+  const { settings } = useStoreSettings({ companyId: allowed ? (companyId ?? undefined) : undefined });
+  const { isCurrentlyOpen, loading: hoursLoading } = useBusinessHours({ companyId: allowed ? (companyId ?? undefined) : undefined });
   const attemptedRef = useRef<Set<string>>(new Set());
   const confirmRef = useRef(confirm);
   confirmRef.current = confirm;

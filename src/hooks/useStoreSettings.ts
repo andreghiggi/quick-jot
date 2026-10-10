@@ -33,6 +33,7 @@ interface StoreSettings {
   pixName: string;
   pixCity: string;
   autoPrintProductionTicket: boolean;
+  autoConfirmOrders: boolean;
   printLayout: 'v1' | 'v2' | 'v3';
   tefAutoPrintVias: 'none' | 'estabelecimento' | 'ambas';
   freeDeliveryEnabled: boolean;
@@ -84,6 +85,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     pixName: '',
     pixCity: '',
     autoPrintProductionTicket: false,
+    autoConfirmOrders: false,
     printLayout: 'v2',
     tefAutoPrintVias: 'ambas',
     freeDeliveryEnabled: false,
@@ -150,6 +152,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         pixName: settingsMap['pix_name'] || '',
         pixCity: settingsMap['pix_city'] || '',
         autoPrintProductionTicket: settingsMap['auto_print_production_ticket'] === 'true',
+        autoConfirmOrders: settingsMap['auto_confirm_orders'] === 'true',
         printLayout: (settingsMap['print_layout'] as 'v1' | 'v2' | 'v3') || 'v2',
         tefAutoPrintVias: ((settingsMap['tef_auto_print_vias'] as 'none' | 'estabelecimento' | 'ambas') || 'ambas'),
         freeDeliveryEnabled: settingsMap['free_delivery_enabled'] === 'true',
