@@ -68,6 +68,13 @@ interface PrintPayload {
   orderOrigin?: 'cardapio' | 'balcao' | 'express' | 'waiter';
   /** Taxa de entrega explícita; se omitida, calculada como total − subtotal dos itens. */
   deliveryFee?: number;
+  /** Conferência de comanda/mesa (piloto I9): substitui o cabeçalho do BOX. */
+  comandaHeader?: {
+    tableNumber?: number | null;
+    comandaNumber?: number | null;
+    openedAt?: string | null;
+    transferLog?: Array<{ from_table_number: number | null; to_table_number: number; at: string; by_name?: string }>;
+  };
 }
 
 function buildReceiptHTML(payload: PrintPayload): string {
@@ -238,7 +245,39 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
   const phoneHtml = payload.customerPhone
     ? `<p><span class="label">Tel:</span> ${escapeHtml(payload.customerPhone)}</p>`
     : '';
-  const deliverySection = payload.deliveryAddress
+  const comandaHeader = payload.comandaHeader;
+  const fmtBr = (iso: string, withDate: boolean) => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return withDate
+      ? `${d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às ${d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}`
+      : d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+  };
+  let comandaHeaderHtml = '';
+  if (comandaHeader) {
+    const idParts: string[] = [];
+    if (comandaHeader.tableNumber != null) idParts.push(`MESA ${String(comandaHeader.tableNumber).padStart(2, '0')}`);
+    if (comandaHeader.comandaNumber != null) idParts.push(`COMANDA ${String(comandaHeader.comandaNumber).padStart(3, '0')}`);
+    const idLabel = idParts.join(' — ') || 'COMANDA';
+    const opened = comandaHeader.openedAt ? fmtBr(comandaHeader.openedAt, true) : '';
+    const transfers = (comandaHeader.transferLog || [])
+      .map((t) => {
+        const from = t.from_table_number != null ? `Mesa ${t.from_table_number}` : 'Sem mesa';
+        const by = t.by_name ? ` (${t.by_name})` : '';
+        return `<div class="origem">Troca: ${escapeHtml(from)} > Mesa ${escapeHtml(String(t.to_table_number))} às ${fmtBr(t.at, false)}${escapeHtml(by)}</div>`;
+      })
+      .join('');
+    comandaHeaderHtml = `<div class="header">
+    <div class="store-name">${escapeHtml(storeName)}</div>
+    <div class="order-num">${escapeHtml(idLabel)}</div>
+    <div class="origem">CONFERÊNCIA DE CONTA</div>
+    ${opened ? `<div class="date">Aberta em: ${opened}</div>` : ''}
+    ${transfers}
+  </div>`;
+  }
+  const deliverySection = comandaHeader
+    ? ''
+    : payload.deliveryAddress
     ? `<div class="delivery-badge">🛵 ENTREGA</div>
        <div class="section"><p>[ENDERECO]${escapeHtml(payload.deliveryAddress)}[/ENDERECO]</p></div>`
     : '<div class="delivery-badge">🏪 RETIRADA NO LOCAL</div>';
@@ -376,7 +415,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
 </head>
 <body>
   <!--BOX_START-->
-  <div class="header">
+  ${comandaHeader ? comandaHeaderHtml : `<div class="header">
     <div class="store-name">${escapeHtml(storeName)}</div>
     <div class="order-num">PEDIDO #${escapeHtml(orderRef)}</div>
     <div class="origem">${escapeHtml(resolveOrigemLabel(payload))}</div>
@@ -388,7 +427,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     <p>[CLIENTE]${escapeHtml(payload.customerName)}[/CLIENTE]</p>
     ${phoneHtml}
     ${paymentHtml}
-  </div>
+  </div>`}
   <!--BOX_END-->
   ${deliverySection}
   <hr class="divider">
