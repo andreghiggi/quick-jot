@@ -6,6 +6,7 @@ import { generateWhatsAppMessage } from '@/utils/whatsappMessages';
 import { formatOrderItemWhatsApp } from '@/utils/formatOrderItemWhatsApp';
 import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 import { buildMenuLink } from '@/utils/menuLink';
+import { useAutoConfirmOrders } from '@/hooks/useAutoConfirmOrders';
 
 interface UseOrdersOptions {
   companyId?: string | null;
@@ -58,6 +59,8 @@ function mapOrderRow(order: any, itemsData: any[]): Order {
 export function useOrders(options: UseOrdersOptions = {}) {
   const { companyId } = options;
   const [orders, setOrders] = useState<Order[]>([]);
+  const ordersRef = useRef<Order[]>([]);
+  ordersRef.current = orders;
   const [loading, setLoading] = useState(true);
   const { checkAndNotify } = useOrderNotificationSound(!!companyId);
   const prevPendingCountRef = useRef<number | null>(null);
@@ -791,6 +794,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
       )
     );
   }
+
+  useAutoConfirmOrders({ companyId, orders, confirm: (id) => sendConfirmationWhatsApp(id, { auto: true }) });
 
   return {
     orders,
