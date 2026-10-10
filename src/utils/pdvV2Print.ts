@@ -655,6 +655,8 @@ function buildReceiptHTMLv3(payload: PrintPayload): string {
 
 function buildReceiptHTMLForCompany(payload: PrintPayload): string {
   // Quando o caller informa explicitamente o layout, respeita a escolha do lojista.
+  // Conferência de comanda (piloto I9) sempre usa o recibo V2 rico com cabeçalho próprio.
+  if (payload.comandaHeader) return buildReceiptHtmlV2Rich(payload);
   if (payload.printLayout === 'v3') return buildReceiptHTMLv3(payload);
   // Layout V2 oficial: qualquer loja (atual ou nova) com V2 marcado usa o recibo V2 completo.
   if (payload.printLayout === 'v2') return buildReceiptHtmlV2Rich(payload);
