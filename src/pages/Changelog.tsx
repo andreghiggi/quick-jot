@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/10/2026',
+    version: '1.74.16-beta',
+    type: 'fix',
+    description: 'Faturamento: itens extras adicionados na hora de cobrar um pedido agora entram no total do pedido e no faturamento do painel. O faturamento do painel inicial também passou a somar as vendas de mesas e comandas do dia. Nada mudou em caixa, fiscal, TEF ou impressão.',
+  },
+  {
+    date: '09/10/2026',
     version: '1.74.15-beta',
     type: 'fix',
     description: 'Garçom: o "Adicionar Itens" voltou a abrir no estilo cardápio (categorias e produtos em cards com foto) em todas as lojas, igual ao Pedido Express. Nada mudou em impressão, valores ou fechamento da comanda.',
