@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { isAutoConfirmAllowedCompany } from '@/utils/autoConfirmOrders';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -1543,6 +1544,26 @@ if errorlevel 1 (
                   }}
                 />
               </div>
+
+              {isAutoConfirmAllowedCompany(company?.id) && (
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">Confirmação automática de pedidos</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ao imprimir o pedido do cardápio online, confirma o pedido e envia a mensagem no WhatsApp do cliente automaticamente. Pedidos agendados fora do expediente continuarão exigindo confirmação manual.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={storeSettings.autoConfirmOrders}
+                    onCheckedChange={async (value) => {
+                      await updateSetting('auto_confirm_orders', value.toString());
+                      toast({
+                        title: value ? 'Confirmação automática ativada' : 'Confirmação automática desativada',
+                      });
+                    }}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>
