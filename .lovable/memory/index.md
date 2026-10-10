@@ -36,7 +36,7 @@
 - [Ticket Formats](mem://features/production-ticket-formatting) — Bold caps, regex extraction for 58/80mm receipts
 - [Double Submit](mem://features/order-duplicate-prevention) — Checkout locking via `isSubmitting`
 - [Demo Env](mem://project/demo-environment) — 'Lancheria da i9' fallback and demo testing rules
-- [Changelog Rules](mem://features/changelog-system) — Requirement to record updates in Novidades menu
+- [Changelog Rules](mem://features/changelog-system) — Só registrar em Novidades quando o usuário mandar
 - [Navigation Stability](mem://design/navigation-stability) — Memoizing and stringify checks to prevent flickering
 - [WhatsApp Ordering](mem://features/customer-whatsapp-ordering) — Public catalog cart flow sending to WhatsApp
 - [Payment Methods](mem://features/payment-methods) — PIX copy button, Cash change requirement

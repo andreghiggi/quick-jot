@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.76.1-beta";
+export const VERSION = "1.76.0-beta";
 export const RELEASE_DATE = "2026-10-10"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Preços sempre atualizados no cardápio";
+export const CODENAME = "Confirmação automática de pedidos";
 
 
 
