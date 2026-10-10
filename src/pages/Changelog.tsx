@@ -13,6 +13,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '10/10/2026',
+    version: '1.74.20-beta',
+    type: 'feature',
+    description: 'Botão "Imprimir comanda" liberado para todas as lojas com Controle de Mesas/Garçom: na cobrança de mesa ou comanda, imprime a conferência no layout padrão (mesa/comanda, horário de abertura, trocas de mesa, itens e TOTAL). Requer programa de impressão 1.8.15 para o visual completo.',
+  },
+  {
     date: '09/10/2026',
     version: '1.74.19-beta',
     type: 'improvement',
