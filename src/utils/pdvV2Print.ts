@@ -272,7 +272,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     comandaHeaderHtml = `<div class="header comanda-header">
     <div class="order-num">${escapeHtml(idLabel)}</div>
     ${opened ? `<div class="date">Aberta em: ${opened}</div>` : ''}
-    ${transfers ? `<hr class="divider comanda-transfer-sep">${transfers}` : ''}
+    ${transfers}
   </div>`;
   }
   const deliverySection = comandaHeader
