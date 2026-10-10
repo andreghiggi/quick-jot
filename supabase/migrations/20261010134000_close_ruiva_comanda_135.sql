@@ -19,11 +19,11 @@ BEGIN
 
   IF to_regclass('public.tab_item_fraction_reservations') IS NOT NULL THEN
     UPDATE public.tab_item_fraction_reservations SET status = 'canceled'
-     WHERE company_id = _cid AND tab_id = _tab_id AND status IN ('reserved','expired');
+     WHERE company_id = _cid AND source_tab_id = _tab_id AND status IN ('reserved','expired');
   END IF;
   IF to_regclass('public.comanda_charges') IS NOT NULL THEN
     UPDATE public.comanda_charges SET status = 'canceled'
-     WHERE company_id = _cid AND tab_id = _tab_id AND status IN ('open','expired');
+     WHERE company_id = _cid AND _tab_id = ANY(tab_ids) AND status IN ('open','expired');
   END IF;
 
   UPDATE public.tabs SET status = 'closed', closed_at = now() WHERE id = _tab_id;
