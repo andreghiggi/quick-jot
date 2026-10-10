@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '10/10/2026',
+    version: '1.76.0-beta',
+    type: 'feature',
+    description: 'Confirmação automática de pedidos: nova opção em Configurações → Impressão, disponível para todas as lojas (desligada por padrão). Ligada, o pedido do cardápio online é confirmado sozinho após a impressão e o cliente recebe a confirmação no WhatsApp, sem clicar em Confirmar. Pedidos agendados fora do horário seguem com confirmação manual, e a mensagem sai uma única vez mesmo com várias telas abertas. Nada mudou em caixa, TEF ou fiscal.',
+  },
+  {
+    date: '10/10/2026',
     version: '1.74.21-beta',
     type: 'improvement',
     description: 'Comanda de produção do Garçom (mesas/comandas) mais enxuta: removidas a faixa ">> PEDIDO MESA <<" e a linha "Pronto até". Mantidos a caixa do cabeçalho, comanda, mesa, data/hora, itens com [ 1x ] e divisórias.',
