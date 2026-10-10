@@ -38,6 +38,20 @@ Criar o módulo **Floricultura** como um perfil visual e de linguagem adicional.
 - Conferir as principais telas em uma empresa de teste com o módulo ligado e em uma empresa restaurante com o módulo desligado, em computador e celular.
 - Verificar que não houve impacto em TEF, fiscal, impressão, pedidos ou checkout.
 
+## 6. Liberação controlada
+- Habilitar inicialmente em **uma única floricultura piloto**, sem ativação automática para nenhuma outra empresa.
+- Antes do piloto, registrar o estado da empresa escolhida e preparar reversão imediata: desligar `floricultura` deve restaurar a identidade e os termos atuais sem migração de dados.
+- Validar lado a lado uma floricultura com o módulo ligado e um restaurante com o módulo desligado.
+- Somente ampliar para outras floriculturas após a aprovação do piloto; nunca alterar todas as lojas de uma vez.
+- Não modificar dados comerciais, produtos, pedidos, pagamentos, impressão ou regras fiscais nesta fase.
+
+## Riscos controlados
+- **Troca global acidental de textos ou cores:** evitada pela terminologia e pelo tema condicionados à empresa ativa, sem busca/substituição geral.
+- **Cache manter perfil antigo após ativar/desativar:** mitigado com chave por empresa, invalidação imediata e fallback seguro para restaurante.
+- **Links e QR Codes deixarem de funcionar:** evitado mantendo as rotas internas atuais, inclusive `/cardapio/...`.
+- **Verde esconder alertas importantes:** evitado mantendo tokens destrutivos vermelhos e alterando somente a identidade principal.
+- **Regressão em restaurante:** coberta por testes com o módulo ausente/desligado e comparação visual antes da liberação.
+
 ## Detalhes técnicos
 - O módulo será identificado internamente como `floricultura` em `company_modules`, seguindo o padrão modular já usado pelo sistema.
 - Um contexto/helper central fornecerá o perfil da empresa, os termos visíveis e os tokens de identidade; as telas consumirão esse ponto único.
