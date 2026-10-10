@@ -78,6 +78,24 @@ function ChannelManager({ channel }: ChannelManagerProps) {
   );
 
   async function handleToggleCrediario(next: boolean) {
+    // Ao ligar, garante a forma técnica de Crediário (nativa) para a loja.
+    if (next && !crediarioMethod) {
+      const ok = await addPaymentMethod(
+        {
+          name: 'Crediário',
+          payment_type: 'crediario',
+          nfe_ref_code: '90',
+          issue_nfce: false,
+          active: true,
+          installments_count: 1,
+          installment_interval: 1,
+          installment_period: 'month',
+          installment_start_rule: 'general',
+        } as any,
+        channel,
+      );
+      if (!ok) return;
+    }
     const { error } = await savePdvSettings({ ...pdvSettings, credit_sale_enabled: next });
     if (error) {
       toast.error('Não foi possível salvar. Tente novamente.');
@@ -85,6 +103,9 @@ function ChannelManager({ channel }: ChannelManagerProps) {
     }
     toast.success(next ? 'Crediário ativado' : 'Crediário desativado');
   }
+
+  const isCrediarioName = (n: string) =>
+    n.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').startsWith('crediario');
 
   async function openCrediarioEditor() {
     if (crediarioMethod) {
@@ -151,6 +172,9 @@ function ChannelManager({ channel }: ChannelManagerProps) {
 
   async function handleLegacyAdd() {
     if (!legacyName.trim()) { toast.error('Nome é obrigatório'); return; }
+    if (isPdv && isCrediarioName(legacyName)) {
+      toast.error('Use o card "Crediário (Nativo)" no topo para ativar o crediário.'); return;
+    }
     if (showModalitySplit && !legacyShowDelivery && !legacyShowPickup) {
       toast.error('Marque ao menos Entrega ou Retirada'); return;
     }
@@ -170,6 +194,9 @@ function ChannelManager({ channel }: ChannelManagerProps) {
   async function handleLegacyEdit() {
     if (!editingMethod) return;
     if (!legacyName.trim()) { toast.error('Nome é obrigatório'); return; }
+    if (isPdv && isCrediarioName(legacyName)) {
+      toast.error('Use o card "Crediário (Nativo)" no topo para ativar o crediário.'); return;
+    }
     if (showModalitySplit && !legacyShowDelivery && !legacyShowPickup) {
       toast.error('Marque ao menos Entrega ou Retirada'); return;
     }

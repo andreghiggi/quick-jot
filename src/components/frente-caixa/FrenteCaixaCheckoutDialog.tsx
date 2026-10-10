@@ -117,7 +117,14 @@ export function FrenteCaixaCheckoutDialog({
    * operador digitar valor nessa linha, a venda inteira vira "crediário"
    * (sem NFC-e e exigindo cliente).
    */
-  const activePaymentMethods = allActivePaymentMethods;
+  // Crediário só aparece quando a chave nativa está ligada (e Financeiro ativo).
+  const activePaymentMethods = useMemo(
+    () =>
+      creditSaleAvailable
+        ? allActivePaymentMethods
+        : allActivePaymentMethods.filter((m) => (m as any).payment_type !== 'crediario'),
+    [allActivePaymentMethods, creditSaleAvailable],
+  );
 
   const [step, setStep] = useState<StepId>(1);
   const [discountText, setDiscountText] = useState('');
