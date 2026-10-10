@@ -92,9 +92,11 @@ export async function runTefPayment(args: RunTefArgs): Promise<RunTefResult> {
       });
 
       if (!createResult.success || !createResult.hash) {
-        // Indisponibilidade de rede/servidor TEF: não mostra toast de erro —
-        // o checkout exibe o painel com "Tentar novamente" / "Cobrar manual".
-        if (!createResult.tefUnavailable) {
+        // Sempre avisa o operador — telas sem painel de contingência ficavam
+        // sem nenhum retorno quando o servidor TEF estava fora.
+        if (createResult.tefUnavailable) {
+          toast.error('Servidor TEF (Multiplus) indisponível. Verifique se o aplicativo do TEF está aberto no computador ou escolha outra forma de pagamento.');
+        } else {
           toast.error(`Erro TEF PinPad: ${createResult.errorMessage || 'falha ao iniciar'}`);
         }
         return {
