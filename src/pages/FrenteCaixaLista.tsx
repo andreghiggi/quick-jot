@@ -399,11 +399,20 @@ export default function FrenteCaixaLista() {
       if (ids.length > 0) {
         const { data: nfces } = await supabase
           .from('nfce_records')
-          .select('id, sale_id, status, numero, serie, chave_acesso, contingencia_offline, contingencia_efetivada')
+          .select('id, sale_id, status, numero, serie, chave_acesso, contingencia_offline, contingencia_efetivada, created_at')
           .eq('company_id', company.id)
-          .in('sale_id', ids);
+          .in('sale_id', ids)
+          .order('created_at', { ascending: false });
+        // Prioridade por status: autorizada nunca é sobreposta por tentativas antigas.
+        const PRIORITY: Record<string, number> = {
+          autorizada: 6, cancelada: 5, processando: 4, pendente: 3, denegada: 2, rejeitada: 1,
+        };
         (nfces || []).forEach((n: any) => {
-          if (n.sale_id) nfceMap.set(n.sale_id, n);
+          if (!n.sale_id) return;
+          const cur = nfceMap.get(n.sale_id) as any;
+          if (!cur || (PRIORITY[n.status] ?? 0) > (PRIORITY[cur.status] ?? 0)) {
+            nfceMap.set(n.sale_id, n);
+          }
         });
       }
 
