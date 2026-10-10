@@ -6,7 +6,7 @@
 - Timezone: Always use 'America/Sao_Paulo' across frontend, edge functions, and python scripts.
 - Visuals: Primary default #ef4444. Prices in green with comma. 85dvh for mobile viewports.
 - IDs: Orders use 6-character hex identifiers (e.g., #AB7CAE), never sequential numbers.
-- Workflow: Always document updates and new features in the 'Novidades' (Changelog) menu.
+- Novidades/versão: registrar SOMENTE quando o usuário mandar explicitamente. Nunca publicar sem pedido expresso.
 - Cash closing: every finalized/charged payment must be included regardless of origin; never filter closure by source.
 - Printing rollout must be isolated per store until validated; never change all stores at once.
 - TEF v1.0 (Multiplus) está homologado e CONGELADO como beta — não alterar nada de TEF/PinPad sem autorização explícita.
