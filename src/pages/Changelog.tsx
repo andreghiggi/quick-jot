@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/10/2026',
+    version: '1.74.15-beta',
+    type: 'fix',
+    description: 'Garçom: o "Adicionar Itens" voltou a abrir no estilo cardápio (categorias e produtos em cards com foto) em todas as lojas, igual ao Pedido Express. Nada mudou em impressão, valores ou fechamento da comanda.',
+  },
+  {
+    date: '09/10/2026',
     version: '1.74.14-beta',
     type: 'improvement',
     description: 'Menos tráfego: o painel e o PDV deixaram de consultar a Venda Rápida a cada minuto nas lojas que não usam esse recurso (segue ativo só na Amore Mio). Pedidos antigos de setembro que ficaram como "não impressos" foram baixados e uma rotina automática duplicada de NFC-e foi removida. Nada mudou em vendas, fiscal, TEF ou impressão.',

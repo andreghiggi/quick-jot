@@ -111,6 +111,8 @@ export default function Waiter() {
   // todo mundo. Corrigido pra checar a loja de verdade.
   const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
   const isI9 = company?.id === I9_COMPANY_ID;
+  // Catálogo moderno no "Adicionar Itens" — padrão para todas as lojas.
+  const useModernWaiterCatalog = true;
 
   // Modo comanda individual (cartões) — só lojas liberadas + opção ligada.
   const comandaCards = useComandaCards(company?.id);
@@ -987,7 +989,8 @@ export default function Waiter() {
       </Dialog>
 
       {/* Add Items Dialog */}
-      {isI9 ? (
+      {/* Catálogo moderno (cards com foto) é o padrão do Garçom para TODAS as lojas. */}
+      {useModernWaiterCatalog ? (
         <>
           {/* i9: Full-screen menu Sheet */}
           <Sheet open={addItemDialogOpen} onOpenChange={(open) => { setAddItemDialogOpen(open); if (!open) setI9CartOpen(false); }}>
