@@ -343,7 +343,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
           ) : (
             <div className="space-y-2">
               {paymentMethods
-                .filter((m) => !(isPdv && (m as any).payment_type === 'crediario'))
+                .filter((m) => !(isPdv && ((m as any).payment_type === 'crediario' || isCrediarioName(m.name || ''))))
                 .map((method) => (
                 <div
                   key={method.id}
