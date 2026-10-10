@@ -521,23 +521,16 @@ export function EfetivarReceitaDialog({
           >
             CANCELAR
           </Button>
-          {!hasTefLine && (
-            <Button
-              variant="outline"
-              onClick={() => submit(false)}
-              disabled={busy || processingTef || !exact}
-            >
-              EFETIVAR
-            </Button>
-          )}
           <Button
-            onClick={() => submit(true)}
+            onClick={() => submit(hasTefLine)}
             disabled={busy || processingTef || !exact}
           >
             {processingTef ? (
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
-            ) : (
+            ) : hasTefLine ? (
               'EFETIVAR COM NFC-E'
+            ) : (
+              'EFETIVAR'
             )}
           </Button>
         </DialogFooter>
