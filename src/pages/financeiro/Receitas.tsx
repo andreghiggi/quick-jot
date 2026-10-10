@@ -374,21 +374,16 @@ export default function Receitas() {
 
     // Total TEF real (com dados NSU/autorização) neste recebimento.
     const tefPayments = payments.filter((p) => p.integration && p.tef);
-    const tefTotal = tefPayments.reduce((s, p) => s + p.amount, 0);
+    const tefTotal = +tefPayments.reduce((s, p) => s + p.amount, 0).toFixed(2);
 
-    // Pagamentos NÃO-TEF (dinheiro / PIX manual). Quando o operador clica
-    // em "EFETIVAR COM NFC-E" em um recebimento sem TEF, também emitimos a
-    // nota financeira (5949/6949) — cada linha vira um <detPag> com o tPag
-    // adequado (PIX=17, demais=01/dinheiro).
-    const cashPayments = payments
-      .filter((p) => !(p.integration && p.tef))
-      .map((p) => ({
-        amount: p.amount,
-        isPix: /pix/i.test(p.paymentName || ''),
-      }))
-      .filter((p) => p.amount > 0.005);
-    const cashTotal = cashPayments.reduce((s, p) => s + p.amount, 0);
-    const financeTotal = +(tefTotal + cashTotal).toFixed(2);
+    // Regra: notas do recebimento (mercadoria em on_receipt e financeira 5949)
+    // só existem quando há TEF. Dinheiro/PIX manual → nenhuma emissão fiscal.
+    if (tefTotal <= 0.005) { setNfcePhase(null); return; }
+
+    // Parte não-TEF não entra na nota financeira.
+    const cashPayments: Array<{ amount: number; isPix: boolean }> = [];
+    const cashTotal = 0;
+    const financeTotal = tefTotal;
 
     // Carrega config do PDV.
     const { data: cfg } = await supabase
