@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/10/2026',
+    version: '1.74.18-beta',
+    type: 'improvement',
+    description: 'Piloto Lancheria da I9: a conferência da comanda ficou mais limpa — o cabeçalho mostra só mesa/comanda e a abertura, o tracejado aparece apenas quando há troca de mesa, e o papel termina no TOTAL (sem nome da loja, sem "Conferência de conta" e sem "Obrigado pela preferência"). Programa de impressão 1.8.14.',
+  },
+  {
+    date: '09/10/2026',
     version: '1.74.17-beta',
     type: 'feature',
     description: 'Piloto Lancheria da I9: o botão "Imprimir comanda" na cobrança agora imprime a conferência com mesa e comanda, horário de abertura e trocas de mesa dentro da caixa do cabeçalho, e os itens no mesmo formato do recibo do pedido (com observações). Demais lojas sem mudança.',
