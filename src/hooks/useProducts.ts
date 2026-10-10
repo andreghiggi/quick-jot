@@ -12,7 +12,8 @@ export function useProducts(options: UseProductsOptions = {}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function fetchProducts() {
+  async function fetchProducts(opts?: { silent?: boolean }) {
+    const silent = opts?.silent === true;
     // Don't fetch if no companyId - prevents showing products from other companies
     if (!companyId) {
       setProducts([]);
@@ -20,7 +21,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       return;
     }
 
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     try {
       let productsQuery = supabase
@@ -109,7 +110,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       setProducts(mappedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('Erro ao carregar produtos');
+      if (!silent) toast.error('Erro ao carregar produtos');
     } finally {
       setLoading(false);
     }
@@ -493,6 +494,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     moveProduct,
     duplicateProduct,
     toggleNewProduct,
-    refetch: fetchProducts,
+    refetch: () => fetchProducts(),
+    refetchSilent: () => fetchProducts({ silent: true }),
   };
 }

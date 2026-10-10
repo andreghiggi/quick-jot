@@ -40,6 +40,7 @@ import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
+import { refreshCartPrices } from '@/utils/cartPriceRefresh';
 
 interface Company {
   id: string;
@@ -110,7 +111,7 @@ export default function Menu() {
     fetchCompany();
   }, [slug, subdomainFromHost, navigate]);
 
-  const { products, loading: productsLoading, getMenuProducts, getNewProducts } = useProducts({ companyId: company?.id });
+  const { products, loading: productsLoading, getMenuProducts, getNewProducts, refetchSilent: refetchProductsSilent } = useProducts({ companyId: company?.id });
   const { settings, loading: settingsLoading } = useStoreSettings({ companyId: company?.id });
   const { categories: allCategories, loading: categoriesLoading } = useCategories({ companyId: company?.id });
   const { subcategories: allSubcategories } = useSubcategories({ companyId: company?.id });
@@ -443,6 +444,15 @@ export default function Menu() {
 
       if (validCart.length > 0) {
         toast.success('Seu pedido foi restaurado', { duration: 2500 });
+        // Atualiza preços do rascunho para os valores vigentes do cadastro
+        if (company?.id) {
+          refreshCartPrices(validCart, company.id).then(({ cart: fresh, changed }) => {
+            if (changed) {
+              setCart(fresh);
+              toast.info('Alguns preços foram atualizados pela loja.', { duration: 3500 });
+            }
+          });
+        }
       }
     } catch {
       // payload corrompido — limpa
@@ -451,6 +461,35 @@ export default function Menu() {
       setDraftRestored(true);
     }
   }, [draftKey, draftRestored, products]);
+
+  // Ao voltar para a aba: recarrega o catálogo e confere preços do carrinho
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+  useEffect(() => {
+    if (!company?.id) return;
+    const companyId = company.id;
+    let lastRun = 0;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastRun < 30000) return;
+      lastRun = Date.now();
+      refetchProductsSilent();
+      const current = cartRef.current;
+      if (current.length === 0) return;
+      refreshCartPrices(current, companyId).then(({ cart: fresh, changed }) => {
+        if (changed && cartRef.current === current) {
+          setCart(fresh);
+          toast.info('Alguns preços foram atualizados pela loja.', { duration: 3500 });
+        }
+      });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [company?.id]);
 
   // Salvar rascunho sempre que carrinho ou campos de checkout mudarem
   useEffect(() => {
@@ -1212,6 +1251,18 @@ export default function Menu() {
       }
     } catch {
       // Rede lenta/instável: não bloqueia o pedido por causa da checagem.
+    }
+
+    // Trava de preço: confere valores do carrinho com o cadastro atual
+    if (company?.id) {
+      setIsSubmitting(true);
+      const { cart: freshCart, changed } = await refreshCartPrices(cart, company.id);
+      if (changed) {
+        setCart(freshCart);
+        setIsSubmitting(false);
+        toast.warning('A loja atualizou alguns preços. Confira o novo total e confirme o pedido novamente.', { duration: 6000 });
+        return;
+      }
     }
 
     // Save order to database
