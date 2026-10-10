@@ -865,7 +865,8 @@ export function PDVV2PaymentDialog({
             />
           )}
 
-          {isLancheriaI9 && checkoutItems && checkoutItems.length > 0 && (
+          {/* Imprimir comanda: padrão para toda loja com módulo Mesas (PDV V2 só passa comandaInfo em cobrança de mesa/comanda). */}
+          {comandaInfo && checkoutItems && checkoutItems.length > 0 && (
             <Button
               variant="outline"
               className="w-full"
