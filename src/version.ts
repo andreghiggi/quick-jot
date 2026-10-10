@@ -7,9 +7,9 @@
  *  - MINOR: nova feature
  *  - PATCH: correção de bug
  */
-export const VERSION = "1.75.0-beta";
-export const RELEASE_DATE = "2026-09-25"; // YYYY-MM-DD (America/Sao_Paulo)
-export const CODENAME = "Caixa nunca trava quando o TEF oscila";
+export const VERSION = "1.76.0-beta";
+export const RELEASE_DATE = "2026-10-10"; // YYYY-MM-DD (America/Sao_Paulo)
+export const CODENAME = "Confirmação automática de pedidos";
 
 
 
@@ -23,6 +23,18 @@ export interface Release {
 }
 
 export const RELEASES: Release[] = [
+  {
+    version: "1.76.0-beta",
+    date: "2026-10-10",
+    codename: "Confirmação automática de pedidos",
+    changes: [
+      "Nova opção 'Confirmação automática de pedidos' em Configurações → Impressão, disponível para todas as lojas e desligada por padrão.",
+      "Com a opção ligada, pedidos do cardápio online são confirmados sozinhos logo após a impressão, e o cliente recebe a mensagem de confirmação no WhatsApp sem o operador clicar em Confirmar.",
+      "Pedidos agendados feitos fora do horário de atendimento continuam aguardando confirmação manual.",
+      "A mensagem é enviada uma única vez, mesmo com várias telas de Pedidos abertas.",
+      "Nenhuma regra de venda, caixa, TEF, PinPad ou documento fiscal foi alterada.",
+    ],
+  },
   {
     version: "1.75.0-beta",
     date: "2026-09-25",
