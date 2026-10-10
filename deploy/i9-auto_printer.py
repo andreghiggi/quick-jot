@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.14"
+SCRIPT_VERSION = "1.8.15"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1056,7 +1056,7 @@ def extrair_blocos_v2(html_content):
         for date_node in by_class("date"):
             blocos.append(block(date_node.text(), "datetime", "center"))
         origens = by_class("origem")
-        if origens and by_class("comanda-transfer-sep"):
+        if origens and by_class("comanda-transfer-sep") and not by_class("comanda-header"):
             blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
         for origem in origens:
             blocos.append(block(origem.text(), "type", "center"))
@@ -1092,7 +1092,9 @@ def extrair_blocos_v2(html_content):
             if "[ENDERECO]" in node.text():
                 blocos.append(block(node.text(), "inverse"))
 
-        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+        # v1.8.15: conferencia de comanda sem tracejado logo abaixo do quadro.
+        if not is_comanda_conf:
+            blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
 
         receipt_items = [
             item for item in by_class("item")
@@ -1150,7 +1152,7 @@ def extrair_blocos_v2(html_content):
 
         footers = by_class("footer")
         if by_class("no-footer"):
-            pass  # v1.8.14: conferencia de comanda termina no TOTAL
+            pass  # v1.8.15: conferencia de comanda termina no TOTAL
         elif footers:
             blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
             blocos.append(block(footers[0].text(), "footer", "center"))
