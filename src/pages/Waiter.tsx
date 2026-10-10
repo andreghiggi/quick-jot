@@ -520,13 +520,12 @@ export default function Waiter() {
               tabNumber: selectedTab.tab_number,
               tableNumber: selectedTab.table?.number,
               customerName: selectedTab.customer_name,
-              orderType: 'table',
+              // Padrão comanda de mesa: sem faixa ">> PEDIDO MESA <<" e sem "Pronto até".
               createdAt: new Date(),
               paperSize: storeSettings.printerPaperSize,
               layout: storeSettings.printLayout,
               companyId: company.id,
-              showReadyTime: true,
-              readyOffsetMinutes: computeReadyOffsetMinutes(storeSettings.estimatedWaitTime, 30),
+              showReadyTime: false,
             },
           });
           toast.success('Pedido enviado para impressão!');

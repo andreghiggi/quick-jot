@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '10/10/2026',
+    version: '1.74.21-beta',
+    type: 'improvement',
+    description: 'Comanda de produção do Garçom (mesas/comandas) mais enxuta: removidas a faixa ">> PEDIDO MESA <<" e a linha "Pronto até". Mantidos a caixa do cabeçalho, comanda, mesa, data/hora, itens com [ 1x ] e divisórias.',
+  },
+  {
+    date: '10/10/2026',
     version: '1.74.20-beta',
     type: 'feature',
     description: 'Botão "Imprimir comanda" liberado para todas as lojas com Controle de Mesas/Garçom: na cobrança de mesa ou comanda, imprime a conferência no layout padrão (mesa/comanda, horário de abertura, trocas de mesa, itens e TOTAL). Requer programa de impressão 1.8.15 para o visual completo.',
