@@ -350,9 +350,10 @@ export function FrenteCaixaCheckoutDialog({
         const isTextarea = target?.tagName === 'TEXTAREA';
         if (isTextarea) return; // permitir quebra de linha em observação
         if (step === 1) {
-          // Na etapa 1, Enter NUNCA avança automaticamente.
-          // O handler do input cuida de auto-preencher o valor.
-          // Para avançar, usar o botão "Próximo" ou Ctrl+2.
+          // Linhas de valor têm handler próprio (auto-preencher). Nos demais
+          // campos (parcelas, vencimento, desconto), Enter avança a etapa.
+          e.preventDefault();
+          setStep(2);
           return;
         }
         if (step === 2) {
@@ -886,7 +887,6 @@ export function FrenteCaixaCheckoutDialog({
                       size="sm"
                       onClick={() => setStep(2)}
                       disabled={processing}
-                      className="bg-muted hover:bg-muted/70"
                     >
                       Próximo
                     </Button>
@@ -1016,7 +1016,6 @@ export function FrenteCaixaCheckoutDialog({
                         setStep(3);
                       }}
                       disabled={processing}
-                      className="bg-muted hover:bg-muted/70"
                     >
                       Próximo
                     </Button>
