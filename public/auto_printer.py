@@ -222,7 +222,7 @@ PRINTER_MAP_FILE = "printer_map.json"
 # Tamanho de papel configurado na loja (store_settings.printer_paper_size).
 # Usado pelo renderizador grafico para dimensionar fonte, colunas e faixas.
 PAPER_SIZE = "58mm"
-PRINT_LAYOUT = "v1"
+PRINT_LAYOUT = "v2"
 CONFIG_LAST_SYNC = 0
 CONFIG_TTL = 300  # segundos
 

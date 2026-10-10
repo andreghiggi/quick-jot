@@ -176,7 +176,7 @@ async function enqueueProductionByStationLegacy(
       const settings: Record<string, string> = {};
       settingsData?.forEach(s => settings[s.key] = s.value);
       
-      const printLayout = (settings['print_layout'] as any) || 'v1';
+      const printLayout = (settings['print_layout'] as any) || 'v2';
       const paperSize = (settings['printer_paper_size'] as any) || '58mm';
       const estimatedWaitTime = settings['estimated_wait_time'];
       const showReady = printLayout === 'v2';
