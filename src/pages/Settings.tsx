@@ -1416,7 +1416,7 @@ if errorlevel 1 (
                   <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="v1" id="layout-v1" />
                     <div className="flex-1">
-                      <Label htmlFor="layout-v1" className="font-medium cursor-pointer">Layout V1 (padrão)</Label>
+                      <Label htmlFor="layout-v1" className="font-medium cursor-pointer">Layout V1 (legado)</Label>
                       <p className="text-sm text-muted-foreground">
                         Layout original. Adicionais aparecem em uma única linha após o produto.
                       </p>
@@ -1425,7 +1425,7 @@ if errorlevel 1 (
                   <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="v2" id="layout-v2" />
                     <div className="flex-1">
-                      <Label htmlFor="layout-v2" className="font-medium cursor-pointer">Layout V2 (novo)</Label>
+                      <Label htmlFor="layout-v2" className="font-medium cursor-pointer">Layout V2 (padrão)</Label>
                       <p className="text-sm text-muted-foreground">
                         Adicionais empilhados (um por linha) em negrito. Observações destacadas em fundo preto / texto branco.
                       </p>
