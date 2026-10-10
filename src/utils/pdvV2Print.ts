@@ -267,12 +267,12 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
         return `<div class="origem">Troca: ${escapeHtml(from)} > Mesa ${escapeHtml(String(t.to_table_number))} às ${fmtBr(t.at, false)}${escapeHtml(by)}</div>`;
       })
       .join('');
-    comandaHeaderHtml = `<div class="header">
-    <div class="store-name">${escapeHtml(storeName)}</div>
+    // Conferência de comanda: sem nome da loja, sem rótulo e sem rodapé.
+    // Tracejado interno só quando houver transferências depois da abertura.
+    comandaHeaderHtml = `<div class="header comanda-header">
     <div class="order-num">${escapeHtml(idLabel)}</div>
-    <div class="origem">CONFERÊNCIA DE CONTA</div>
     ${opened ? `<div class="date">Aberta em: ${opened}</div>` : ''}
-    ${transfers}
+    ${transfers ? `<hr class="divider comanda-transfer-sep">${transfers}` : ''}
   </div>`;
   }
   const deliverySection = comandaHeader
@@ -441,8 +441,8 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     <span>TOTAL:</span>
     <span>R$ ${payload.total.toFixed(2).replace('.', ',')}</span>
   </div>
-  <hr class="divider">
-  <p class="footer">Obrigado pela preferência!</p>
+  ${comandaHeader ? '<div class="no-footer"></div>' : `<hr class="divider">
+  <p class="footer">Obrigado pela preferência!</p>`}
 </body>
 </html>`;
 }
