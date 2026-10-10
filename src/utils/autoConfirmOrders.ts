@@ -1,10 +1,8 @@
 import type { Order } from '@/types/order';
 
-/** Piloto: apenas Lancheria da I9 até validação. */
-export const AUTO_CONFIRM_PILOT_COMPANY_IDS = ['8c9e7a0e-dbb6-49b9-8344-c23155a71164'];
-
+/** Liberado para todas as lojas (piloto I9 aprovado). Ativação controlada pela toggle de cada loja. */
 export function isAutoConfirmAllowedCompany(companyId?: string | null): boolean {
-  return !!companyId && AUTO_CONFIRM_PILOT_COMPANY_IDS.includes(companyId);
+  return !!companyId;
 }
 
 /** Pedido do cardápio online, pendente, com telefone, ainda não confirmado e recente (até 30 min). */
