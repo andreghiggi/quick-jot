@@ -200,6 +200,7 @@ export function PDVV2PaymentDialog({
   onConfirm,
   activeSplit,
   transferLog,
+  comandaInfo,
   onSplitPayments,
   printLayout,
   currentTabId,
