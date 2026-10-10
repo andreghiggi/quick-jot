@@ -14,6 +14,12 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: '09/10/2026',
+    version: '1.74.19-beta',
+    type: 'improvement',
+    description: 'Piloto Lancheria da I9: a conferência da comanda não tem mais linhas tracejadas no cabeçalho nem abaixo dele, e termina no TOTAL, sem tracejado final e sem "Obrigado pela preferência". Programa de impressão 1.8.15.',
+  },
+  {
+    date: '09/10/2026',
     version: '1.74.18-beta',
     type: 'improvement',
     description: 'Piloto Lancheria da I9: a conferência da comanda ficou mais limpa — o cabeçalho mostra só mesa/comanda e a abertura, o tracejado aparece apenas quando há troca de mesa, e o papel termina no TOTAL (sem nome da loja, sem "Conferência de conta" e sem "Obrigado pela preferência"). Programa de impressão 1.8.14.',
