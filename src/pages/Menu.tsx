@@ -38,6 +38,9 @@ import { detectDomainContext, COMANDATECH_ROOT, LEGACY_HOST } from '@/utils/doma
 import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
 import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
+import { FloristGiftSection } from '@/components/menu/FloristGiftSection';
+import { validateGift, normalizePhone, GiftInput } from '@/lib/floristGift';
+const todaySP = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
 import { refreshCartPrices } from '@/utils/cartPriceRefresh';
@@ -167,6 +170,7 @@ export default function Menu() {
   const [changeFor, setChangeFor] = useState('');
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'city' | 'interior' | 'neighborhood' | ''>('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
+  const [gift, setGift] = useState<GiftInput & { allowNotify?: boolean }>({ isGift: true, cardIncluded: true });
   const [orderSent] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1198,11 +1202,21 @@ export default function Menu() {
     if (!paymentMethod) errors.add('paymentMethod');
     if (cart.length === 0) errors.add('cart');
 
+    const giftErrors = isFlorist ? validateGift(gift, todaySP()) : [];
+    if (giftErrors.length > 0) errors.add('gift');
+
     if (errors.size > 0) {
       setFieldErrors(errors);
-      toast.error('Preencha todos os campos obrigatórios destacados em vermelho');
+      toast.error(giftErrors[0] || 'Preencha todos os campos obrigatórios destacados em vermelho');
       return;
     }
+    const giftLine = isFlorist
+      ? [
+          `Agendado: ${gift.scheduledDate!.split('-').reverse().join('/')} ${gift.scheduledSlot}`,
+          gift.isGift ? `PRESENTE para ${gift.recipientName!.trim()} (${gift.recipientPhone})${gift.allowNotify ? '' : ' - SURPRESA, não avisar'}` : '',
+          gift.isGift && gift.cardIncluded ? `Cartão: "${gift.cardMessage!.trim()}"` : '',
+        ].filter(Boolean).join(' | ')
+      : '';
     setFieldErrors(new Set());
 
     // Use company phone or settings phone
@@ -1302,7 +1316,7 @@ export default function Menu() {
           customer_name: safe.customerName,
           customer_phone: safe.customerPhone || null,
           delivery_address: safe.deliveryAddress || null,
-          notes: `Pagamento: ${paymentMethod}${(() => { const pm = activePaymentMethods.find(m => m.name === paymentMethod); return pm?.pix_key ? ` (Chave PIX: ${pm.pix_key})` : ''; })()}${changeFor.trim() ? ` (Troco para R$ ${changeFor.trim()})` : ''} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}`,
+          notes: `Pagamento: ${paymentMethod}${(() => { const pm = activePaymentMethods.find(m => m.name === paymentMethod); return pm?.pix_key ? ` (Chave PIX: ${pm.pix_key})` : ''; })()}${changeFor.trim() ? ` (Troco para R$ ${changeFor.trim()})` : ''} | ${deliveryTypeLabel}${deliveryFee > 0 ? ` (R$ ${deliveryFee.toFixed(2)})` : ''}${giftLine ? ` | ${giftLine}` : ''}`,
           total: orderTotal,
           status: 'pending',
           company_id: company?.id || null,
@@ -1342,6 +1356,22 @@ export default function Menu() {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      if (isFlorist && company?.id) {
+        const { error: giftError } = await supabase.from('order_gift_details').insert({
+          order_id: newOrder.id,
+          company_id: company.id,
+          is_gift: gift.isGift,
+          recipient_name: gift.isGift ? gift.recipientName!.trim() : null,
+          recipient_phone: gift.isGift ? normalizePhone(gift.recipientPhone) : null,
+          allow_notify_recipient: gift.isGift ? !!gift.allowNotify : false,
+          card_included: gift.isGift ? !!gift.cardIncluded : false,
+          card_message: gift.isGift && gift.cardIncluded ? gift.cardMessage!.trim() : null,
+          scheduled_date: gift.scheduledDate,
+          scheduled_slot: gift.scheduledSlot,
+        });
+        if (giftError) console.error('[florist] gift details', giftError);
+      }
 
       // Save/update customer data for future auto-fill
       if (customerPhone && company?.id) {
@@ -1632,6 +1662,7 @@ export default function Menu() {
     if (customerBirthDate) message += `*Data de Nascimento:* ${customerBirthDate}\n`;
     if (customerPhone) message += `*Telefone:* ${customerPhone}\n`;
     message += `*Tipo:* ${deliveryTypeLabel}\n`;
+    if (giftLine) message += `${giftLine.replace(/ \| /g, '\n')}\n`;
     message += `*Pagamento:* ${paymentMethod}\n`;
     if (changeFor.trim()) {
       message += `*Troco para:* R$ ${changeFor.trim()}\n`;
@@ -2546,6 +2577,9 @@ export default function Menu() {
                       className={cn('border-primary', fieldErrors.has('deliveryReference') && 'border-destructive')}
                     />
                   </div>
+                  {isFlorist && (
+                    <FloristGiftSection value={gift} onChange={(v) => { setGift(v); setFieldErrors(prev => { const n = new Set(prev); n.delete('gift'); return n; }); }} today={todaySP()} invalid={fieldErrors.has('gift')} />
+                  )}
                   <div>
                     <Label className="font-bold">Tipo de entrega *</Label>
                     {settings.deliveryMode === 'neighborhood' && getActiveNeighborhoods().length > 0 ? (
