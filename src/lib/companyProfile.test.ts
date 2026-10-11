@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
+import { describe, it as test } from 'vitest';
 import { DEFAULT_PRIMARY_HEX, FLORIST_PRIMARY_HEX, getCompanyTerminology, getPublicMenuColor, getProductTagline, usesTableService } from './companyProfile.ts';
 
 describe('company profile isolation', () => {
