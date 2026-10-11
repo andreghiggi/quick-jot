@@ -17,3 +17,13 @@ describe('company profile isolation', () => {
     assert.equal(getPublicMenuColor(true, '#126b45'), '#126b45');
   });
 });
+describe('florist login and table service', () => {
+  test('florist tagline and no table service', () => {
+    assert.equal(getProductTagline(true), 'Software para Floriculturas');
+    assert.equal(usesTableService(true), false);
+  });
+  test('restaurant keeps tagline and table service', () => {
+    assert.equal(getProductTagline(false), 'Software para Restaurantes');
+    assert.equal(usesTableService(false), true);
+  });
+});

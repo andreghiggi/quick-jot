@@ -64,7 +64,6 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import defaultLogoIcon from '@/assets/logo-icon.png';
 import { getBrandLogo } from '@/lib/brandLogo';
 import { AdminSidebar } from './AdminSidebar';
 import { getCompanyTerminology, usesTableService } from '@/lib/companyProfile';
