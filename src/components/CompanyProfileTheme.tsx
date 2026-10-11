@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { rememberLoginProfile } from '@/lib/companyProfile';
 
 const FLORIST_THEME: Record<string, string> = {
   '--primary': '145 94% 12%',
@@ -21,6 +22,10 @@ const FLORIST_THEME: Record<string, string> = {
 export function CompanyProfileTheme({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
   const { isFlorist } = useCompanyProfile(company?.id);
+
+  useEffect(() => {
+    if (company?.id) rememberLoginProfile(isFlorist);
+  }, [company?.id, isFlorist]);
 
   useEffect(() => {
     if (!isFlorist) return;

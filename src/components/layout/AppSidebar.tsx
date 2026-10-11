@@ -64,9 +64,9 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import logoIcon from '@/assets/logo-icon.png';
+import { getBrandLogo } from '@/lib/brandLogo';
 import { AdminSidebar } from './AdminSidebar';
-import { getCompanyTerminology } from '@/lib/companyProfile';
+import { getCompanyTerminology, usesTableService } from '@/lib/companyProfile';
 
 export function AppSidebar() {
   const { isSuperAdmin, impersonatedCompany } = useAuthContext();
@@ -87,7 +87,10 @@ function OperationalSidebar() {
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
-  const terminology = getCompanyTerminology(isModuleEnabled('floricultura'));
+  const isFlorist = isModuleEnabled('floricultura');
+  const terminology = getCompanyTerminology(isFlorist);
+  const tableService = usesTableService(isFlorist) && isModuleEnabled('mesas');
+  const logoIcon = getBrandLogo(isFlorist);
   // Fallback robusto: useMercadoEnabled depende de cache em localStorage e pode
   // ficar momentaneamente desatualizado. O useCompanyModules tem realtime e é a
   // fonte da verdade — combinamos os dois para evitar sumiço do grupo Movimentações.
@@ -183,7 +186,7 @@ function OperationalSidebar() {
   // Itens top-level: Pedidos, Comandas, PDV legado (fora de Movimentações)
   const pdvMenuItems: { title: string; icon: any; href: string }[] = [
     ...(mercadoOnly ? [] : [{ title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' }]),
-    ...(pdvV2Enabled && !mercadoOnly && isModuleEnabled('mesas')
+    ...(pdvV2Enabled && !mercadoOnly && tableService
       ? [{ title: 'Comandas', icon: ClipboardEdit, href: '/pdv-v2/comandas-historico' }]
       : []),
     ...(isModuleEnabled('pdv') && !pdvV2Enabled && !mercadoOnly
@@ -191,7 +194,7 @@ function OperationalSidebar() {
       : []),
   ];
 
-  const mesasMenuItems = isModuleEnabled('mesas') && !isWaiter() && !mercadoOnly ? [
+  const mesasMenuItems = tableService && !isWaiter() && !mercadoOnly ? [
     {
       title: 'Garçom',
       icon: UtensilsCrossed,
@@ -240,7 +243,7 @@ function OperationalSidebar() {
     },
   ];
 
-  const mesasConfigItems = isModuleEnabled('mesas') && isCompanyAdmin() && !mercadoOnly ? [
+  const mesasConfigItems = tableService && isCompanyAdmin() && !mercadoOnly ? [
     {
       title: 'Mesas',
       icon: Table2,

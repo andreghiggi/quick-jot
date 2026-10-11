@@ -56,7 +56,8 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import logoIcon from '@/assets/logo-icon.png';
+import { getBrandLogo } from '@/lib/brandLogo';
+import { usesTableService } from '@/lib/companyProfile';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 /**
@@ -72,7 +73,9 @@ export function PDVV2Sidebar() {
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
-  const { terminology } = useCompanyProfile(company?.id);
+  const { terminology, isFlorist } = useCompanyProfile(company?.id);
+  const tableService = usesTableService(isFlorist);
+  const logoIcon = getBrandLogo(isFlorist);
   const financeiroActive = financeiroEnabled || isModuleEnabled('financeiro');
 
   const getInitials = (name: string | null | undefined) => {
@@ -83,7 +86,7 @@ export function PDVV2Sidebar() {
   const home = [{ title: 'PDV', icon: Monitor, href: '/pdv-v2' }];
   const operations = [
     { title: 'Pedidos', icon: ShoppingBag, href: '/pedidos' },
-    { title: 'Comandas', icon: History, href: '/pdv-v2/comandas-historico' },
+    ...(tableService ? [{ title: 'Comandas', icon: History, href: '/pdv-v2/comandas-historico' }] : []),
   ];
 
   // Movimentações (idêntico à AppSidebar): Frente de Caixa · Compras · NF-e
@@ -99,7 +102,7 @@ export function PDVV2Sidebar() {
       : []),
   ];
 
-  const tables = isModuleEnabled('mesas')
+  const tables = tableService && isModuleEnabled('mesas')
     ? [
         { title: 'Garçom', icon: UtensilsCrossed, href: '/garcom' },
         { title: 'Mesas', icon: TableIcon, href: '/configuracoes/mesas' },

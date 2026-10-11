@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { DEFAULT_PRIMARY_HEX, FLORIST_PRIMARY_HEX, getCompanyTerminology, getPublicMenuColor } from './companyProfile.ts';
+import { DEFAULT_PRIMARY_HEX, FLORIST_PRIMARY_HEX, getCompanyTerminology, getPublicMenuColor, getProductTagline, usesTableService } from './companyProfile.ts';
 
 describe('company profile isolation', () => {
   test('restaurant keeps Cardápio and the current red identity', () => {
@@ -15,5 +15,15 @@ describe('company profile isolation', () => {
 
   test('a saved public catalog color has precedence for florists', () => {
     assert.equal(getPublicMenuColor(true, '#126b45'), '#126b45');
+  });
+});
+describe('florist login and table service', () => {
+  test('florist tagline and no table service', () => {
+    assert.equal(getProductTagline(true), 'Software para Floriculturas');
+    assert.equal(usesTableService(true), false);
+  });
+  test('restaurant keeps tagline and table service', () => {
+    assert.equal(getProductTagline(false), 'Software para Restaurantes');
+    assert.equal(usesTableService(false), true);
   });
 });

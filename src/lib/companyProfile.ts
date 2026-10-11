@@ -35,3 +35,29 @@ export function getPublicMenuColor(isFlorist: boolean, savedColor?: string | nul
   if (normalized && normalized !== DEFAULT_PRIMARY_HEX) return normalized;
   return isFlorist ? FLORIST_PRIMARY_HEX : DEFAULT_PRIMARY_HEX;
 }
+
+export function getProductTagline(isFlorist: boolean): string {
+  return isFlorist ? 'Software para Floriculturas' : 'Software para Restaurantes';
+}
+
+/** Floriculturas não usam comandas, mesas nem garçons. */
+export function usesTableService(isFlorist: boolean): boolean {
+  return !isFlorist;
+}
+
+const LOGIN_PROFILE_KEY = 'comandatech_login_profile';
+
+/** Perfil da tela de login: ?perfil=floricultura ou último perfil lembrado neste aparelho. */
+export function getLoginIsFlorist(search: string = window.location.search): boolean {
+  const param = new URLSearchParams(search).get('perfil');
+  if (param === 'floricultura') return true;
+  if (param === 'restaurante') return false;
+  try { return localStorage.getItem(LOGIN_PROFILE_KEY) === 'floricultura'; } catch { return false; }
+}
+
+export function rememberLoginProfile(isFlorist: boolean) {
+  try {
+    if (isFlorist) localStorage.setItem(LOGIN_PROFILE_KEY, 'floricultura');
+    else localStorage.removeItem(LOGIN_PROFILE_KEY);
+  } catch { /* ignore */ }
+}
