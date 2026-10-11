@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { DEFAULT_PRIMARY_HEX, FLORIST_PRIMARY_HEX, getCompanyTerminology, getPublicMenuColor } from './companyProfile.ts';
+import { DEFAULT_PRIMARY_HEX, FLORIST_PRIMARY_HEX, getCompanyTerminology, getPublicMenuColor, getProductTagline, usesTableService } from './companyProfile.ts';
 
 describe('company profile isolation', () => {
   test('restaurant keeps Cardápio and the current red identity', () => {
