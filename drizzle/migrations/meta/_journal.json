@@ -15,6 +15,13 @@
       "when": 1791696043969,
       "tag": "0001_expose_public_florist_profile_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791696616010,
+      "tag": "0002_restrict_public_module_flag_to_floricultura",
+      "breakpoints": true
     }
   ]
 }
