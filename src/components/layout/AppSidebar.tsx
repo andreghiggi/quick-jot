@@ -69,13 +69,17 @@ import { AdminSidebar } from './AdminSidebar';
 import { getCompanyTerminology } from '@/lib/companyProfile';
 
 export function AppSidebar() {
-  const location = useLocation();
-  const { user, profile, company, signOut, isSuperAdmin, isWaiter, isCompanyAdmin, impersonatedCompany } = useAuthContext();
+  const { isSuperAdmin, impersonatedCompany } = useAuthContext();
   // Super Admin (não impersonando loja) enxerga apenas o painel administrativo.
-  // Ao impersonar uma loja, cai no fluxo normal do AppSidebar operacional.
   if (isSuperAdmin() && !impersonatedCompany) {
     return <AdminSidebar />;
   }
+  return <OperationalSidebar />;
+}
+
+function OperationalSidebar() {
+  const location = useLocation();
+  const { user, profile, company, signOut, isSuperAdmin, isWaiter, isCompanyAdmin, impersonatedCompany } = useAuthContext();
   const { isModuleEnabled } = useCompanyModules({ companyId: company?.id });
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { enabled: mercadoEnabled } = useMercadoEnabled(company?.id);
