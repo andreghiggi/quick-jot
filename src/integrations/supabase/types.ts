@@ -2378,6 +2378,75 @@ export type Database = {
           },
         ]
       }
+      order_gift_details: {
+        Row: {
+          allow_notify_recipient: boolean
+          card_included: boolean
+          card_message: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_gift: boolean
+          occasion: string | null
+          order_id: string
+          recipient_name: string | null
+          recipient_phone: string | null
+          scheduled_date: string | null
+          scheduled_slot: string | null
+          special_instructions: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_notify_recipient?: boolean
+          card_included?: boolean
+          card_message?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_gift?: boolean
+          occasion?: string | null
+          order_id: string
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          scheduled_date?: string | null
+          scheduled_slot?: string | null
+          special_instructions?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_notify_recipient?: boolean
+          card_included?: boolean
+          card_message?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_gift?: boolean
+          occasion?: string | null
+          order_id?: string
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          scheduled_date?: string | null
+          scheduled_slot?: string | null
+          special_instructions?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_gift_details_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_gift_details_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           added_after: boolean

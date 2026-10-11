@@ -22,6 +22,13 @@
       "when": 1791696616010,
       "tag": "0002_restrict_public_module_flag_to_floricultura",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791701640260,
+      "tag": "0003_create_order_gift_details",
+      "breakpoints": true
     }
   ]
 }
