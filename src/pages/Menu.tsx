@@ -41,6 +41,7 @@ import { usePublicCoupons } from '@/hooks/usePublicCoupons';
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
 import { refreshCartPrices } from '@/utils/cartPriceRefresh';
+import { getCompanyTerminology, getPublicMenuColor } from '@/lib/companyProfile';
 
 interface Company {
   id: string;
@@ -58,6 +59,7 @@ export default function Menu() {
   const [company, setCompany] = useState<Company | null>(null);
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companyNotFound, setCompanyNotFound] = useState(false);
+  const [isFlorist, setIsFlorist] = useState(false);
 
   // Detecta se viemos por subdomínio (ex: lancheriadai9.comandatech.com.br) ou pela rota /cardapio/:slug
   const domainCtx = detectDomainContext();
@@ -99,6 +101,11 @@ export default function Menu() {
           }
 
           setCompany(data);
+          const { data: floristEnabled } = await supabase.rpc('is_company_module_enabled', {
+            _company_id: data.id,
+            _module_name: 'floricultura',
+          });
+          setIsFlorist(floristEnabled === true);
         }
       } catch (error) {
         console.error('Error fetching company:', error);
@@ -295,10 +302,11 @@ export default function Menu() {
 
   // Floating photo animation enabled per establishment
   const floatingPhoto = settings.floatingPhoto;
+  const terminology = useMemo(() => getCompanyTerminology(isFlorist), [isFlorist]);
 
   // Convert buttonColor hex to HSL for CSS variable override
   const buttonColorStyle = useMemo(() => {
-    const hex = settings.buttonColor;
+    const hex = getPublicMenuColor(isFlorist, settings.buttonColor);
     if (!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)) return undefined;
     const r = parseInt(hex.slice(1, 3), 16) / 255;
     const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -317,7 +325,7 @@ export default function Menu() {
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
     const fg = lum > 0.5 ? '0 0% 0%' : '0 0% 100%';
     return { '--primary': hsl, '--primary-foreground': fg } as React.CSSProperties;
-  }, [settings.buttonColor]);
+  }, [isFlorist, settings.buttonColor]);
 
   // Get optional groups applicable to a specific product (with per-product overrides)
   function getGroupsForProduct(productId: string, productCategory: string): OptionalGroup[] {
@@ -1245,7 +1253,7 @@ export default function Menu() {
       const currentScript = document.querySelector('script[src*="assets/index-"]');
       const currentSrc = currentScript?.getAttribute('src') || '';
       if (latestMatch && currentSrc && !currentSrc.includes(latestMatch[0])) {
-        toast.error('Uma nova versão do cardápio chegou. Atualizando a página — é só confirmar o pedido de novo.');
+        toast.error(`Uma nova versão do ${terminology.menuLower} chegou. Atualizando a página — é só confirmar o pedido de novo.`);
         setTimeout(() => window.location.reload(), 1200);
         return;
       }
@@ -1737,7 +1745,7 @@ export default function Menu() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando cardápio...</p>
+        <p className="text-muted-foreground">Carregando {terminology.menuLower}...</p>
       </div>
     );
   }
@@ -1753,7 +1761,7 @@ export default function Menu() {
             <div className="space-y-2">
               <h2 className="text-xl font-bold">Empresa não encontrada</h2>
               <p className="text-muted-foreground">
-                O cardápio que você está procurando não existe ou está inativo.
+                O {terminology.menuLower} que você está procurando não existe ou está inativo.
               </p>
             </div>
           </CardContent>
@@ -1770,7 +1778,7 @@ export default function Menu() {
     <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
       <div className="max-w-3xl mx-auto flex items-center justify-between gap-2">
         <p className="text-sm text-white truncate">
-          <strong>🔗 Link do cardápio:</strong>{' '}
+          <strong>🔗 Link do {terminology.menuLower}:</strong>{' '}
           <a href={menuLink} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline">
             {menuLink}
           </a>
@@ -1809,6 +1817,7 @@ export default function Menu() {
         onNavigateBack={() => navigate(-1)}
         buttonColorStyle={buttonColorStyle}
         publicCoupons={publicCoupons}
+        menuLabel={terminology.menu}
       />
     ) : (
     <div className="min-h-screen bg-background pb-24" style={buttonColorStyle}>
@@ -1851,7 +1860,7 @@ export default function Menu() {
                     </svg>
                   </Button>
                   <h1 className="text-lg font-bold text-foreground truncate">
-                    {settings.storeName || company?.name || 'Cardápio'}
+                    {settings.storeName || company?.name || terminology.menu}
                   </h1>
                   <div className="flex flex-col items-start gap-0.5 flex-shrink-0">
                     <span className={cn(

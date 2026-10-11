@@ -57,6 +57,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import logoIcon from '@/assets/logo-icon.png';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 /**
  * Sidebar exclusiva para lojas com PDV V2 ativo.
@@ -71,6 +72,7 @@ export function PDVV2Sidebar() {
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
+  const { terminology } = useCompanyProfile(company?.id);
   const financeiroActive = financeiroEnabled || isModuleEnabled('financeiro');
 
   const getInitials = (name: string | null | undefined) => {
@@ -125,7 +127,7 @@ export function PDVV2Sidebar() {
     ...(isModuleEnabled('sales_campaigns')
       ? [{ title: 'Campanhas de Vendas', icon: Megaphone, href: '/campanhas' }]
       : []),
-    { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
+    { title: terminology.viewMenu, icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
   const finance = [

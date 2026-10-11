@@ -998,7 +998,7 @@ export function AppSidebar() {
                 >
                   <Link to="/importar-cardapio">
                     <Upload className="w-4 h-4" />
-                    <span>Importar Cardápio</span>
+                    <span>{terminology.importMenu}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
