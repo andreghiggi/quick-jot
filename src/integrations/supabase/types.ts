@@ -5125,6 +5125,10 @@ export type Database = {
         }
         Returns: string
       }
+      is_company_module_enabled: {
+        Args: { _company_id: string; _module_name: string }
+        Returns: boolean
+      }
       is_company_suspended: { Args: { _company_id: string }; Returns: boolean }
       is_reserved_subdomain: { Args: { _subdomain: string }; Returns: boolean }
       next_finance_document_number: {
