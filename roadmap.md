@@ -1,7 +1,7 @@
 # Roadmap — Retomada ComandaTech
 
 ## Perfil Floricultura
-- [ ] Criar perfil adicional isolado por empresa, com identidade verde e linguagem de catálogo
+- [x] Criar perfil adicional isolado por empresa, com identidade verde e linguagem de catálogo
 - [ ] Validar regressão em restaurante e piloto isolado antes de qualquer liberação geral
 
 - [x] Preparar acionamento único 21/09/2026 00:00 BRT (somente diagnóstico + cópia de retorno do frontend)

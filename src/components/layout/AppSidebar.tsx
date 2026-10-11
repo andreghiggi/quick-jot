@@ -66,7 +66,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import logoIcon from '@/assets/logo-icon.png';
 import { AdminSidebar } from './AdminSidebar';
-import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { getCompanyTerminology } from '@/lib/companyProfile';
 
 export function AppSidebar() {
   const location = useLocation();
@@ -83,7 +83,7 @@ export function AppSidebar() {
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
-  const { terminology } = useCompanyProfile(company?.id);
+  const terminology = getCompanyTerminology(isModuleEnabled('floricultura'));
   // Fallback robusto: useMercadoEnabled depende de cache em localStorage e pode
   // ficar momentaneamente desatualizado. O useCompanyModules tem realtime e é a
   // fonte da verdade — combinamos os dois para evitar sumiço do grupo Movimentações.

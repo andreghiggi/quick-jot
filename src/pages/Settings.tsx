@@ -1153,7 +1153,7 @@ if errorlevel 1 (
             </CardContent>
           </Card>
           <ButtonColorPicker
-            value={storeSettings.buttonColor}
+            value={isFlorist && storeSettings.buttonColor.toLowerCase() === '#ef4444' ? FLORIST_PRIMARY_HEX : storeSettings.buttonColor}
             menuLabel={terminology.menuLower}
             defaultColor={isFlorist ? FLORIST_PRIMARY_HEX : undefined}
             defaultColorName={isFlorist ? 'verde da Floricultura' : undefined}
