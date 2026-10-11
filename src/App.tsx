@@ -137,6 +137,7 @@ function AppRoutes() {
     <Routes>
       {/* Public Routes */}
       <Route path="/auth" element={<Auth />} />
+      <Route path="/floricultura" element={<Navigate to="/auth?perfil=floricultura" replace />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/cardapio/:slug" element={<P.Menu />} />
       <Route path="/mesa/:slug" element={<P.MesaQR />} />
