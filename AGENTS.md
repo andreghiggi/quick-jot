@@ -1,0 +1,1 @@
+Profile-specific visual identity and terminology must derive from `company_modules` through centralized profile helpers, so disabled or absent profiles preserve existing companies unchanged.

@@ -12,6 +12,7 @@ export const MODULE_SHORT_LABEL: Record<string, string> = {
   cardapio_mesa: 'QR Mesa',
   mercado: 'Loja',
   cardapio: 'Cardápio',
+  floricultura: 'Floricultura',
   financeiro: 'Financeiro',
   pinpdv_v1: 'PinPDV v1',
 };

@@ -7,12 +7,15 @@ import { Palette, Upload, Pipette, X, RotateCcw, Save } from 'lucide-react';
 interface ButtonColorPickerProps {
   value: string;
   onChange: (color: string) => void;
+  menuLabel?: string;
+  defaultColor?: string;
+  defaultColorName?: string;
 }
 
 const DEFAULT_BUTTON_COLOR = '#ef4444';
 
-export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
-  const savedValue = value || DEFAULT_BUTTON_COLOR;
+export function ButtonColorPicker({ value, onChange, menuLabel = 'cardápio', defaultColor = DEFAULT_BUTTON_COLOR, defaultColorName = 'vermelho' }: ButtonColorPickerProps) {
+  const savedValue = value || defaultColor;
   const [pendingColor, setPendingColor] = useState<string>(savedValue);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [hoverColor, setHoverColor] = useState<string | null>(null);
@@ -22,8 +25,8 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setPendingColor(value || DEFAULT_BUTTON_COLOR);
-  }, [value]);
+    setPendingColor(value || defaultColor);
+  }, [value, defaultColor]);
 
   const hasChanges = pendingColor !== savedValue;
 
@@ -84,7 +87,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
   }, []);
 
   const handleReset = () => {
-    setPendingColor(DEFAULT_BUTTON_COLOR);
+    setPendingColor(defaultColor);
   };
 
   const handleSave = () => {
@@ -106,7 +109,7 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
           Cor dos Botões
         </CardTitle>
         <CardDescription>
-          Carregue a sua logomarca e extraia a cor desejada para personalizar os botões do seu cardápio.
+          Carregue a sua logomarca e extraia a cor desejada para personalizar os botões do seu {menuLabel}.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -122,13 +125,13 @@ export function ButtonColorPicker({ value, onChange }: ButtonColorPickerProps) {
             </p>
             <p className="text-xs text-muted-foreground">
               {!hasChanges
-                ? (pendingColor === DEFAULT_BUTTON_COLOR
-                    ? 'Cor padrão do sistema (vermelho)'
-                    : 'Esta cor será aplicada aos botões e à área de novidades do cardápio')
+                ? (pendingColor === defaultColor
+                    ? `Cor padrão do sistema (${defaultColorName})`
+                    : `Esta cor será aplicada aos botões e à área de novidades do ${menuLabel}`)
                 : 'Clique em Salvar para aplicar a nova cor'}
             </p>
           </div>
-          {pendingColor !== DEFAULT_BUTTON_COLOR && (
+          {pendingColor !== defaultColor && (
             <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
               <RotateCcw className="w-4 h-4 mr-1" />
               Resetar

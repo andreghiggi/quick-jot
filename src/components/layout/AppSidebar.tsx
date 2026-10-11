@@ -66,6 +66,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import logoIcon from '@/assets/logo-icon.png';
 import { AdminSidebar } from './AdminSidebar';
+import { getCompanyTerminology } from '@/lib/companyProfile';
 
 export function AppSidebar() {
   const location = useLocation();
@@ -82,6 +83,7 @@ export function AppSidebar() {
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
+  const terminology = getCompanyTerminology(isModuleEnabled('floricultura'));
   // Fallback robusto: useMercadoEnabled depende de cache em localStorage e pode
   // ficar momentaneamente desatualizado. O useCompanyModules tem realtime e é a
   // fonte da verdade — combinamos os dois para evitar sumiço do grupo Movimentações.
@@ -171,7 +173,7 @@ export function AppSidebar() {
     ...(isModuleEnabled('sales_campaigns')
       ? [{ title: 'Campanhas de Vendas', icon: Megaphone, href: '/campanhas' }]
       : []),
-    { title: 'Ver cardápio', icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
+    { title: terminology.viewMenu, icon: ChefHat, href: `/cardapio/${company?.slug || ''}` },
   ];
 
   // Itens top-level: Pedidos, Comandas, PDV legado (fora de Movimentações)
@@ -996,7 +998,7 @@ export function AppSidebar() {
                 >
                   <Link to="/importar-cardapio">
                     <Upload className="w-4 h-4" />
-                    <span>Importar Cardápio</span>
+                    <span>{terminology.importMenu}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -28,6 +28,8 @@ import instalarImpressaoCmd from '../../scripts/instalar_impressao.cmd?raw';
 import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
 import verificarPywin32Py from '../../scripts/verificar_pywin32.py?raw';
 import { usePrintStations } from '@/hooks/usePrintStations';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { FLORIST_PRIMARY_HEX } from '@/lib/companyProfile';
 
 const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
@@ -51,6 +53,7 @@ export default function Settings() {
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
   const { stations, addStation, deleteStation, updateStationPrinter } = usePrintStations(company?.id);
+  const { isFlorist, terminology } = useCompanyProfile(company?.id);
   const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
@@ -456,7 +459,7 @@ if errorlevel 1 (
               <div className="space-y-2">
                 <Label htmlFor="slug" className="flex items-center gap-2">
                   <Globe className="w-4 h-4" />
-                  Slug (URL do cardápio)
+                  Slug (URL do {terminology.menuLower})
                 </Label>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">/cardapio/</span>
@@ -493,7 +496,7 @@ if errorlevel 1 (
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Apenas letras minúsculas e números, entre 3 e 30 caracteres. Esse é o endereço curto e profissional do seu cardápio.
+                  Apenas letras minúsculas e números, entre 3 e 30 caracteres. Esse é o endereço curto e profissional do seu {terminology.menuLower}.
                 </p>
               </div>
             </CardContent>
@@ -612,10 +615,10 @@ if errorlevel 1 (
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Image className="w-5 h-5" />
-                Banner do Cardápio
+                Banner do {terminology.menu}
               </CardTitle>
               <CardDescription>
-                Imagem exibida no topo do cardápio online (recomendado: 1200x400 pixels)
+                Imagem exibida no topo do {terminology.onlineMenuLower} (recomendado: 1200x400 pixels)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1035,10 +1038,10 @@ if errorlevel 1 (
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5" />
-                  Layout do Cardápio Online
+                  Layout do {terminology.onlineMenu}
                 </CardTitle>
                 <CardDescription>
-                  Escolha qual layout será exibido no cardápio público para seus clientes
+                  Escolha qual layout será exibido no {terminology.menuLower} público para seus clientes
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1048,7 +1051,7 @@ if errorlevel 1 (
                     await updateSetting('menu_layout', value);
                     toast({
                       title: 'Layout alterado',
-                      description: `Cardápio online agora usa o layout ${value.toUpperCase()}`,
+                      description: `${terminology.onlineMenu} agora usa o layout ${value.toUpperCase()}`,
                     });
                   }}
                   className="space-y-4"
@@ -1058,7 +1061,7 @@ if errorlevel 1 (
                     <div className="flex-1">
                       <Label htmlFor="layout-v1" className="font-medium cursor-pointer text-base">V1 — Clássico</Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Categorias em pills horizontais no topo. Todos os produtos listados na mesma página com separação por seção. Ideal para cardápios menores.
+                        Categorias em pills horizontais no topo. Todos os produtos listados na mesma página com separação por seção. Ideal para {terminology.menuLower}s menores.
                       </p>
                       <div className="mt-2 flex gap-2">
                         <Badge variant="secondary" className="text-xs">Atual</Badge>
@@ -1108,7 +1111,7 @@ if errorlevel 1 (
                       toast({
                         title: value ? 'Rolagem lateral ativada' : 'Rolagem lateral desativada',
                         description: value
-                          ? 'Adicionais serão exibidos em etapas laterais no cardápio'
+                          ? `Adicionais serão exibidos em etapas laterais no ${terminology.menuLower}`
                           : 'Adicionais voltaram ao modo padrão (vertical)',
                       });
                     }}
@@ -1125,7 +1128,7 @@ if errorlevel 1 (
                 Foto Flutuante nos Produtos
               </CardTitle>
               <CardDescription>
-                Ativa animação de deslizamento vertical nas fotos dos produtos do cardápio
+                Ativa animação de deslizamento vertical nas fotos dos produtos do {terminology.menuLower}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1150,7 +1153,10 @@ if errorlevel 1 (
             </CardContent>
           </Card>
           <ButtonColorPicker
-            value={storeSettings.buttonColor}
+            value={isFlorist && storeSettings.buttonColor.toLowerCase() === '#ef4444' ? FLORIST_PRIMARY_HEX : storeSettings.buttonColor}
+            menuLabel={terminology.menuLower}
+            defaultColor={isFlorist ? FLORIST_PRIMARY_HEX : undefined}
+            defaultColorName={isFlorist ? 'verde da Floricultura' : undefined}
             onChange={async (color) => {
               await updateSetting('button_color', color);
               toast({
@@ -1167,7 +1173,7 @@ if errorlevel 1 (
                 Seção em destaque
               </CardTitle>
               <CardDescription>
-                Este nome aparece no cardápio na seção de produtos marcados com ⭐. Marque um produto com a estrela para ele aparecer aqui.
+                Este nome aparece no {terminology.menuLower} na seção de produtos marcados com ⭐. Marque um produto com a estrela para ele aparecer aqui.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

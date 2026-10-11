@@ -93,6 +93,7 @@ interface MenuV2Props {
   buttonColorStyle?: React.CSSProperties;
   hideEstimatedWaitTime?: boolean;
   publicCoupons?: Coupon[];
+  menuLabel?: string;
 }
 
 export function MenuV2({
@@ -119,6 +120,7 @@ export function MenuV2({
   buttonColorStyle,
   hideEstimatedWaitTime = false,
   publicCoupons = [],
+  menuLabel = 'Cardápio',
 }: MenuV2Props) {
   const AMORE_MIO_COMPANY_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
   const isAmoreMio = company?.id === AMORE_MIO_COMPANY_ID;
@@ -358,7 +360,7 @@ export function MenuV2({
             <div className="flex-1 min-w-0">
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
                 <h1 className="text-lg font-bold text-foreground uppercase" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {settings.storeName || company?.name || 'Cardápio'}
+          {settings.storeName || company?.name || menuLabel}
                 </h1>
                 <div>
                   <span className={cn(
@@ -425,7 +427,7 @@ export function MenuV2({
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar no cardápio..."
+              placeholder={`Buscar no ${menuLabel.toLowerCase()}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-10"

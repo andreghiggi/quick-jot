@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Upload, Loader2, Eye, Check, FileImage, Trash2, Plus, Sparkles, AlertTriangle, Wand2 } from 'lucide-react';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 interface ExtractedProduct {
   name: string;
@@ -61,6 +62,7 @@ export default function MenuImport() {
   const { subcategories, getSubcategoriesByCategoryId, refetch: refetchSubcategories } = useSubcategories({ companyId: company?.id });
   const { addProduct } = useProducts({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
+  const { terminology } = useCompanyProfile(company?.id);
   
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -464,7 +466,7 @@ export default function MenuImport() {
   const selectedCount = extractedProducts.filter(p => p.selected).length;
 
   return (
-    <AppLayout title="Importar Cardápio">
+    <AppLayout title={terminology.importMenu}>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Step: Upload */}
         {step === 'upload' && (
@@ -475,7 +477,7 @@ export default function MenuImport() {
                 Importar por Foto ou Arquivo
               </CardTitle>
               <CardDescription>
-                Envie uma foto ou arquivo do seu cardápio e nosso sistema irá extrair os produtos automaticamente.
+                Envie uma foto ou arquivo do seu {terminology.menuLower} e nosso sistema irá extrair os produtos automaticamente.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -587,7 +589,7 @@ export default function MenuImport() {
                       <Select value={bulkType} onValueChange={(v) => setBulkType(v as any)}>
                         <SelectTrigger className="h-9 w-40"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="cardapio">Cardápio</SelectItem>
+                          <SelectItem value="cardapio">{terminology.menu}</SelectItem>
                           <SelectItem value="mercado">Mercado</SelectItem>
                           <SelectItem value="ambos">Ambos</SelectItem>
                         </SelectContent>
@@ -702,7 +704,7 @@ export default function MenuImport() {
                             <Select value={product.productType} onValueChange={(v) => updateProduct(index, 'productType', v as any)}>
                               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="cardapio">Cardápio</SelectItem>
+                                <SelectItem value="cardapio">{terminology.menu}</SelectItem>
                                 <SelectItem value="mercado">Mercado</SelectItem>
                                 <SelectItem value="ambos">Ambos</SelectItem>
                               </SelectContent>
@@ -778,7 +780,7 @@ export default function MenuImport() {
                           </label>
                           <label className="flex items-center gap-2">
                             <Switch checked={product.menuItem} onCheckedChange={(v) => updateProduct(index, 'menuItem', v)} />
-                            Visível no Cardápio
+                            Visível no {terminology.menu}
                           </label>
                           <label className="flex items-center gap-2">
                             <Switch checked={product.waiterItem} onCheckedChange={(v) => updateProduct(index, 'waiterItem', v)} />

@@ -29,6 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { applyStockMovementOnce } from '@/hooks/useStockMovements';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 interface ExtractedProduct {
   name: string;
@@ -53,6 +54,7 @@ export default function Products() {
   // no perfil "só Mercado" só na página de Produtos.
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
+  const { terminology } = useCompanyProfile(company?.id);
   const { categories, addCategory, refetch: refetchCategories } = useCategories({ companyId: company?.id });
   const { subcategories, getSubcategoriesByCategoryId } = useSubcategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
@@ -1724,9 +1726,9 @@ export default function Products() {
           </DialogHeader>
           <div className="grid grid-cols-1 gap-2 pt-2">
             {([
-              { v: 'cardapio', label: 'Cardápio', desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
+              { v: 'cardapio', label: terminology.menu, desc: 'Produtos vendidos no canal online', Icon: UtensilsCrossed },
               { v: 'mercado', label: 'Loja', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
-              { v: 'ambos', label: 'Ambos', desc: 'Vendido em cardápio e loja', Icon: Repeat },
+              { v: 'ambos', label: 'Ambos', desc: `Vendido em ${terminology.menuLower} e loja`, Icon: Repeat },
             ] as const).map(({ v, label, desc, Icon }) => (
               <button
                 key={v}

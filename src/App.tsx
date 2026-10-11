@@ -22,6 +22,7 @@ import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useFinanceiroEnabled } from "@/hooks/useFinanceiroEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
+import { CompanyProfileTheme } from "@/components/CompanyProfileTheme";
 
 const queryClient = new QueryClient();
 
@@ -663,6 +664,7 @@ function AppWithProviders() {
   const { isImpersonating } = useAuthContext();
   
   return (
+    <CompanyProfileTheme>
     <OrderProvider>
       <ImpersonationBanner />
       <ImplementedSuggestionsModal />
@@ -673,6 +675,7 @@ function AppWithProviders() {
         <AppRoutes />
       </div>
     </OrderProvider>
+    </CompanyProfileTheme>
   );
 }
 
