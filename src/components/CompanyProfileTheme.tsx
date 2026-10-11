@@ -1,7 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
-import { rememberLoginProfile } from '@/lib/companyProfile';
+import { getLoginIsFlorist, rememberLoginProfile } from '@/lib/companyProfile';
 
 const FLORIST_THEME: Record<string, string> = {
   '--primary': '145 94% 12%',
@@ -21,11 +22,15 @@ const FLORIST_THEME: Record<string, string> = {
 
 export function CompanyProfileTheme({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
-  const { isFlorist } = useCompanyProfile(company?.id);
+  const { isFlorist: companyIsFlorist } = useCompanyProfile(company?.id);
+  const { pathname, search } = useLocation();
+  // Na tela de login (sem empresa carregada), usa o perfil do link/memória.
+  const isLoginScreen = !company?.id && pathname === '/auth';
+  const isFlorist = isLoginScreen ? getLoginIsFlorist(search) : companyIsFlorist;
 
   useEffect(() => {
-    if (company?.id) rememberLoginProfile(isFlorist);
-  }, [company?.id, isFlorist]);
+    if (company?.id) rememberLoginProfile(companyIsFlorist);
+  }, [company?.id, companyIsFlorist]);
 
   useEffect(() => {
     if (!isFlorist) return;

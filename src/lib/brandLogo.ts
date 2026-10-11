@@ -1,6 +1,6 @@
 import logoIcon from '@/assets/logo-icon.png';
-import floristLogo from '@/assets/logo-floricultura.png.asset.json';
+import floristLogo from '@/assets/logo-floricultura.png';
 
 export function getBrandLogo(isFlorist: boolean): string {
-  return isFlorist ? floristLogo.url : logoIcon;
+  return isFlorist ? floristLogo : logoIcon;
 }
