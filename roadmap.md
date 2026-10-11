@@ -41,3 +41,8 @@
 - [ ] Teste real na I9 (ligar a opção e testar com cartões) — aguarda usuário
 - [ ] Espelhar banco e função do QR na VPS antes de publicar — sem acesso à VPS nesta sessão
 - [ ] Novidades + versão 1.76.0-beta
+
+- [x] Floricultura Etapa 1: tabela de dados do presente + regras (turnos 2h, cartão grátis, dedicatória manuscrita) — só perfil floricultura
+- [ ] Floricultura Etapa 2: checkout guiado no catálogo
+- [ ] Floricultura Etapa 3: destaque nos pedidos (copiar mensagem)
+- [ ] Espelhar tabela order_gift_details na VPS antes de publicar
