@@ -12,7 +12,8 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import logoIcon from '@/assets/logo-icon.png';
+import { getBrandLogo } from '@/lib/brandLogo';
+import { getLoginIsFlorist, getProductTagline, usesTableService } from '@/lib/companyProfile';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -60,6 +61,7 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [isWaiterLogin, setIsWaiterLogin] = useState(false);
+  const [isFloristLogin] = useState(() => getLoginIsFlorist());
   const [waiterCpf, setWaiterCpf] = useState('');
   const [waiterPin, setWaiterPin] = useState('');
   
@@ -214,11 +216,11 @@ export default function Auth() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center bg-white shadow-lg">
-              <img src={logoIcon} alt="ComandaTech" className="w-16 h-16 object-contain" />
+              <img src={getBrandLogo(isFloristLogin)} alt="ComandaTech" className="w-16 h-16 object-contain" />
             </div>
           </div>
           <CardTitle className="text-2xl text-primary">ComandaTech</CardTitle>
-          <CardDescription>Software para Restaurantes</CardDescription>
+          <CardDescription>{getProductTagline(isFloristLogin)}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
@@ -227,6 +229,7 @@ export default function Auth() {
             </TabsList>
             
             <TabsContent value="login">
+              {usesTableService(isFloristLogin) && (
               <div className="flex items-center justify-end gap-2 mt-4">
                 <Label htmlFor="waiter-toggle" className="text-sm text-muted-foreground cursor-pointer">
                   Sou garçom
@@ -237,6 +240,8 @@ export default function Auth() {
                   onCheckedChange={(v) => { setIsWaiterLogin(v); setErrors({}); }}
                 />
               </div>
+              )}
+
 
               {isWaiterLogin ? (
                 <form onSubmit={handleLogin} className="space-y-4 mt-4">
