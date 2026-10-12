@@ -46,3 +46,10 @@
 - [ ] Floricultura Etapa 2: checkout guiado no catálogo
 - [ ] Floricultura Etapa 3: destaque nos pedidos (copiar mensagem)
 - [ ] Espelhar tabela order_gift_details na VPS antes de publicar
+
+## Floricultura — destino por produto
+- [x] Presente / para mim → retirada ou entrega no produto (após adicionais), data+turno, destinatário, endereço e cartão
+- [x] Taxa por endereço de entrega distinto; endereço "para mim" preenche o cadastro
+- [x] Popup de primeira compra; cupom oculto sem cupom ativo (só floricultura)
+- [ ] Comanda de produção física separada por destino — itens já saem marcados "DESTINO N"; separar o papel exige ajuste na impressora, liberado só com autorização (regra de impressão por loja)
+- [ ] Etapa 3: presente em destaque nos pedidos com botão Copiar
