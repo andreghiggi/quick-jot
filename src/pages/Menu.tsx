@@ -39,6 +39,8 @@ import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddres
 import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
 import { FloristGiftSection } from '@/components/menu/FloristGiftSection';
+import { FloristItemDestination } from '@/components/menu/FloristItemDestination';
+import { validateDestination, destinationKey, totalDeliveryFee, describeDestination, type FloristDestination } from '@/lib/floristDestination';
 import { validateGift, normalizePhone, GiftInput } from '@/lib/floristGift';
 const todaySP = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
@@ -175,6 +177,10 @@ export default function Menu() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
+  const [itemDestination, setItemDestination] = useState<Partial<FloristDestination>>({});
+  const [showNewCustomerPopup, setShowNewCustomerPopup] = useState(false);
+  const [newCustomerPromptedFor, setNewCustomerPromptedFor] = useState<string | null>(null);
+  const customerNameRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set());
   const [showAddedToCart, setShowAddedToCart] = useState(false);
@@ -619,6 +625,10 @@ export default function Menu() {
 
           setCustomerLoaded(true);
           toast.success('Dados carregados automaticamente!', { duration: 2000 });
+        } else if (!error && isFlorist && newCustomerPromptedFor !== cleanPhone) {
+          // Primeira compra na loja: popup de boas-vindas (somente floricultura)
+          setNewCustomerPromptedFor(cleanPhone);
+          setShowNewCustomerPopup(true);
         }
       } catch (error) {
         console.error('Error loading customer:', error);
@@ -965,9 +975,30 @@ export default function Menu() {
       return;
     }
 
+    let floristDestination: FloristDestination | undefined;
+    if (isFlorist) {
+      const errs = validateDestination(itemDestination, todaySP());
+      if (errs.length > 0) { toast.error(errs[0]); return; }
+      const d = { ...itemDestination } as FloristDestination;
+      if (d.mode === 'delivery') {
+        const nb = floristNeighborhoods.find((n) => n.name.toLowerCase() === (d.neighborhood || '').trim().toLowerCase());
+        d.fee = nb ? nb.fee : (settings.deliveryFeeCity || 0);
+        // "Para mim mesmo": já preenche o endereço do cadastro final
+        if (d.forWhom === 'self') {
+          if (!deliveryAddress) setDeliveryAddress(d.street || '');
+          if (!deliveryNumber) setDeliveryNumber(d.number || '');
+          if (!deliveryComplement) setDeliveryComplement(d.complement || '');
+          if (!deliveryNeighborhood) setDeliveryNeighborhood(d.neighborhood || '');
+          if (!deliveryReference) setDeliveryReference(d.reference || '');
+        }
+      }
+      floristDestination = d;
+    }
+
     const newItems = Array.from({ length: times }, (_, i): CartItem => {
       const perNote = (notesList?.[i] ?? itemNotes ?? '').trim();
       return {
+        floristDestination,
         product: selectedProduct,
         quantity: 1,
         selectedOptionals: allOptionals.map(o => ({ ...o })),
@@ -981,6 +1012,7 @@ export default function Menu() {
     setSelectedOptionals([]);
     setSelectedGroupItems({});
     setItemNotes('');
+    setItemDestination({});
     setShowAddedToCart(true);
   }
 
@@ -1089,7 +1121,14 @@ export default function Menu() {
   // Cupom aplicado (encapsulado SOMENTE neste fluxo do cardápio público)
   const couponResult = appliedCoupon ? computeCouponDiscount(appliedCoupon, cartTotal) : null;
   const discountAmount = couponResult?.eligible ? couponResult.discountAmount : 0;
-  const deliveryFee = baseFee;
+  // Floricultura: uma taxa por endereço de entrega distinto do carrinho.
+  const floristHasDest = isFlorist && cart.some((c) => c.floristDestination);
+  const floristDeliveryCount = floristHasDest
+    ? new Set(cart.filter((c) => c.floristDestination?.mode === 'delivery').map((c) => destinationKey(c.floristDestination))).size
+    : 0;
+  const floristFee = floristHasDest ? totalDeliveryFee(cart.map((c) => c.floristDestination)) : 0;
+  const floristFreeDelivery = floristHasDest && settings.freeDeliveryEnabled && settings.freeDeliveryMinOrder > 0 && cartTotal >= settings.freeDeliveryMinOrder;
+  const deliveryFee = floristHasDest ? (floristFreeDelivery ? 0 : floristFee) : baseFee;
   const orderTotal = Math.max(0, cartTotal - discountAmount) + deliveryFee;
 
   // Cupons públicos para banner + auto-aplicação
@@ -1209,7 +1248,7 @@ export default function Menu() {
       errors.delete('deliveryType');
       errors.delete('selectedNeighborhood');
     }
-    const giftErrors = isFlorist && floristItemsWithDest.length === 0 ? validateGift(gift, todaySP()) : [];
+    const giftErrors: string[] = [];
     if (giftErrors.length > 0) errors.add('gift');
 
     if (errors.size > 0) {
@@ -1257,9 +1296,14 @@ export default function Menu() {
 
     // Get delivery type label
     let deliveryTypeLabel = 'Retirada';
-    if (deliveryType === 'city') deliveryTypeLabel = 'Entrega Cidade';
+    if (isFlorist && floristItemsWithDest.length > 0) {
+      const n = floristDestKeys.filter((k) => k.startsWith('delivery|')).length;
+      deliveryTypeLabel = n > 0 ? `Entrega em ${n} endereço(s)` : 'Retirada na loja';
+    }
+    if (isFlorist && floristItemsWithDest.length > 0) { /* já definido acima */ }
+    else if (deliveryType === 'city') deliveryTypeLabel = 'Entrega Cidade';
     else if (deliveryType === 'interior') deliveryTypeLabel = 'Entrega Interior';
-    else if (deliveryType === 'neighborhood' && selectedNeighborhood) {
+    else if (!isFlorist && deliveryType === 'neighborhood' && selectedNeighborhood) {
       const neighborhood = getActiveNeighborhoods().find(n => n.id === selectedNeighborhood);
       deliveryTypeLabel = `Entrega ${neighborhood?.neighborhoodName || 'Bairro'}`;
     }
@@ -2117,7 +2161,7 @@ export default function Menu() {
     )}
 
       {/* Product Detail Dialog */}
-      <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); setComboFlow(null); } }}>
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); setComboFlow(null); setItemDestination({}); } }}>
         <DialogContent style={buttonColorStyle} className="h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             {comboFlow && (
@@ -2361,6 +2405,21 @@ export default function Menu() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Floricultura: popup de primeira compra */}
+      <Dialog open={showNewCustomerPopup} onOpenChange={setShowNewCustomerPopup}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>👋 Primeira compra por aqui? Seja bem-vindo(a)!</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Informe todos os seus dados completos somente na primeira compra, nas demais compras é só digitar seu número de telefone que os seus dados carregam automaticamente.
+          </p>
+          <Button className="w-full" size="lg" onClick={() => { setShowNewCustomerPopup(false); setTimeout(() => customerNameRef.current?.focus(), 150); }}>
+            Prosseguir com o cadastro
+          </Button>
         </DialogContent>
       </Dialog>
 
