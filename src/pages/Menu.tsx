@@ -2126,7 +2126,7 @@ export default function Menu() {
               </div>
             )}
           </DialogHeader>
-          <div className={(settings.lateralScrollOptionals && selectedProduct && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) ? "flex-1 min-h-0 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto"}>
+          <div className={(useOptionalsWizard && selectedProduct && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) ? "flex-1 min-h-0 flex flex-col overflow-hidden" : "flex-1 overflow-y-auto"}>
             {selectedProduct && (
               <>
                 {selectedProduct.imageUrl && (
@@ -2140,8 +2140,8 @@ export default function Menu() {
                     />
                   </div>
                 )}
-                <div className={(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) ? "px-6 py-4 flex-1 min-h-0 flex flex-col" : "px-6 py-4"}>
-                  {settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
+                <div className={(useOptionalsWizard && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) ? "px-6 py-4 flex-1 min-h-0 flex flex-col" : "px-6 py-4"}>
+                  {useOptionalsWizard && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0)) ? (
                     <LateralOptionalsWizard
                       key={comboFlow ? `combo-step-${comboFlow.index}` : `prod-${selectedProduct.id}`}
                       product={selectedProduct}
