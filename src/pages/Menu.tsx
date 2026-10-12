@@ -1202,7 +1202,14 @@ export default function Menu() {
     if (!paymentMethod) errors.add('paymentMethod');
     if (cart.length === 0) errors.add('cart');
 
-    const giftErrors = isFlorist ? validateGift(gift, todaySP()) : [];
+    // Floricultura: cada item já traz seu destino validado no momento de adicionar.
+    const floristItemsWithDest = isFlorist ? cart.filter((c) => c.floristDestination) : [];
+    const floristDestKeys = Array.from(new Set(floristItemsWithDest.map((c) => destinationKey(c.floristDestination))));
+    if (isFlorist && floristItemsWithDest.length > 0) {
+      errors.delete('deliveryType');
+      errors.delete('selectedNeighborhood');
+    }
+    const giftErrors = isFlorist && floristItemsWithDest.length === 0 ? validateGift(gift, todaySP()) : [];
     if (giftErrors.length > 0) errors.add('gift');
 
     if (errors.size > 0) {
@@ -1211,11 +1218,16 @@ export default function Menu() {
       return;
     }
     const giftLine = isFlorist
-      ? [
-          `Agendado: ${gift.scheduledDate!.split('-').reverse().join('/')} ${gift.scheduledSlot}`,
-          gift.isGift ? `PRESENTE para ${gift.recipientName!.trim()} (${gift.recipientPhone})${gift.allowNotify ? '' : ' - SURPRESA, não avisar'}` : '',
-          gift.isGift && gift.cardIncluded ? `Cartão: "${gift.cardMessage!.trim()}"` : '',
-        ].filter(Boolean).join(' | ')
+      ? (floristItemsWithDest.length > 0
+          ? floristDestKeys.map((k, i) => {
+              const items = floristItemsWithDest.filter((c) => destinationKey(c.floristDestination) === k);
+              return `DESTINO ${i + 1}: ${describeDestination(items[0].floristDestination!)} | Itens: ${items.map((c) => `${c.quantity}x ${c.product.name}`).join(', ')}`;
+            }).join(' || ')
+          : [
+              `Agendado: ${gift.scheduledDate!.split('-').reverse().join('/')} ${gift.scheduledSlot}`,
+              gift.isGift ? `PRESENTE para ${gift.recipientName!.trim()} (${gift.recipientPhone})${gift.allowNotify ? '' : ' - SURPRESA, não avisar'}` : '',
+              gift.isGift && gift.cardIncluded ? `Cartão: "${gift.cardMessage!.trim()}"` : '',
+            ].filter(Boolean).join(' | '))
       : '';
     setFieldErrors(new Set());
 
@@ -1333,6 +1345,11 @@ export default function Menu() {
         // Anexa marcador [DESC] em notes para o auto_printer renderizar a descrição no recibo.
         // Aplicado para qualquer loja em que a categoria do produto tenha print_description ligado.
         let itemNotes = item.notes || null;
+        if (isFlorist && item.floristDestination) {
+          const idx = floristDestKeys.indexOf(destinationKey(item.floristDestination)) + 1;
+          const tag = `DESTINO ${idx}: ${describeDestination(item.floristDestination)}`;
+          itemNotes = itemNotes ? `${itemNotes} | ${tag}` : tag;
+        }
         if (item.product.description) {
           const cat = categories.find((c) => c.name === item.product.category);
           if (cat?.printDescription) {
@@ -1357,7 +1374,7 @@ export default function Menu() {
 
       if (itemsError) throw itemsError;
 
-      if (isFlorist && company?.id) {
+      if (isFlorist && company?.id && !cart.some((c) => c.floristDestination)) {
         const { error: giftError } = await supabase.from('order_gift_details').insert({
           order_id: newOrder.id,
           company_id: company.id,
