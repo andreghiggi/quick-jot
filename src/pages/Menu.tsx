@@ -2311,10 +2311,19 @@ export default function Menu() {
                         <Input
                           value={itemNotes}
                           onChange={(e) => setItemNotes(e.target.value)}
-                          placeholder="Ex: Sem cebola, bem passado..."
+                          placeholder={isFlorist ? 'Ex: Tom de flor preferido, detalhes da embalagem...' : 'Ex: Sem cebola, bem passado...'}
                           className="mt-2"
                         />
                       </div>
+                      {isFlorist && !comboFlow && (
+                        <FloristItemDestination
+                          value={itemDestination}
+                          onChange={setItemDestination}
+                          today={todaySP()}
+                          neighborhoods={floristNeighborhoods}
+                          pickupEnabled={settings.enablePickup !== false}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -2322,14 +2331,17 @@ export default function Menu() {
             )}
           </div>
           {/* Fixed bottom button - only for non-wizard flow */}
-          {selectedProduct && !(settings.lateralScrollOptionals && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
+          {selectedProduct && !(useOptionalsWizard && (selectedProductGroups.length > 0 || (selectedProduct.optionals && selectedProduct.optionals.filter(o => o.active).length > 0))) && (
             <div className="px-6 py-4 border-t flex-shrink-0 bg-background">
-              <Button onClick={() => addToCart(1)} className="w-full" size="lg" disabled={!allMandatoryComplete}>
+              <Button onClick={() => addToCart(1)} className="w-full" size="lg" disabled={!allMandatoryComplete || itemDestinationErrors.length > 0}>
                 <Plus className="h-4 w-4 mr-2" />
                 {comboFlow
                   ? (comboFlow.index + 1 < comboFlow.steps.length ? 'Próximo item do combo' : 'Adicionar combo ao carrinho')
                   : 'Adicionar ao carrinho'}
               </Button>
+              {itemDestinationErrors.length > 0 && allMandatoryComplete && (
+                <p className="mt-2 text-center text-xs text-muted-foreground">{itemDestinationErrors[0]}</p>
+              )}
             </div>
           )}
         </DialogContent>
@@ -2458,6 +2470,7 @@ export default function Menu() {
                   <div>
                     <Label className="font-bold">Nome Completo *</Label>
                     <Input
+                      ref={customerNameRef}
                       value={customerName}
                       onChange={(e) => { setCustomerName(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerName'); return n; }); }}
                       placeholder="Nome e sobrenome"
@@ -2577,9 +2590,12 @@ export default function Menu() {
                       className={cn('border-primary', fieldErrors.has('deliveryReference') && 'border-destructive')}
                     />
                   </div>
-                  {isFlorist && (
-                    <FloristGiftSection value={gift} onChange={(v) => { setGift(v); setFieldErrors(prev => { const n = new Set(prev); n.delete('gift'); return n; }); }} today={todaySP()} invalid={fieldErrors.has('gift')} />
+                  {isFlorist && floristDeliveryCount > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      🚚 {floristDeliveryCount} {floristDeliveryCount === 1 ? 'endereço de entrega' : 'endereços de entrega'} neste pedido. A data, o turno e o endereço de cada produto já foram informados.
+                    </p>
                   )}
+                  {!isFlorist && (
                   <div>
                     <Label className="font-bold">Tipo de entrega *</Label>
                     {settings.deliveryMode === 'neighborhood' && getActiveNeighborhoods().length > 0 ? (
@@ -2775,10 +2791,12 @@ export default function Menu() {
                       return null;
                     })()}
                   </div>
+                  )}
                 </div>
 
                 <div className="border-t pt-4 space-y-2">
-                  {/* Cupom de desconto */}
+                  {/* Cupom de desconto (floricultura: só aparece se a loja tiver cupom ativo) */}
+                  {(!isFlorist || publicCoupons.length > 0 || appliedCoupon) && (
                   <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <Ticket className="h-4 w-4 text-primary" /> Cupom de desconto
@@ -2808,6 +2826,7 @@ export default function Menu() {
                     )}
                     {couponError && <p className="text-xs text-destructive">{couponError}</p>}
                   </div>
+                  )}
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span>Subtotal</span>
                     <span>R$ {formatPrice(cartTotal)}</span>
