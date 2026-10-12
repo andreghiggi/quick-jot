@@ -380,6 +380,16 @@ export default function Menu() {
   });
   const mandatoryProgress = mandatoryGroups.length > 0 ? Math.round((completedMandatory.length / mandatoryGroups.length) * 100) : 100;
   const allMandatoryComplete = completedMandatory.length === mandatoryGroups.length;
+  // Floricultura: destino do item aparece depois dos adicionais, sem o assistente lateral.
+  const useOptionalsWizard = !!settings.lateralScrollOptionals && !isFlorist;
+  const itemDestinationErrors = isFlorist && !comboFlow ? validateDestination(itemDestination, todaySP()) : [];
+  const floristNeighborhoods = useMemo(
+    () => (isFlorist && settings.deliveryMode === 'neighborhood'
+      ? getActiveNeighborhoods().map((n) => ({ name: n.neighborhoodName, fee: n.deliveryFee || 0 }))
+      : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isFlorist, settings.deliveryMode, neighborhoods],
+  );
 
   // Reorder from localStorage (I9 only)
   const lastOrderKey = `lastOrder_${slug}`;
