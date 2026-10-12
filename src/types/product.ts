@@ -79,4 +79,6 @@ export interface CartItem {
   selectedOptionals: ProductOptional[];
   groupedOptionalNames?: string[];
   notes?: string;
+  /** Somente perfil floricultura: destino deste item. */
+  floristDestination?: import('@/lib/floristDestination').FloristDestination;
 }
