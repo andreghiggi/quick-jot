@@ -2802,6 +2802,7 @@ export default function Menu() {
                       </RadioGroup>
                     )}
                   </div>
+                  )}
                   <div>
                     <Label className="font-bold">Forma de pagamento *</Label>
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2">
@@ -2877,7 +2878,6 @@ export default function Menu() {
                       return null;
                     })()}
                   </div>
-                  )}
                 </div>
 
                 <div className="border-t pt-4 space-y-2">
