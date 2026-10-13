@@ -495,6 +495,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${readyHeaderHTML}
       </div>
       <!--BOX_END-->
+      ${data.florist ? renderFloristBlockHTML(data.florist) : ''}
       ${data.paymentNote ? `<div class="obs-block"><div class="obs"><span class="obs-text">${data.paymentNote}</span></div></div>` : ''}
       ${readyBlockHTML}
       <div class="items">${itemsHTML}</div>
