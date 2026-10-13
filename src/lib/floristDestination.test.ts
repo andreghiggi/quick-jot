@@ -33,3 +33,23 @@ describe('floristDestination', () => {
     expect(totalDeliveryFee([{ forWhom: 'self', mode: 'pickup' }])).toBe(0);
   });
 });
+
+import { renderFloristBlockHTML } from '@/utils/printProductionTicket';
+describe('layout floricultura', () => {
+  it('imprime entrega, quem recebe, endereço e cartão', () => {
+    const html = renderFloristBlockHTML({ index: 1, total: 2, destination: {
+      forWhom: 'gift', mode: 'delivery', date: '2026-10-14', slot: '10:00–12:00',
+      recipientName: 'Maria', recipientPhone: '51999887766', street: 'Rua A', number: '10',
+      neighborhood: 'Centro', reference: 'Praça', cardMessage: 'Te amo' } });
+    expect(html).toContain('DESTINO 1 DE 2');
+    expect(html).toContain('14/10/2026');
+    expect(html).toContain('RECEBE: Maria');
+    expect(html).toContain('[ENDERECO]Rua A, 10 - Centro[/ENDERECO]');
+    expect(html).toContain('Te amo');
+  });
+  it('retirada para o comprador não imprime endereço nem cartão', () => {
+    const html = renderFloristBlockHTML({ index: 1, total: 1, destination: { forWhom: 'self', mode: 'pickup' } });
+    expect(html).not.toContain('[ENDERECO]');
+    expect(html).not.toContain('CARTAO');
+  });
+});
