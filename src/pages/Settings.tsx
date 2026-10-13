@@ -1409,6 +1409,14 @@ if errorlevel 1 (
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {isFlorist ? (
+                  <div className="p-3 border rounded-lg border-primary bg-primary/5">
+                    <p className="font-medium">Layout Floricultura (padrão)</p>
+                    <p className="text-sm text-muted-foreground">
+                      Mesma formatação do V2, com data e turno da entrega, presente, quem recebe, WhatsApp, endereço e mensagem do cartão. Sai uma comanda para cada local de entrega ou retirada.
+                    </p>
+                  </div>
+                ) : (
                 <RadioGroup
                   value={storeSettings.printLayout}
                   onValueChange={async (value: 'v1' | 'v2' | 'v3') => {
@@ -1448,6 +1456,7 @@ if errorlevel 1 (
                     </div>
                   </div>
                 </RadioGroup>
+                )}
               </CardContent>
             </Card>
           )}
