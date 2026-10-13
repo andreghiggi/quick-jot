@@ -39,6 +39,35 @@ interface PrintItem {
    *  renderizam rótulo do grupo (■ sublinhado) + itens (+ CAPS). 1 grupo
    *  esconde o rótulo. Quando ausente, comportamento legado preservado. */
   groupedOptionals?: { groupName: string; items: string }[];
+  /** Layout Floricultura: destino deste item (impresso embaixo do produto). */
+  floristDestination?: import('@/lib/floristDestination').FloristDestination | null;
+}
+
+/** Bloco do destino floral impresso embaixo de cada produto no recibo. */
+export function renderFloristItemReceiptHTML(d: import('@/lib/floristDestination').FloristDestination): string {
+  const e = escapeHtml;
+  const out: string[] = [];
+  out.push(`<div class="item-detail">${d.mode === 'delivery' ? '🛵 ENTREGA' : '🏪 RETIRADA NA LOJA'} - ${d.forWhom === 'gift' ? '🎁 PRESENTE' : 'PARA O COMPRADOR'}</div>`);
+  if (d.mode === 'delivery') {
+    const date = (d.date || '').split('-').reverse().join('/');
+    out.push(`<div class="item-detail">Data: ${e(date)} | Turno: ${e(d.slot || '')}</div>`);
+  }
+  if (d.forWhom === 'gift' && (d.recipientName || '').trim()) {
+    out.push(`<div class="item-detail">Recebe: ${e(d.recipientName!.trim())}</div>`);
+    if ((d.recipientPhone || '').trim()) out.push(`<div class="item-detail">WhatsApp: ${e(d.recipientPhone!.trim())}</div>`);
+  }
+  if (d.mode === 'delivery') {
+    let addr = `${(d.street || '').trim()}, ${(d.number || '').trim()}`;
+    if ((d.complement || '').trim()) addr += ` - ${d.complement!.trim()}`;
+    addr += ` - ${(d.neighborhood || '').trim()}`;
+    if ((d.reference || '').trim()) addr += ` | Ref: ${d.reference!.trim()}`;
+    out.push(`<div class="section"><p>[ENDERECO]${e(addr)}[/ENDERECO]</p></div>`);
+  }
+  const msg = (d.cardMessage || '').trim();
+  if (d.forWhom === 'gift' && msg) {
+    out.push(`<div class="item-detail">Mensagem do cartão (escrever à mão):</div><div class="item-notes">[OBS]${e(msg)}[/OBS]</div>`);
+  }
+  return out.join('');
 }
 
 interface PrintPayload {
@@ -68,6 +97,8 @@ interface PrintPayload {
   orderOrigin?: 'cardapio' | 'balcao' | 'express' | 'waiter';
   /** Taxa de entrega explícita; se omitida, calculada como total − subtotal dos itens. */
   deliveryFee?: number;
+  /** Perfil floricultura: "CATÁLOGO ONLINE" e destino por item. */
+  isFlorist?: boolean;
   /** Conferência de comanda/mesa (piloto I9): substitui o cabeçalho do BOX. */
   comandaHeader?: {
     tableNumber?: number | null;
@@ -181,7 +212,7 @@ function resolveOrigemLabel(payload: PrintPayload): string {
   }
   if (payload.orderOrigin === 'waiter') return '🍽️ PEDIDO GARÇOM';
   if (payload.orderOrigin === 'balcao') return '⚡ PEDIDO EXPRESS';
-  return '📱 CARDÁPIO ONLINE';
+  return payload.isFlorist ? '📱 CATÁLOGO ONLINE' : '📱 CARDÁPIO ONLINE';
 }
 
 function resolvePaymentHtml(notes: string | undefined): string {
@@ -275,7 +306,8 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     ${transfers}
   </div>`;
   }
-  const deliverySection = comandaHeader
+  const floristPerItem = !!payload.isFlorist && payload.items.some((it) => it.floristDestination);
+  const deliverySection = comandaHeader || floristPerItem
     ? ''
     : payload.deliveryAddress
     ? `<div class="delivery-badge">🛵 ENTREGA</div>
@@ -323,6 +355,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
       let block = `<div class="item">
         <div class="item-name">${qtyLabel}${escapeHtml(it.name)}</div>`;
       if (additionalsHtml) block += additionalsHtml;
+      if (payload.isFlorist && it.floristDestination) block += renderFloristItemReceiptHTML(it.floristDestination);
       // Sanitiza: nunca repetir a lista de adicionais/opcionais dentro da observação.
       const cleanNotes = (it.notes || '')
         .split(/\r?\n|;/)
