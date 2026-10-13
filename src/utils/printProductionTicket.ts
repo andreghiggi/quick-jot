@@ -51,6 +51,49 @@ interface PrintTicketData {
    *  permanece idêntico ao anterior. Isolado por company_id no caller —
    *  atualmente APENAS Bon Appetit (só layout V2). */
   paymentNote?: string | null;
+  /** Layout Floricultura (base V2): bloco do destino deste ticket. Só é
+   *  enviado por lojas com perfil floricultura; ausente = V2 idêntico. */
+  florist?: FloristTicketInfo | null;
+}
+
+export interface FloristTicketInfo {
+  destination: import('@/lib/floristDestination').FloristDestination;
+  index: number;
+  total: number;
+  buyerPhone?: string | null;
+}
+
+const escFl = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** Bloco exclusivo do Layout Floricultura, usando os mesmos marcadores do V2. */
+export function renderFloristBlockHTML(info: FloristTicketInfo): string {
+  const d = info.destination;
+  const parts: string[] = [];
+  if (info.total > 1) parts.push(`<div class="info">DESTINO ${info.index} DE ${info.total}</div>`);
+  if (d.mode === 'delivery') {
+    const date = (d.date || '').split('-').reverse().join('/');
+    parts.push(`<div class="info">ENTREGA: ${escFl(date)} - TURNO ${escFl(d.slot || '')}</div>`);
+  }
+  parts.push(`<div class="info">${d.forWhom === 'gift' ? 'PRESENTE' : 'PARA O COMPRADOR'}</div>`);
+  if (d.forWhom === 'gift' && (d.recipientName || '').trim()) {
+    parts.push(`<div class="info">RECEBE: ${escFl(d.recipientName!.trim())}</div>`);
+    if ((d.recipientPhone || '').trim()) parts.push(`<div class="info">WHATSAPP: ${escFl(d.recipientPhone!.trim())}</div>`);
+  }
+  if (info.buyerPhone) parts.push(`<div class="info">TEL. COMPRADOR: ${escFl(info.buyerPhone)}</div>`);
+  if (d.mode === 'delivery') {
+    let addr = `${(d.street || '').trim()}, ${(d.number || '').trim()}`;
+    if ((d.complement || '').trim()) addr += ` - ${d.complement!.trim()}`;
+    addr += ` - ${(d.neighborhood || '').trim()}`;
+    parts.push(`<div class="info">[ENDERECO]${escFl(addr)}[/ENDERECO]</div>`);
+    if ((d.reference || '').trim()) parts.push(`<div class="info">REF: ${escFl(d.reference!.trim())}</div>`);
+  }
+  let html = `<div class="header florist-block">${parts.join('')}</div>`;
+  const msg = (d.cardMessage || '').trim();
+  if (d.forWhom === 'gift' && msg) {
+    html += `<div class="info">MENSAGEM DO CARTAO (ESCREVER A MAO):</div><div class="obs-block"><div class="obs"><span class="obs-text">${escFl(msg)}</span></div></div>`;
+  }
+  return html;
 }
 
 // Allow-list ISOLADA: troca de "Comanda #<n>" por referenceLabel no cabeçalho.
