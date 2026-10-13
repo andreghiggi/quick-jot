@@ -1691,6 +1691,7 @@ export default function Menu() {
                   price: calculateItemTotal(item) / (item.quantity || 1),
                   notes: item.notes?.trim() || undefined,
                   groupedOptionals: productionItems[idx]?.groupedOptionals,
+                  floristDestination: isFlorist ? item.floristDestination ?? null : undefined,
                 }));
                 const receiptNotes = [
                   `Pagamento: ${paymentMethod}`,
@@ -1710,6 +1711,7 @@ export default function Menu() {
                     : undefined,
                   storeName: company.name,
                   orderOrigin: 'cardapio',
+                  isFlorist,
                   deliveryFee,
                   items: receiptItems,
                   total: orderTotal,
