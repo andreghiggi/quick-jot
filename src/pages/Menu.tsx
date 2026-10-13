@@ -1635,6 +1635,10 @@ export default function Menu() {
                       },
                     }))
                   : [{ items: productionItems, florist: null }];
+                if (floristGroups[0].florist) {
+                  const rest = productionItems.filter((_, ci) => !cart[ci].floristDestination);
+                  if (rest.length > 0) floristGroups.push({ items: rest, florist: null });
+                }
                 for (const grp of floristGroups) {
                 const productionHtml = generateProductionTicketHTML({
                   florist: grp.florist,
