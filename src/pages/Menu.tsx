@@ -1554,7 +1554,7 @@ export default function Menu() {
             // Antes isso ainda estava preso na I9, então Margen recebia lista plana.
             const I9_COMPANY_ID = '8c9e7a0e-dbb6-49b9-8344-c23155a71164';
             const sendGroupedOptionals =
-              settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID;
+              isFlorist || settings.printLayout === 'v2' || settings.printLayout === 'v3' || company?.id === I9_COMPANY_ID;
             const productionItems = cart.map((item) => {
               // Build a clean list of additional names (without prices, without group prefix)
               const additionalNames: string[] = [];
@@ -1623,19 +1623,33 @@ export default function Menu() {
             const enqueueProduction = async () => {
             if (shouldPrintProduction) {
               try {
+                // Layout Floricultura (base V2): uma comanda por local de entrega/retirada.
+                const floristGroups = isFlorist && floristDestKeys.length > 0
+                  ? floristDestKeys.map((k, gi) => ({
+                      items: productionItems.filter((_, ci) => destinationKey(cart[ci].floristDestination) === k),
+                      florist: {
+                        destination: cart.find((c) => destinationKey(c.floristDestination) === k)!.floristDestination!,
+                        index: gi + 1,
+                        total: floristDestKeys.length,
+                        buyerPhone: customerPhone || null,
+                      },
+                    }))
+                  : [{ items: productionItems, florist: null }];
+                for (const grp of floristGroups) {
                 const productionHtml = generateProductionTicketHTML({
+                  florist: grp.florist,
                   tabNumber: newOrder.daily_number || 0,
                   customerName,
-                  items: productionItems,
+                  items: grp.items,
                   createdAt: new Date(),
                   paperSize: settings.printerPaperSize,
                   referenceLabel: `PEDIDO ${(newOrder as any).short_code || '#' + (newOrder.daily_number || newOrder.order_code)}`,
-                  layout: settings.printLayout,
+                  layout: isFlorist ? 'v2' : settings.printLayout,
                   companyId: company.id,
-                  orderType: deliveryType === 'pickup' ? 'pickup' : 'delivery',
+                  orderType: grp.florist ? grp.florist.destination.mode : (deliveryType === 'pickup' ? 'pickup' : 'delivery'),
                   showReadyTime: true,
                   readyOffsetMinutes: computeReadyOffsetMinutes(settings.estimatedWaitTime, 30),
-                  deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
+                  deliveryAddress: grp.florist ? null : (deliveryType !== 'pickup' && fullAddress ? fullAddress : null),
                   // Isolado: só Bon Appetit recebe pagamento/troco na comanda de
                   // produção (pedido do cliente). Nenhuma outra loja é afetada.
                   paymentNote:
@@ -1650,10 +1664,11 @@ export default function Menu() {
                   .insert({
                     company_id: company.id,
                     html_content: productionHtml,
-                    label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}`,
+                    label: `Produção Pedido #${newOrder.daily_number || newOrder.order_code}${grp.florist && grp.florist.total > 1 ? ` (destino ${grp.florist.index}/${grp.florist.total})` : ''}`,
                     job_type: 'production',
                   });
                 if (productionError) throw productionError;
+                }
               } catch (productionError) {
                 console.error('Erro ao enfileirar comanda de produção:', productionError);
               }
@@ -1696,7 +1711,7 @@ export default function Menu() {
                   total: orderTotal,
                   notes: receiptNotes,
                   paperSize: settings.printerPaperSize,
-                  printLayout: settings.printLayout,
+                  printLayout: isFlorist ? 'v2' : settings.printLayout,
                   estimatedWaitTime: settings.estimatedWaitTime,
                   deliveryAddress: deliveryType !== 'pickup' && fullAddress ? fullAddress : null,
                 });
