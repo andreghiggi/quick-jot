@@ -60,9 +60,10 @@ function PDVV2CategoryBrowserComponent({
   onProductSelect,
   maxHeightClassName = 'max-h-[60vh]',
 }: Props) {
-  const { categories } = useCategories({ companyId });
+  const { categories, loading: categoriesLoading } = useCategories({ companyId });
   const { subcategories } = useSubcategories({ companyId });
-  const { products } = useProducts({ companyId });
+  const { products, loading: productsLoading } = useProducts({ companyId });
+  const isLoadingCatalog = (categoriesLoading || productsLoading) && products.length === 0;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
@@ -75,6 +76,8 @@ function PDVV2CategoryBrowserComponent({
 
   const orderedCategories = useMemo(() => {
     const visibleCategoryNames = new Set(activeProducts.map((p) => p.category));
+    // Fallback: se o cadastro de categorias ainda não chegou, usa as dos produtos
+    if (categories.length === 0) return Array.from(visibleCategoryNames).filter(Boolean).sort();
     return categories
       .filter((c) => c.active !== false && (!pdvOnly || (c as any).pdvItem !== false) && (!waiterOnly || (c as any).waiterItem !== false) && visibleCategoryNames.has(c.name))
       .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
@@ -261,7 +264,7 @@ function PDVV2CategoryBrowserComponent({
       {orderedCategories.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">Nenhuma categoria disponível</p>
+            <p className="text-sm text-muted-foreground">{isLoadingCatalog ? 'Carregando produtos…' : 'Nenhuma categoria disponível'}</p>
           </CardContent>
         </Card>
       ) : (

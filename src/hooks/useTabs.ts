@@ -455,25 +455,23 @@ export function useTabs(options: UseTabsOptions = {}) {
     }));
 
     try {
-      for (const item of items) {
-        const { data, error } = await supabase
-          .from('tab_items')
-          .insert({
-            tab_id: tabId,
-            product_id: item.productId || null,
-            product_name: item.productName,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            total_price: item.quantity * item.unitPrice,
-            notes: item.notes || null,
-            created_by: item.userId
-          })
-          .select()
-          .single();
+      // Gravação em lote: 1 requisição para todos os itens (atômica)
+      const { data, error } = await supabase
+        .from('tab_items')
+        .insert(items.map(item => ({
+          tab_id: tabId,
+          product_id: item.productId || null,
+          product_name: item.productName,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.quantity * item.unitPrice,
+          notes: item.notes || null,
+          created_by: item.userId
+        })))
+        .select();
 
-        if (error) throw error;
-        addedItems.push(data as TabItem);
-      }
+      if (error) throw error;
+      addedItems.push(...((data || []) as TabItem[]));
 
       // Sync with database
       await fetchTabs();
