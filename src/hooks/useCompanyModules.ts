@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getCompanyModules, invalidateCompanyModules } from '@/lib/companyModulesCache';
 import { toast } from 'sonner';
 import { clearPdvV2Cache } from '@/hooks/usePdvV2Enabled';
 import { clearCardapioCache } from '@/hooks/useCardapioEnabled';
@@ -54,17 +55,12 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
     return () => window.removeEventListener(COMPANY_MODULES_CHANGED_EVENT, handleModulesChanged);
   }, [companyId]);
 
-  async function fetchModules() {
+  async function fetchModules(force = false) {
     if (!companyId) return;
     
     try {
-      const { data, error } = await supabase
-        .from('company_modules')
-        .select('*')
-        .eq('company_id', companyId);
-
-      if (error) throw error;
-      setModules(data || []);
+      const data = await getCompanyModules(companyId, force);
+      setModules(data);
     } catch (error) {
       console.error('Error fetching modules:', error);
     } finally {
