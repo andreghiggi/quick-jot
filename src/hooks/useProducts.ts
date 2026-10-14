@@ -110,12 +110,14 @@ async function queryProducts(companyId: string): Promise<Product[]> {
 
 export function loadProductsShared(
   companyId: string,
-  opts: { force?: boolean; query?: (id: string) => Promise<Product[]> } = {},
+  opts: { force?: boolean; dedupe?: boolean; query?: (id: string) => Promise<Product[]> } = {},
 ): Promise<Product[]> {
   const cached = productsCache.get(companyId);
   if (!opts.force && cached && Date.now() - cached.ts < PRODUCTS_TTL_MS) return Promise.resolve(cached.data);
   const pending = productsInflight.get(companyId);
-  if (pending) return pending;
+  // Reaproveita busca em andamento (várias telas abrindo juntas). Após salvar
+  // (dedupe=false) sempre faz nova busca para não pegar dados anteriores.
+  if (pending && opts.dedupe !== false) return pending;
   const p = (opts.query ?? queryProducts)(companyId)
     .then((data) => { productsCache.set(companyId, { data, ts: Date.now() }); return data; })
     .finally(() => productsInflight.delete(companyId));
@@ -140,7 +142,12 @@ export function useProducts(options: UseProductsOptions = {}) {
     if (!silent && !getCachedProducts(companyId)) setLoading(true);
 
     try {
-      const mappedProducts = await loadProductsShared(companyId, { force: !opts?.useCache });
+      // Mostra o catálogo guardado na hora, mas sempre confirma com o servidor
+      // (preço sempre atualizado). Buscas simultâneas da mesma loja viram uma só.
+      const mappedProducts = await loadProductsShared(companyId, {
+        force: true,
+        dedupe: opts?.useCache === true,
+      });
       setProducts(mappedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -151,8 +158,8 @@ export function useProducts(options: UseProductsOptions = {}) {
   }
 
   useEffect(() => {
-    // Primeira carga reaproveita o catálogo recente; chamadas explícitas
-    // (após salvar/editar) sempre forçam atualização.
+    const cached = getCachedProducts(companyId);
+    if (cached) { setProducts(cached); setLoading(false); }
     fetchProducts({ useCache: true });
   }, [companyId]);
 
