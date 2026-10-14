@@ -18,6 +18,13 @@ export interface CompanyModuleRow {
 
 const TTL_MS = 30_000;
 const cache = new Map<string, { at: number; rows: CompanyModuleRow[] }>();
+const LS_PREFIX = 'company_modules_rows_';
+function readPersisted(companyId: string): CompanyModuleRow[] | null {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + companyId);
+    return raw ? (JSON.parse(raw) as CompanyModuleRow[]) : null;
+  } catch { return null; }
+}
 const inflight = new Map<string, Promise<CompanyModuleRow[]>>();
 
 export function getCompanyModules(companyId: string, force = false): Promise<CompanyModuleRow[]> {
@@ -35,7 +42,13 @@ export function getCompanyModules(companyId: string, force = false): Promise<Com
       if (error) throw error;
       const rows = (data || []) as CompanyModuleRow[];
       cache.set(companyId, { at: Date.now(), rows });
+      try { localStorage.setItem(LS_PREFIX + companyId, JSON.stringify(rows)); } catch { /* ignore */ }
       return rows;
+    } catch (err) {
+      // Rede lenta/erro: usa o último valor conhecido em vez de "desligar" módulos.
+      const stale = hit?.rows ?? readPersisted(companyId);
+      if (stale) return stale;
+      throw err;
     } finally {
       inflight.delete(companyId);
     }
