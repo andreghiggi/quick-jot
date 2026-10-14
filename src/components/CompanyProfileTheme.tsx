@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
-import { getLoginIsFlorist, rememberLoginProfile } from '@/lib/companyProfile';
+import { clearLegacyLoginProfile, getLoginIsFlorist } from '@/lib/companyProfile';
 
 const FLORIST_THEME: Record<string, string> = {
   '--primary': '145 94% 12%',
@@ -20,17 +20,17 @@ const FLORIST_THEME: Record<string, string> = {
   '--shadow-primary': '0 4px 14px -3px hsl(145 94% 12% / 0.4)',
 };
 
+// Limpa a memória antiga que deixava o login verde para todas as lojas.
+clearLegacyLoginProfile();
+
 export function CompanyProfileTheme({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
-  const { isFlorist: companyIsFlorist } = useCompanyProfile(company?.id);
   const { pathname, search } = useLocation();
-  // Na tela de login (sem empresa carregada), usa o perfil do link/memória.
-  const isLoginScreen = !company?.id && pathname === '/auth';
-  const isFlorist = isLoginScreen ? getLoginIsFlorist(search) : companyIsFlorist;
-
-  useEffect(() => {
-    if (company?.id) rememberLoginProfile(companyIsFlorist);
-  }, [company?.id, companyIsFlorist]);
+  // Sem empresa logada não consulta nada: o perfil vem só do link.
+  const { isFlorist: companyIsFlorist } = useCompanyProfile(company?.id ?? null);
+  const isFlorist = company?.id
+    ? companyIsFlorist
+    : pathname === '/auth' && getLoginIsFlorist(search);
 
   useEffect(() => {
     if (!isFlorist) return;

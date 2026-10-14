@@ -47,17 +47,15 @@ export function usesTableService(isFlorist: boolean): boolean {
 
 const LOGIN_PROFILE_KEY = 'comandatech_login_profile';
 
-/** Perfil da tela de login: ?perfil=floricultura ou último perfil lembrado neste aparelho. */
+/**
+ * Perfil da tela de login: SOMENTE pelo link (?perfil=floricultura).
+ * Nada é guardado no aparelho, para não contaminar o login de outras lojas.
+ */
 export function getLoginIsFlorist(search: string = window.location.search): boolean {
-  const param = new URLSearchParams(search).get('perfil');
-  if (param === 'floricultura') return true;
-  if (param === 'restaurante') return false;
-  try { return localStorage.getItem(LOGIN_PROFILE_KEY) === 'floricultura'; } catch { return false; }
+  return new URLSearchParams(search).get('perfil') === 'floricultura';
 }
 
-export function rememberLoginProfile(isFlorist: boolean) {
-  try {
-    if (isFlorist) localStorage.setItem(LOGIN_PROFILE_KEY, 'floricultura');
-    else localStorage.removeItem(LOGIN_PROFILE_KEY);
-  } catch { /* ignore */ }
+/** Remove memória antiga de perfil gravada por versões anteriores. */
+export function clearLegacyLoginProfile() {
+  try { localStorage.removeItem(LOGIN_PROFILE_KEY); } catch { /* ignore */ }
 }
