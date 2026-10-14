@@ -76,6 +76,8 @@ function PDVV2CategoryBrowserComponent({
 
   const orderedCategories = useMemo(() => {
     const visibleCategoryNames = new Set(activeProducts.map((p) => p.category));
+    // Fallback: se o cadastro de categorias ainda não chegou, usa as dos produtos
+    if (categories.length === 0) return Array.from(visibleCategoryNames).filter(Boolean).sort();
     return categories
       .filter((c) => c.active !== false && (!pdvOnly || (c as any).pdvItem !== false) && (!waiterOnly || (c as any).waiterItem !== false) && visibleCategoryNames.has(c.name))
       .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
