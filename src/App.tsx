@@ -12,10 +12,9 @@ import { TefPrintPromptDialog } from "@/components/TefPrintPromptDialog";
 import { VersionBadge } from "@/components/VersionBadge";
 import { useCompanyModules } from "@/hooks/useCompanyModules";
 import { detectDomainContext, COMANDATECH_ROOT } from "@/utils/domainRouting";
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, type ReactNode } from "react";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
-import PDVV2 from "./pages/PDVV2";
 import * as P from "./routes/lazyPages";
 import { PageLoader } from "@/components/PageLoader";
 import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
@@ -23,6 +22,7 @@ import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useFinanceiroEnabled } from "@/hooks/useFinanceiroEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
 import { CompanyProfileTheme } from "@/components/CompanyProfileTheme";
+const PDVV2 = lazy(() => import("./pages/PDVV2"));
 
 const queryClient = new QueryClient();
 
@@ -32,7 +32,7 @@ function RootRedirect() {
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { enabled: cardapioEnabled, loading: cardapioLoading } = useCardapioEnabled(company?.id);
 
-  if (loading || (user && !userDataReady)) {
+  if (loading || (user && !userDataReady) || (user && company?.id && pdvV2Loading)) {
     return <PageLoader />;
   }
   if (!user) return <Navigate to="/auth" replace />;
