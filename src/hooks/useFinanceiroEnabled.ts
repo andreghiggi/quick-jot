@@ -1,3 +1,4 @@
+import { getCompanyModuleRow } from '@/lib/companyModulesCache';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { scheduleModuleFlagTimeout } from '@/hooks/moduleFlagTimeout';
@@ -81,12 +82,7 @@ export function useFinanceiroEnabled(companyId?: string | null) {
       if (!cancelled) setLoading(false);
     });
 
-    supabase
-      .from('company_modules')
-      .select('enabled')
-      .eq('company_id', companyId)
-      .eq('module_name', 'financeiro')
-      .maybeSingle()
+    getCompanyModuleRow(companyId, 'financeiro')
       .then(({ data }) => {
         window.clearTimeout(timer);
         if (cancelled) return;

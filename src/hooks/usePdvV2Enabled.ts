@@ -1,3 +1,4 @@
+import { getCompanyModuleRow } from '@/lib/companyModulesCache';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { scheduleModuleFlagTimeout } from '@/hooks/moduleFlagTimeout';
@@ -55,12 +56,7 @@ export function usePdvV2Enabled(companyId?: string | null) {
       if (!cancelled) setLoading(false);
     });
 
-    supabase
-      .from('company_modules')
-      .select('enabled')
-      .eq('company_id', companyId)
-      .eq('module_name', 'pdv_v2')
-      .maybeSingle()
+    getCompanyModuleRow(companyId, 'pdv_v2')
       .then(({ data }) => {
         window.clearTimeout(timer);
         if (cancelled) return;
