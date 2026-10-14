@@ -94,7 +94,8 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
         if (error) throw error;
       }
 
-      await fetchModules();
+      invalidateCompanyModules(companyId);
+      await fetchModules(true);
       notifyCompanyModulesChanged(companyId);
       // Invalida o cache do redirect/guard de PDV V2 sempre que algum dos
       // dois PDVs muda (o trigger no banco também desativa o "outro").
@@ -126,6 +127,6 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
     loading,
     toggleModule,
     isModuleEnabled,
-    refetch: fetchModules
+    refetch: () => fetchModules(true)
   };
 }

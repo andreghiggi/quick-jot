@@ -117,12 +117,15 @@
           }, 0);
         });
 
+        // Só considera falha se o aplicativo NEM chegou a iniciar (a mensagem
+        // inicial ainda está no lugar) após 30s. Telas aguardando dados do
+        // servidor (ícone girando, sem texto) não disparam mais esse erro —
+        // antes isso levava o operador a recarregar e piorava a lentidão.
         watchdog = window.setTimeout(function () {
           var root = document.getElementById('root');
           var splash = document.getElementById('boot-splash');
-          var text = root ? (root.innerText || '').replace(/v\d+\.\d+\.\d+[^\n]*/g, '').trim() : '';
-          if (!root || splash || !text) showBootError('A tela principal não apresentou conteúdo');
-        }, 12000);
+          if (!root || splash) showBootError('O aplicativo não iniciou');
+        }, 30000);
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
