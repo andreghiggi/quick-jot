@@ -1,3 +1,4 @@
+import { getCompanyModuleRow } from '@/lib/companyModulesCache';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -51,12 +52,7 @@ export function usePinpdvV1Enabled(companyId?: string | null) {
       setLoading(true);
     }
 
-    supabase
-      .from('company_modules')
-      .select('enabled')
-      .eq('company_id', companyId)
-      .eq('module_name', 'pinpdv_v1')
-      .maybeSingle()
+    getCompanyModuleRow(companyId, 'pinpdv_v1')
       .then(({ data }) => {
         if (cancelled) return;
         const value = !!data?.enabled;
