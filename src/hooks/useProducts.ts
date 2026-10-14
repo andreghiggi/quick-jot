@@ -7,12 +7,130 @@ interface UseProductsOptions {
   companyId?: string | null;
 }
 
+// Cache compartilhado do catálogo por loja: evita baixar o mesmo catálogo
+// várias vezes (Pedido Express + lista de categorias + outras telas).
+const PRODUCTS_TTL_MS = 2 * 60 * 1000;
+const productsCache = new Map<string, { data: Product[]; ts: number }>();
+const productsInflight = new Map<string, Promise<Product[]>>();
+
+export function invalidateProductsCache(companyId?: string | null) {
+  if (companyId) productsCache.delete(companyId); else productsCache.clear();
+}
+
+export function getCachedProducts(companyId?: string | null): Product[] | null {
+  if (!companyId) return null;
+  return productsCache.get(companyId)?.data ?? null;
+}
+
+async function queryProducts(companyId: string): Promise<Product[]> {
+  let productsQuery = supabase
+    .from('products')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  const { data: productsData, error: productsError } = await productsQuery;
+
+  if (productsError) throw productsError;
+
+  // Get product IDs to fetch optionals
+  const productIds = (productsData || []).map(p => p.id);
+  
+  let optionalsData: any[] = [];
+  if (productIds.length > 0) {
+    let optionalsQuery = supabase
+      .from('product_optionals')
+      .select('*')
+      .in('product_id', productIds);
+
+    const { data, error: optionalsError } = await optionalsQuery;
+
+    if (optionalsError) throw optionalsError;
+    optionalsData = data || [];
+  }
+
+  const mappedProducts: Product[] = (productsData || []).map((product) => ({
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    category: product.category,
+    description: product.description || undefined,
+    imageUrl: product.image_url || undefined,
+    active: product.active,
+    companyId: product.company_id || undefined,
+    taxRuleId: product.tax_rule_id || null,
+    displayOrder: product.display_order ?? 0,
+    pdvItem: product.pdv_item ?? true,
+    menuItem: (product as any).menu_item ?? true,
+    waiterItem: (product as any).waiter_item ?? true,
+    qrItem: (product as any).qr_item ?? true,
+    isNew: (product as any).is_new ?? false,
+    subcategoryId: (product as any).subcategory_id || null,
+    productType: ((product as any).product_type as 'cardapio'|'mercado'|'ambos') || 'cardapio',
+    code: (product as any).code || null,
+    gtin: (product as any).gtin || null,
+    unit: (product as any).unit || 'UN',
+    icmsOrigin: (product as any).icms_origin || '0',
+    netWeight: (product as any).net_weight != null ? Number((product as any).net_weight) : null,
+    grossWeight: (product as any).gross_weight != null ? Number((product as any).gross_weight) : null,
+    costPrice: (product as any).cost_price != null ? Number((product as any).cost_price) : null,
+    swappableInOrder: (product as any).swappable_in_order ?? false,
+    trackStock: (product as any).track_stock ?? false,
+    stockQuantity: (product as any).stock_quantity != null ? Number((product as any).stock_quantity) : 0,
+    minStock: (product as any).min_stock != null ? Number((product as any).min_stock) : 0,
+    ncm: (product as any).ncm ?? null,
+    cest: (product as any).cest ?? null,
+    cfop: (product as any).cfop ?? null,
+    wholesalePrice: (product as any).wholesale_price != null ? Number((product as any).wholesale_price) : null,
+    wholesaleMinQty: (product as any).wholesale_min_qty != null ? Number((product as any).wholesale_min_qty) : null,
+    brand: (product as any).brand ?? null,
+    supplierId: (product as any).supplier_id ?? null,
+    shelfLifeDays: (product as any).shelf_life_days != null ? Number((product as any).shelf_life_days) : null,
+    expirationDate: (product as any).expiration_date ?? null,
+    batchNumber: (product as any).batch_number ?? null,
+    isScaleItem: (product as any).is_scale_item ?? false,
+    scaleBarcode: (product as any).scale_barcode ?? null,
+    fastHotkey: (product as any).fast_hotkey ?? null,
+    pricePerKg: (product as any).price_per_kg ?? false,
+    sellByWeight: (product as any).sell_by_weight ?? false,
+    optionals: optionalsData
+      .filter((opt) => opt.product_id === product.id)
+      .map((opt) => ({
+        id: opt.id,
+        productId: opt.product_id,
+        name: opt.name,
+        price: Number(opt.price),
+        type: opt.type as 'extra' | 'variation',
+        active: opt.active,
+      })),
+  }));
+  return mappedProducts;
+}
+
+export function loadProductsShared(
+  companyId: string,
+  opts: { force?: boolean; dedupe?: boolean; query?: (id: string) => Promise<Product[]> } = {},
+): Promise<Product[]> {
+  const cached = productsCache.get(companyId);
+  if (!opts.force && cached && Date.now() - cached.ts < PRODUCTS_TTL_MS) return Promise.resolve(cached.data);
+  const pending = productsInflight.get(companyId);
+  // Reaproveita busca em andamento (várias telas abrindo juntas). Após salvar
+  // (dedupe=false) sempre faz nova busca para não pegar dados anteriores.
+  if (pending && opts.dedupe !== false) return pending;
+  const p = (opts.query ?? queryProducts)(companyId)
+    .then((data) => { productsCache.set(companyId, { data, ts: Date.now() }); return data; })
+    .finally(() => productsInflight.delete(companyId));
+  productsInflight.set(companyId, p);
+  return p;
+}
+
 export function useProducts(options: UseProductsOptions = {}) {
   const { companyId } = options;
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(() => getCachedProducts(companyId) ?? []);
+  const [loading, setLoading] = useState(() => !getCachedProducts(companyId));
 
-  async function fetchProducts(opts?: { silent?: boolean }) {
+  async function fetchProducts(opts?: { silent?: boolean; useCache?: boolean }) {
     const silent = opts?.silent === true;
     // Don't fetch if no companyId - prevents showing products from other companies
     if (!companyId) {
@@ -21,92 +139,15 @@ export function useProducts(options: UseProductsOptions = {}) {
       return;
     }
 
-    if (!silent) setLoading(true);
+    if (!silent && !getCachedProducts(companyId)) setLoading(true);
 
     try {
-      let productsQuery = supabase
-        .from('products')
-        .select('*')
-        .eq('company_id', companyId)
-        .order('display_order', { ascending: true })
-        .order('created_at', { ascending: true });
-
-      const { data: productsData, error: productsError } = await productsQuery;
-
-      if (productsError) throw productsError;
-
-      // Get product IDs to fetch optionals
-      const productIds = (productsData || []).map(p => p.id);
-      
-      let optionalsData: any[] = [];
-      if (productIds.length > 0) {
-        let optionalsQuery = supabase
-          .from('product_optionals')
-          .select('*')
-          .in('product_id', productIds);
-
-        const { data, error: optionalsError } = await optionalsQuery;
-
-        if (optionalsError) throw optionalsError;
-        optionalsData = data || [];
-      }
-
-      const mappedProducts: Product[] = (productsData || []).map((product) => ({
-        id: product.id,
-        name: product.name,
-        price: Number(product.price),
-        category: product.category,
-        description: product.description || undefined,
-        imageUrl: product.image_url || undefined,
-        active: product.active,
-        companyId: product.company_id || undefined,
-        taxRuleId: product.tax_rule_id || null,
-        displayOrder: product.display_order ?? 0,
-        pdvItem: product.pdv_item ?? true,
-        menuItem: (product as any).menu_item ?? true,
-        waiterItem: (product as any).waiter_item ?? true,
-        qrItem: (product as any).qr_item ?? true,
-        isNew: (product as any).is_new ?? false,
-        subcategoryId: (product as any).subcategory_id || null,
-        productType: ((product as any).product_type as 'cardapio'|'mercado'|'ambos') || 'cardapio',
-        code: (product as any).code || null,
-        gtin: (product as any).gtin || null,
-        unit: (product as any).unit || 'UN',
-        icmsOrigin: (product as any).icms_origin || '0',
-        netWeight: (product as any).net_weight != null ? Number((product as any).net_weight) : null,
-        grossWeight: (product as any).gross_weight != null ? Number((product as any).gross_weight) : null,
-        costPrice: (product as any).cost_price != null ? Number((product as any).cost_price) : null,
-        swappableInOrder: (product as any).swappable_in_order ?? false,
-        trackStock: (product as any).track_stock ?? false,
-        stockQuantity: (product as any).stock_quantity != null ? Number((product as any).stock_quantity) : 0,
-        minStock: (product as any).min_stock != null ? Number((product as any).min_stock) : 0,
-        ncm: (product as any).ncm ?? null,
-        cest: (product as any).cest ?? null,
-        cfop: (product as any).cfop ?? null,
-        wholesalePrice: (product as any).wholesale_price != null ? Number((product as any).wholesale_price) : null,
-        wholesaleMinQty: (product as any).wholesale_min_qty != null ? Number((product as any).wholesale_min_qty) : null,
-        brand: (product as any).brand ?? null,
-        supplierId: (product as any).supplier_id ?? null,
-        shelfLifeDays: (product as any).shelf_life_days != null ? Number((product as any).shelf_life_days) : null,
-        expirationDate: (product as any).expiration_date ?? null,
-        batchNumber: (product as any).batch_number ?? null,
-        isScaleItem: (product as any).is_scale_item ?? false,
-        scaleBarcode: (product as any).scale_barcode ?? null,
-        fastHotkey: (product as any).fast_hotkey ?? null,
-        pricePerKg: (product as any).price_per_kg ?? false,
-        sellByWeight: (product as any).sell_by_weight ?? false,
-        optionals: optionalsData
-          .filter((opt) => opt.product_id === product.id)
-          .map((opt) => ({
-            id: opt.id,
-            productId: opt.product_id,
-            name: opt.name,
-            price: Number(opt.price),
-            type: opt.type as 'extra' | 'variation',
-            active: opt.active,
-          })),
-      }));
-
+      // Mostra o catálogo guardado na hora, mas sempre confirma com o servidor
+      // (preço sempre atualizado). Buscas simultâneas da mesma loja viram uma só.
+      const mappedProducts = await loadProductsShared(companyId, {
+        force: true,
+        dedupe: opts?.useCache === true,
+      });
       setProducts(mappedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -117,7 +158,9 @@ export function useProducts(options: UseProductsOptions = {}) {
   }
 
   useEffect(() => {
-    fetchProducts();
+    const cached = getCachedProducts(companyId);
+    if (cached) { setProducts(cached); setLoading(false); }
+    fetchProducts({ useCache: true });
   }, [companyId]);
 
   async function addProduct(productData: Omit<Product, 'id' | 'optionals'>): Promise<string | null> {

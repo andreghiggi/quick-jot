@@ -2658,6 +2658,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   <PDVV2CategoryBrowser
                     companyId={company?.id}
                     pdvOnly
+                    products={products}
+                    productsLoading={productsLoading}
                     onProductSelect={handleProductClick}
                     maxHeightClassName="max-h-[60vh]"
                   />

@@ -44,6 +44,9 @@ interface Props {
   onProductSelect: (product: Product) => void;
   /** Altura máxima da área de rolagem (default: 60vh) */
   maxHeightClassName?: string;
+  /** Catálogo já carregado pela tela-mãe (evita baixar duas vezes). */
+  products?: Product[];
+  productsLoading?: boolean;
 }
 
 /**
@@ -59,10 +62,15 @@ function PDVV2CategoryBrowserComponent({
   waiterOnly = false,
   onProductSelect,
   maxHeightClassName = 'max-h-[60vh]',
+  products: parentProducts,
+  productsLoading: parentProductsLoading,
 }: Props) {
   const { categories, loading: categoriesLoading } = useCategories({ companyId });
   const { subcategories } = useSubcategories({ companyId });
-  const { products, loading: productsLoading } = useProducts({ companyId });
+  const hasParentProducts = parentProducts !== undefined;
+  const own = useProducts({ companyId: hasParentProducts ? null : companyId });
+  const products = hasParentProducts ? parentProducts : own.products;
+  const productsLoading = hasParentProducts ? !!parentProductsLoading : own.loading;
   const isLoadingCatalog = (categoriesLoading || productsLoading) && products.length === 0;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
