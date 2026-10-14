@@ -6,7 +6,7 @@
  * verificação termina. Ao estourar o limite, seguimos com o último valor
  * conhecido (cache local ou padrão do hook) e liberamos a tela.
  */
-export const MODULE_FLAG_TIMEOUT_MS = 6000;
+export const MODULE_FLAG_TIMEOUT_MS = 2500;
 
 export function scheduleModuleFlagTimeout(
   moduleName: string,
