@@ -1,5 +1,5 @@
 // Layout de impressão exclusivo do perfil Floricultura (recibo e comanda de produção).
-import { destinationKey, type FloristDestination } from './floristDestination';
+import { destinationKey, parseDestinationFromNotes, type FloristDestination } from './floristDestination';
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -47,59 +47,68 @@ export function floristItemFees(items: FloristPrintItem[]): number[] {
   });
 }
 
-/** Bloco completo por produto, na ordem pedida pela floricultura. */
+/**
+ * Bloco completo por produto, na ordem pedida pela floricultura.
+ * Usa as mesmas classes que o programa de impressão automática já entende
+ * (item / item-name / qty / name / description / add-line / obs-text / item-notes),
+ * para sair igual no navegador, na fila automática e na reimpressão.
+ */
 export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
   const fees = floristItemFees(items);
+  const line = (txt: string, extra = '') => `<div class="fl-line description add-line${extra ? ' ' + extra : ''}">${txt}</div>`;
   return items
     .map((it, i) => {
       const d = it.destination;
       const out: string[] = [];
       if (d) {
         const modo = d.mode === 'delivery' ? '🛵 ENTREGA' : '🏪 RETIRADA NA LOJA';
-        out.push(`<div class="fl-line fl-mode">${modo} - ${d.forWhom === 'gift' ? '🎁 PRESENTE' : 'PARA O COMPRADOR'}</div>`);
+        out.push(line(`${modo} - ${d.forWhom === 'gift' ? '🎁 PRESENTE' : 'PARA O COMPRADOR'}`, 'fl-mode'));
       }
-      out.push(`<div class="fl-line fl-name">[${it.quantity}x] ${esc(it.name)}</div>`);
+      out.push(`<div class="fl-line fl-name item-name"><span class="qty">[${it.quantity}x]</span> <span class="name">${esc(it.name)}</span></div>`);
       for (const g of it.groupedOptionals || []) {
         g.items
           .split(/,(?!\s*\d{2}\s*(?:,|$))/)
           .map((s) => s.trim())
           .filter(Boolean)
-          .forEach((a) => out.push(`<div class="fl-line">+ ${esc(a)}</div>`));
+          .forEach((a) => out.push(line(`+ ${esc(a)}`)));
       }
       if (d?.date) {
         const date = d.date.split('-').reverse().join('/');
-        out.push(`<div class="fl-line">Data: ${esc(date)} | Turno: ${esc(d.slot || '')}</div>`);
+        out.push(line(`Data: ${esc(date)} | Turno: ${esc(d.slot || '')}`));
       }
       if (d?.mode === 'delivery') {
         let addr = `${(d.street || '').trim()}, ${(d.number || '').trim()}`;
         if ((d.complement || '').trim()) addr += ` - ${d.complement!.trim()}`;
         addr += ` - ${(d.neighborhood || '').trim()}`;
         if ((d.reference || '').trim()) addr += ` | Ref: ${d.reference!.trim()}`;
-        out.push(`<div class="fl-line">[ENDERECO]${esc(addr)}[/ENDERECO]</div>`);
+        out.push(line(`Endereço: ${esc(addr)}`));
       }
-      if ((d?.recipientName || '').trim()) out.push(`<div class="fl-line">Recebe: ${esc(d!.recipientName!.trim())}</div>`);
-      if ((d?.recipientPhone || '').trim()) out.push(`<div class="fl-line">Telefone: ${esc(d!.recipientPhone!.trim())}</div>`);
+      if ((d?.recipientName || '').trim()) out.push(line(`Recebe: ${esc(d!.recipientName!.trim())}`));
+      if ((d?.recipientPhone || '').trim()) out.push(line(`Telefone: ${esc(d!.recipientPhone!.trim())}`));
       const msg = (d?.cardMessage || '').trim();
       if (d?.forWhom === 'gift' && msg) {
-        out.push(`<div class="fl-line">Mensagem do cartão (escrever à mão):</div><div class="fl-line">[OBS]${esc(msg)}[/OBS]</div>`);
+        out.push(line('Cartão (escrever à mão):'));
+        out.push(`<div class="fl-line fl-card obs-text item-notes">[OBS]${esc(msg)}[/OBS]</div>`);
       }
-      const notes = (it.notes || '').trim();
-      if (notes) out.push(`<div class="fl-line">[OBS]Obs: ${esc(notes)}[/OBS]</div>`);
+      // Observação livre do cliente (nunca o texto técnico do destino).
+      const notes = parseDestinationFromNotes(it.notes).rest;
+      if (notes) out.push(`<div class="fl-line obs-text item-notes">[OBS]Obs: ${esc(notes)}[/OBS]</div>`);
       const prod = it.price * it.quantity;
-      out.push(`<div class="fl-line">Valor do produto: ${money(prod)}</div>`);
-      out.push(`<div class="fl-line">Valor da entrega: ${money(fees[i])}</div>`);
-      out.push(`<div class="fl-line fl-total">Total: ${money(prod + fees[i])}</div>`);
+      out.push(line(`Valor do produto: ${money(prod)}`));
+      out.push(line(`Valor da entrega: ${money(fees[i])}`));
+      out.push(line(`Total: ${money(prod + fees[i])}`, 'fl-total'));
       const sep = i < items.length - 1 ? '<div class="fl-sep">--------------------------------</div>' : '';
-      return `<div class="fl-item">${out.join('')}</div>${sep}`;
+      return `<div class="item fl-item">${out.join('')}</div>${sep}`;
     })
     .join('');
 }
 
 export const FLORIST_PRINT_CSS = `
 .fl-item { margin: 1.5mm 0; }
-.fl-line { font-size: 10pt; font-weight: bold; margin: 0.4mm 0; }
-.fl-mode { text-align: center; border: 1px solid #000; padding: 0.8mm; }
-.fl-name { font-size: 11pt; text-transform: uppercase; }
-.fl-total { font-size: 11pt; }
+.fl-item .fl-line { font-size: 10pt; font-weight: bold; margin: 0.4mm 0; font-style: normal; text-transform: none; background: none; color: inherit; padding: 0; }
+.fl-item .fl-card { border: 1px dashed #000; padding: 0.8mm; }
+.fl-item .fl-mode { text-align: center; border: 1px solid #000; padding: 0.8mm; }
+.fl-item .fl-name { font-size: 11pt; text-transform: uppercase; }
+.fl-item .fl-total { font-size: 11pt; }
 .fl-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; }
 `;
