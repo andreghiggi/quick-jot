@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { parseDestinationFromNotes } from '@/lib/floristDestination';
+import { renderFloristItemsHTML, earliestFloristReady, FLORIST_PRINT_CSS } from '@/lib/floristPrint';
 import { Order, OrderStatus } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -506,6 +508,20 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFee = order.total - subtotal > 0 ? order.total - subtotal : 0;
 
+    // Floricultura: pedidos com destino por item reimprimem no layout próprio.
+    const floristParsed = order.items.map((it) => parseDestinationFromNotes(it.notes));
+    const isFloristOrder = floristParsed.some((p) => p.destination);
+    let floristFeeLeft = deliveryFee;
+    const floristItemsHtml = isFloristOrder
+      ? renderFloristItemsHTML(order.items.map((it, i) => {
+          const dest = floristParsed[i].destination;
+          const withFee = dest && dest.mode === 'delivery' ? { ...dest, fee: floristFeeLeft } : dest;
+          if (dest && dest.mode === 'delivery') floristFeeLeft = 0;
+          return { name: it.name, quantity: it.quantity, price: it.price, notes: floristParsed[i].rest, destination: withFee };
+        }))
+      : '';
+    const floristReady = isFloristOrder ? earliestFloristReady(floristParsed.map((p) => p.destination)) : null;
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -551,6 +567,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             margin: 1mm 0;
             border: 1px solid #000;
           }
+          ${isFloristOrder ? FLORIST_PRINT_CSS : ''}
         </style>
       </head>
       <body>
@@ -558,6 +575,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           <div class="store-name">${storeName.toUpperCase()}</div>
           <div class="order-num">PEDIDO #${order.shortCode || order.orderCode || order.dailyNumber}</div>
           <div class="date">${formattedDate}</div>
+          ${floristReady ? `<div class="date"><strong>Pronto até ${floristReady}</strong></div>` : ''}
         </div>
         <hr class="divider">
         <div class="section">
@@ -586,13 +604,13 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
             return extraInfo;
           })()}
         </div>
-        ${order.deliveryAddress 
+        ${isFloristOrder ? '' : order.deliveryAddress 
           ? `<div class="delivery-badge">🛵 ENTREGA</div>
              <div class="section"><p><span class="label">END:</span> ${order.deliveryAddress}</p></div>` 
           : `<div class="delivery-badge">🏪 RETIRADA NO LOCAL</div>`}
         <hr class="divider">
         <div class="section">
-          ${order.items.map(item => {
+          ${isFloristOrder ? floristItemsHtml : order.items.map(item => {
             const itemName = item.name;
             let mainName = itemName;
             let extras = '';
@@ -626,7 +644,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           <span>TOTAL:</span>
           <span>R$ ${order.total.toFixed(2).replace('.', ',')}</span>
         </div>
-        ${order.notes ? `<hr class="divider"><p class="notes"><strong>Obs:</strong> ${order.notes}</p>` : ''}
+        ${order.notes && !isFloristOrder ? `<hr class="divider"><p class="notes"><strong>Obs:</strong> ${order.notes}</p>` : ''}
         <hr class="divider">
         <p class="footer">Obrigado pela preferência!</p>
         <script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 200); }</script>
