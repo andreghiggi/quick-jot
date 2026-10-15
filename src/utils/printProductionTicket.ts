@@ -1,3 +1,4 @@
+import { renderFloristItemsHTML, floristReadyLabel, FLORIST_PRINT_CSS } from '@/lib/floristPrint';
 // Utility for printing production tickets on 80mm thermal printers
 
 export type PrintLayoutVersion = 'v1' | 'v2' | 'v3';
@@ -18,6 +19,9 @@ interface PrintItem {
    *  Formato: [{ groupName: "Sabores da sua Pizza", items: "CAMARÃO R$12,00, FILÉ R$8,00" }].
    *  Quando omitido, comportamento permanece idêntico ao anterior (parseNotes). */
   groupedOptionals?: { groupName: string; items: string }[];
+  /** Floricultura: preço unitário e destino do item (layout completo por produto). */
+  price?: number;
+  floristDestination?: import('@/lib/floristDestination').FloristDestination | null;
 }
 
 interface PrintTicketData {
@@ -252,6 +256,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
         .notes { font-size: 9pt; font-style: italic; margin-left: 8mm; margin-top: 0.5mm; }
         .description { font-size: 9pt; font-style: italic; font-weight: normal; margin-left: 8mm; margin-top: 0.5mm; }
         .footer { border-top: 1px dashed #000; padding-top: 2mm; margin-top: 2mm; text-align: center; font-size: 8pt; }
+        ${FLORIST_PRINT_CSS}
         @media print {
           body { width: ${paperWidth}; }
           @page { margin: 0; size: ${paperWidth} auto; }
@@ -269,7 +274,11 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
         <div class="datetime">${dateStr} às ${timeStr}</div>
       </div>
       <!--BOX_END-->
-      <div class="items">${itemsHTML}</div>
+      <div class="items">${data.florist ? renderFloristItemsHTML(data.items.map((it) => ({
+        name: it.productName, quantity: it.quantity, price: it.price || 0,
+        groupedOptionals: it.groupedOptionals, notes: parseNotes(it.notes).observations?.join?.(' | ') ?? '',
+        destination: it.floristDestination ?? data.florist!.destination,
+      }))) : itemsHTML}</div>
       <div class="footer">--- FIM ---</div>
     </body>
     </html>
@@ -313,7 +322,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   // da data/hora do cabeçalho.
   const readyBlockHTML = '';
   const readyHeaderHTML = data.showReadyTime
-    ? `<div class="datetime ready-inline"><strong>Pronto até:</strong> ${readyTimeStr}</div>`
+    ? `<div class="datetime ready-inline"><strong>Pronto até:</strong> ${(data.florist && floristReadyLabel(data.florist.destination)) || readyTimeStr}</div>`
     : '';
 
   const itemsHTML = data.items.map((item, index) => {
@@ -495,7 +504,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${readyHeaderHTML}
       </div>
       <!--BOX_END-->
-      ${data.florist ? renderFloristBlockHTML(data.florist) : ''}
+      ${data.florist ? '' : ''}
       ${data.paymentNote ? `<div class="obs-block"><div class="obs"><span class="obs-text">${data.paymentNote}</span></div></div>` : ''}
       ${readyBlockHTML}
       <div class="items">${itemsHTML}</div>

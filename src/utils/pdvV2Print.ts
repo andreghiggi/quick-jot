@@ -1,3 +1,4 @@
+import { renderFloristItemsHTML, earliestFloristReady, FLORIST_PRINT_CSS } from '@/lib/floristPrint';
 /**
  * Wrappers de impressão exclusivos do PDV V2.
  * Reusa a função existente generateProductionTicketHTML() sem modificá-la.
@@ -314,7 +315,12 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
        <div class="section"><p>[ENDERECO]${escapeHtml(payload.deliveryAddress)}[/ENDERECO]</p></div>`
     : '<div class="delivery-badge">🏪 RETIRADA NO LOCAL</div>';
 
-  const itemsHtml = payload.items
+  const itemsHtml = floristPerItem
+    ? renderFloristItemsHTML(payload.items.map((it) => ({
+        name: it.name, quantity: it.quantity, price: it.price,
+        groupedOptionals: it.groupedOptionals, notes: it.notes, destination: it.floristDestination,
+      })))
+    : payload.items
     .map((it, idx) => {
       const lineTotal = (it.price * it.quantity).toFixed(2).replace('.', ',');
       let additionalsHtml = '';
@@ -436,6 +442,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     .total-line { display: flex; justify-content: space-between; font-size: 10pt; margin: 0.5mm 0; }
     .grand-total { display: flex; justify-content: space-between; font-size: 13pt; font-weight: bold; margin: 1mm 0; }
     .footer { text-align: center; font-size: 9pt; margin-top: 2mm; }
+    ${FLORIST_PRINT_CSS}
     .delivery-badge {
       text-align: center;
       font-size: 11pt;
@@ -453,7 +460,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     <div class="order-num">PEDIDO #${escapeHtml(orderRef)}</div>
     <div class="origem">${escapeHtml(resolveOrigemLabel(payload))}</div>
     <div class="date">${dt}</div>
-    <div class="ready-inline">Pronto até: ${readyTs}</div>
+    <div class="ready-inline">Pronto até: ${floristPerItem ? (earliestFloristReady(payload.items.map((i) => i.floristDestination)) || readyTs) : readyTs}</div>
   </div>
   <hr class="divider">
   <div class="section">
