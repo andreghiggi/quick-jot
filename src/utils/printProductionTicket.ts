@@ -276,7 +276,7 @@ function generateProductionTicketHTMLv1(data: PrintTicketData): string {
       <!--BOX_END-->
       <div class="items">${data.florist ? renderFloristItemsHTML(data.items.map((it) => ({
         name: it.productName, quantity: it.quantity, price: it.price || 0,
-        groupedOptionals: it.groupedOptionals, notes: parseNotes(it.notes).observations?.join?.(' | ') ?? '',
+        groupedOptionals: it.groupedOptionals, notes: parseNotes(it.notes).observations.join(' | '),
         destination: it.floristDestination ?? data.florist!.destination,
       }))) : itemsHTML}</div>
       <div class="footer">--- FIM ---</div>
@@ -504,7 +504,6 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         ${readyHeaderHTML}
       </div>
       <!--BOX_END-->
-      ${data.florist ? '' : ''}
       ${data.paymentNote ? `<div class="obs-block"><div class="obs"><span class="obs-text">${data.paymentNote}</span></div></div>` : ''}
       ${readyBlockHTML}
       <div class="items">${itemsHTML}</div>
