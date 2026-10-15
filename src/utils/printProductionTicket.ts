@@ -490,6 +490,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           .add-line { -webkit-text-stroke: 0.5px #000 !important; }
           .order-type-badge { background: #000 !important; background-color: #000 !important; color: #fff !important; }
         }
+      ${data.florist ? FLORIST_PRINT_CSS : ''}
       </style>
     </head>
     <body>
@@ -506,7 +507,11 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       <!--BOX_END-->
       ${data.paymentNote ? `<div class="obs-block"><div class="obs"><span class="obs-text">${data.paymentNote}</span></div></div>` : ''}
       ${readyBlockHTML}
-      <div class="items">${itemsHTML}</div>
+      <div class="items">${data.florist ? renderFloristItemsHTML(data.items.map((it) => ({
+        name: it.productName, quantity: it.quantity, price: it.price || 0,
+        groupedOptionals: it.groupedOptionals, notes: parseNotes(it.notes).observations.join(' | '),
+        destination: it.floristDestination ?? data.florist!.destination,
+      }))) : itemsHTML}</div>
       <div class="footer">--- FIM ---</div>
     </body>
     </html>
