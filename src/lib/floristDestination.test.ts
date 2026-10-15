@@ -53,3 +53,26 @@ describe('layout floricultura', () => {
     expect(html).not.toContain('CARTAO');
   });
 });
+
+import { parseDestinationFromNotes as _parse } from './floristDestination';
+describe('parseDestinationFromNotes (reimpressão floricultura)', () => {
+  it('reconstrói o destino gravado no pedido', () => {
+    const n = 'Sem laço | DESTINO 1: PRESENTE | Entrega 22/10/2026 16:00–18:00 | Recebe: Débora Boscato (54999660158) | Endereço: Marechal Floriano, 859 - Centro | Ref: Casa salmão | Cartão: "Te amo | minha vida!" | [DESC]x[/DESC]';
+    const { destination: d, rest } = _parse(n);
+    expect(rest).toBe('Sem laço');
+    expect(d?.forWhom).toBe('gift');
+    expect(d?.mode).toBe('delivery');
+    expect(d?.date).toBe('2026-10-22');
+    expect(d?.slot).toBe('16:00–18:00');
+    expect(d?.recipientName).toBe('Débora Boscato');
+    expect(d?.recipientPhone).toBe('54999660158');
+    expect(d?.street).toBe('Marechal Floriano');
+    expect(d?.number).toBe('859');
+    expect(d?.neighborhood).toBe('Centro');
+    expect(d?.reference).toBe('Casa salmão');
+    expect(d?.cardMessage).toBe('Te amo | minha vida!');
+  });
+  it('sem destino devolve só a observação', () => {
+    expect(_parse('Sem cebola').destination).toBeNull();
+  });
+});
