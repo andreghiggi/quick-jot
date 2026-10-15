@@ -14,6 +14,6 @@ describe('floristPrint', () => {
   it('separa produtos com linha tracejada', () => {
     const html = renderFloristItemsHTML([{ name: 'A', quantity: 1, price: 50, destination: dest }, { name: 'B', quantity: 1, price: 30, destination: dest }]);
     expect(html.match(/fl-sep/g)?.length).toBe(1);
-    expect(html.indexOf('PRESENTE')).toBeLessThan(html.indexOf('[1x] A'));
+    expect(html.indexOf('PRESENTE')).toBeLessThan(html.indexOf('<span class="name">A<'));
   });
 });
