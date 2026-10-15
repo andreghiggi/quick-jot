@@ -1617,6 +1617,9 @@ export default function Menu() {
                 description,
                 groupedOptionals:
                   sendGroupedOptionals && groupedOptionals.length > 0 ? groupedOptionals : undefined,
+                ...(isFlorist
+                  ? { price: calculateItemTotal(item) / (item.quantity || 1), floristDestination: item.floristDestination ?? null }
+                  : {}),
               };
             });
 
