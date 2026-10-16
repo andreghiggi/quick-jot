@@ -107,6 +107,79 @@ const nextStatusLabel: Record<OrderStatus, string> = {
   canceled: '',
 };
 
+
+// Catálogo de adicionais por loja, compartilhado entre TODOS os cards de pedido
+// (antes cada card disparava 5 consultas pesadas; com 20 pedidos eram 100).
+const OPTIONALS_CATALOG_TTL_MS = 60_000;
+type OptionalsCatalog = Record<string, Record<string, { price: number; groupName: string }>>;
+const optionalsCatalogCache = new Map<string, { ts: number; promise: Promise<OptionalsCatalog> }>();
+function loadOptionalsCatalog(companyId: string): Promise<OptionalsCatalog> {
+  const hit = optionalsCatalogCache.get(companyId);
+  if (hit && Date.now() - hit.ts < OPTIONALS_CATALOG_TTL_MS) return hit.promise;
+  const promise = buildOptionalsCatalog(companyId);
+  optionalsCatalogCache.set(companyId, { ts: Date.now(), promise });
+  promise.catch(() => optionalsCatalogCache.delete(companyId));
+  return promise;
+}
+function buildOptionalsCatalog(companyId: string): Promise<OptionalsCatalog> {
+  return Promise.all([
+      supabase.from('product_optionals').select('name, price, product_id, products!inner(name, company_id)').eq('products.company_id', companyId).eq('active', true),
+      supabase.from('optional_group_items').select('name, price, group_id, optional_groups!inner(name, company_id)').eq('optional_groups.company_id', companyId).eq('active', true),
+      supabase.from('optional_group_products').select('group_id, product_id, products!inner(name, company_id)').eq('products.company_id', companyId),
+      supabase.from('optional_group_categories').select('group_id, category_id, categories!inner(name, company_id)').eq('categories.company_id', companyId),
+      supabase.from('products').select('id, name, category, company_id').eq('company_id', companyId).eq('active', true),
+    ]).then(([prodOptRes, groupItemsRes, groupProdsRes, groupCatsRes, productsRes]) => {
+      const catalog: Record<string, Record<string, { price: number; groupName: string }>> = {};
+      
+      // Add product_optionals (paid extras)
+      (prodOptRes.data || []).forEach((row: any) => {
+        const productName = row.products?.name;
+        if (!productName) return;
+        if (!catalog[productName]) catalog[productName] = {};
+        catalog[productName][row.name] = { price: Number(row.price), groupName: 'Adicionais' };
+      });
+      
+      // Build group-to-products map from direct product associations
+      const groupToProducts: Record<string, Set<string>> = {};
+      (groupProdsRes.data || []).forEach((row: any) => {
+        const productName = row.products?.name;
+        if (!productName) return;
+        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
+        groupToProducts[row.group_id].add(productName);
+      });
+      
+      // Build group-to-products map from category associations
+      (groupCatsRes.data || []).forEach((row: any) => {
+        const categoryName = row.categories?.name;
+        if (!categoryName) return;
+        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
+        (productsRes.data || []).forEach((p: any) => {
+          if (p.category === categoryName) {
+            groupToProducts[row.group_id].add(p.name);
+          }
+        });
+      });
+      
+      // Add optional_group_items with their group names
+      (groupItemsRes.data || []).forEach((row: any) => {
+        const groupName = row.optional_groups?.name;
+        if (!groupName) return;
+        const productNames = groupToProducts[row.group_id];
+        if (productNames) {
+          productNames.forEach((productName: string) => {
+            if (!catalog[productName]) catalog[productName] = {};
+            catalog[productName][row.name] = { price: Number(row.price), groupName };
+          });
+        }
+        // Wildcard entry for unmapped products
+        if (!catalog['__groups__']) catalog['__groups__'] = {};
+        catalog['__groups__'][row.name] = { price: Number(row.price), groupName };
+      });
+      
+      return catalog;
+    });
+}
+
 export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech', headerExtra, disableAdvance = false, disableAdvanceReason, hideAdvance = false, onCharged }: OrderCardProps) {
   const { updateOrderStatus, deleteOrder, sendConfirmationWhatsApp, applyLocalOrderStatus } = useOrderContext();
   const { company, isSuperAdmin, isCompanyAdmin } = useAuthContext();
@@ -208,65 +281,6 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     let cancelled = false;
     loadOptionalsCatalog(company.id).then((catalog) => { if (!cancelled) setOptionalsCatalog(catalog); }).catch(() => {});
     return () => { cancelled = true; };
-  }, [company?.id]);
-  // (catálogo carregado uma vez por loja e compartilhado entre todos os cards)
-  const __unusedCatalogEffect = () => {
-    Promise.all([
-      supabase.from('product_optionals').select('name, price, product_id, products!inner(name, company_id)').eq('products.company_id', company.id).eq('active', true),
-      supabase.from('optional_group_items').select('name, price, group_id, optional_groups!inner(name, company_id)').eq('optional_groups.company_id', company.id).eq('active', true),
-      supabase.from('optional_group_products').select('group_id, product_id, products!inner(name, company_id)').eq('products.company_id', company.id),
-      supabase.from('optional_group_categories').select('group_id, category_id, categories!inner(name, company_id)').eq('categories.company_id', company.id),
-      supabase.from('products').select('id, name, category, company_id').eq('company_id', company.id).eq('active', true),
-    ]).then(([prodOptRes, groupItemsRes, groupProdsRes, groupCatsRes, productsRes]) => {
-      const catalog: Record<string, Record<string, { price: number; groupName: string }>> = {};
-      
-      // Add product_optionals (paid extras)
-      (prodOptRes.data || []).forEach((row: any) => {
-        const productName = row.products?.name;
-        if (!productName) return;
-        if (!catalog[productName]) catalog[productName] = {};
-        catalog[productName][row.name] = { price: Number(row.price), groupName: 'Adicionais' };
-      });
-      
-      // Build group-to-products map from direct product associations
-      const groupToProducts: Record<string, Set<string>> = {};
-      (groupProdsRes.data || []).forEach((row: any) => {
-        const productName = row.products?.name;
-        if (!productName) return;
-        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
-        groupToProducts[row.group_id].add(productName);
-      });
-      
-      // Build group-to-products map from category associations
-      (groupCatsRes.data || []).forEach((row: any) => {
-        const categoryName = row.categories?.name;
-        if (!categoryName) return;
-        if (!groupToProducts[row.group_id]) groupToProducts[row.group_id] = new Set();
-        (productsRes.data || []).forEach((p: any) => {
-          if (p.category === categoryName) {
-            groupToProducts[row.group_id].add(p.name);
-          }
-        });
-      });
-      
-      // Add optional_group_items with their group names
-      (groupItemsRes.data || []).forEach((row: any) => {
-        const groupName = row.optional_groups?.name;
-        if (!groupName) return;
-        const productNames = groupToProducts[row.group_id];
-        if (productNames) {
-          productNames.forEach((productName: string) => {
-            if (!catalog[productName]) catalog[productName] = {};
-            catalog[productName][row.name] = { price: Number(row.price), groupName };
-          });
-        }
-        // Wildcard entry for unmapped products
-        if (!catalog['__groups__']) catalog['__groups__'] = {};
-        catalog['__groups__'][row.name] = { price: Number(row.price), groupName };
-      });
-      
-      setOptionalsCatalog(catalog);
-    });
   }, [company?.id]);
   // Converter para fuso horário de São Paulo
   const createdAt = new Date(order.createdAt);
