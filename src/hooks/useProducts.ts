@@ -291,7 +291,14 @@ export function useProducts(options: UseProductsOptions = {}) {
 
       if (error) throw error;
 
-      await fetchProducts();
+      // Atualiza só o produto editado (sem rebaixar o catálogo inteiro).
+      const patch = (list: Product[]) =>
+        list.map((p) => (p.id === id ? ({ ...p, ...productData, id, optionals: p.optionals } as Product) : p));
+      setProducts((prev) => patch(prev));
+      if (companyId) {
+        const cached = productsCache.get(companyId);
+        if (cached) productsCache.set(companyId, { data: patch(cached.data), ts: cached.ts });
+      }
       toast.success('Produto atualizado!');
       return true;
     } catch (error) {
