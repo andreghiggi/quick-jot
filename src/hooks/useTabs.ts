@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -52,6 +52,8 @@ export function useTabs(options: UseTabsOptions = {}) {
   const { companyId } = options;
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [loading, setLoading] = useState(true);
+  const tabsRef = useRef<Tab[]>([]);
+  tabsRef.current = tabs;
 
   useEffect(() => {
     if (companyId) {
@@ -101,7 +103,11 @@ export function useTabs(options: UseTabsOptions = {}) {
             schema: 'public',
             table: 'tab_items',
           },
-          () => {
+          (payload: any) => {
+            // tab_items não tem company_id: ignora movimentos de comandas de
+            // OUTRAS lojas (antes cada item de qualquer loja recarregava tudo).
+            const tabId = payload?.new?.tab_id ?? payload?.old?.tab_id;
+            if (tabId && !tabsRef.current.some((t) => t.id === tabId)) return;
             scheduleItemsRefetch();
           }
         )
@@ -144,6 +150,9 @@ export function useTabs(options: UseTabsOptions = {}) {
           items:tab_items(*)
         `)
         .eq('company_id', companyId)
+        // Só comandas abertas: todas as telas usam apenas openTabs. Antes vinha
+        // o histórico inteiro (centenas de comandas fechadas, ~650 KB).
+        .eq('status', 'open')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
