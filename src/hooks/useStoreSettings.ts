@@ -48,6 +48,40 @@ interface StoreSettings {
   drawerPulse: string;
 }
 
+// Cache compartilhado por empresa: dezenas de cards/telas abertas ao mesmo
+// tempo reaproveitam UMA busca (evita rajadas de store_settings idênticas).
+const SETTINGS_TTL_MS = 30_000;
+const settingsCache = new Map<string, { ts: number; rows?: any[]; promise?: Promise<any[]> }>();
+
+export function fetchStoreSettingsRows(companyId: string, force = false): Promise<any[]> {
+  const now = Date.now();
+  const hit = settingsCache.get(companyId);
+  if (!force && hit) {
+    if (hit.promise) return hit.promise;
+    if (hit.rows && now - hit.ts < SETTINGS_TTL_MS) return Promise.resolve(hit.rows);
+  }
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from('store_settings')
+      .select('*')
+      .eq('company_id', companyId);
+    if (error) throw error;
+    return data || [];
+  })();
+  settingsCache.set(companyId, { ts: now, rows: hit?.rows, promise });
+  promise
+    .then((rows) => settingsCache.set(companyId, { ts: Date.now(), rows }))
+    .catch(() => {
+      if (hit?.rows) settingsCache.set(companyId, { ts: hit.ts, rows: hit.rows });
+      else settingsCache.delete(companyId);
+    });
+  return promise;
+}
+
+export function invalidateStoreSettings(companyId?: string) {
+  if (companyId) settingsCache.delete(companyId); else settingsCache.clear();
+}
+
 interface UseStoreSettingsOptions {
   companyId?: string | null;
 }
@@ -102,19 +136,14 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
   const [loading, setLoading] = useState(true);
   const isInitialLoadRef = useRef(true);
 
-  async function fetchSettings() {
+  async function fetchSettings(force = false) {
     if (!companyId) {
       setLoading(false);
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('store_settings')
-        .select('*')
-        .eq('company_id', companyId);
-
-      if (error) throw error;
+      const data = await fetchStoreSettingsRows(companyId, force);
 
       const settingsMap: Record<string, string> = {};
       (data || []).forEach((item) => {
@@ -219,7 +248,7 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
         if (error) throw error;
       }
 
-      await fetchSettings();
+      await fetchSettings(true);
       return true;
     } catch (error) {
       console.error('Error updating setting:', error);
@@ -283,6 +312,6 @@ export function useStoreSettings(options: UseStoreSettingsOptions = {}) {
     saveDeliveryFeeInterior,
     saveCardVisibility,
     updateSetting,
-    refetch: fetchSettings,
+    refetch: () => fetchSettings(true),
   };
 }

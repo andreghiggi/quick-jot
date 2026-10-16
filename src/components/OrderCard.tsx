@@ -205,7 +205,12 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
   useEffect(() => {
     if (!company?.id) return;
-    
+    let cancelled = false;
+    loadOptionalsCatalog(company.id).then((catalog) => { if (!cancelled) setOptionalsCatalog(catalog); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [company?.id]);
+  // (catálogo carregado uma vez por loja e compartilhado entre todos os cards)
+  const __unusedCatalogEffect = () => {
     Promise.all([
       supabase.from('product_optionals').select('name, price, product_id, products!inner(name, company_id)').eq('products.company_id', company.id).eq('active', true),
       supabase.from('optional_group_items').select('name, price, group_id, optional_groups!inner(name, company_id)').eq('optional_groups.company_id', company.id).eq('active', true),
