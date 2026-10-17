@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchStoreSettingsRows } from '@/hooks/useStoreSettings';
 
 export function useTefEnabled(companyId?: string | null) {
   const [enabled, setEnabled] = useState(false);
@@ -14,12 +15,8 @@ export function useTefEnabled(companyId?: string | null) {
 
       try {
         // Verifica tanto TEF PinPad (merchant_id) quanto SmartPOS (terminais ativos)
-        const [settingsRes, terminalsRes] = await Promise.all([
-          supabase
-            .from('store_settings')
-            .select('key, value')
-            .eq('company_id', companyId)
-            .eq('key', 'tef_merchant_id'),
+        const [settingsRows, terminalsRes] = await Promise.all([
+          fetchStoreSettingsRows(companyId),
           supabase
             .from('pinpdv_terminals')
             .select('id')
@@ -28,7 +25,7 @@ export function useTefEnabled(companyId?: string | null) {
             .limit(1)
         ]);
 
-        const hasMerchantId = settingsRes.data?.some(s => s.value && s.value.trim() !== '');
+        const hasMerchantId = settingsRows.some((s: any) => s.key === 'tef_merchant_id' && s.value && s.value.trim() !== '');
         const hasSmartPos = (terminalsRes.data?.length || 0) > 0;
 
         setEnabled(!!(hasMerchantId || hasSmartPos));

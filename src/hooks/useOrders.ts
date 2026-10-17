@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchStoreSettingsRows } from '@/hooks/useStoreSettings';
 import { Order, OrderItem, OrderStatus } from '@/types/order';
 import { toast } from 'sonner';
 import { generateWhatsAppMessage } from '@/utils/whatsappMessages';
@@ -361,11 +362,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
               let googleReviewUrl: string | undefined;
               let estimatedWaitTime: string | undefined;
 
-              const { data: settings } = await supabase
-                .from('store_settings')
-                .select('key, value')
-                .eq('company_id', companyId)
-                .in('key', ['google_review_url', 'estimated_wait_time', 'whatsapp_msg_pending', 'whatsapp_msg_preparing', 'whatsapp_msg_ready_pickup', 'whatsapp_msg_ready_delivery', 'whatsapp_msg_delivered']);
+              const settings = (await fetchStoreSettingsRows(companyId)).filter((r: any) => ['google_review_url', 'estimated_wait_time', 'whatsapp_msg_pending', 'whatsapp_msg_preparing', 'whatsapp_msg_ready_pickup', 'whatsapp_msg_ready_delivery', 'whatsapp_msg_delivered'].includes(r.key));
 
               const customTemplates: Record<string, string> = {};
               settings?.forEach(s => {
@@ -575,11 +572,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         .eq('id', companyId)
         .single();
 
-      const { data: settings } = await supabase
-        .from('store_settings')
-        .select('key, value')
-        .eq('company_id', companyId)
-        .in('key', ['whatsapp_msg_pending', 'whatsapp_msg_pix']);
+      const settings = (await fetchStoreSettingsRows(companyId)).filter((r: any) => ['whatsapp_msg_pending', 'whatsapp_msg_pix'].includes(r.key));
 
       const customTemplates: Record<string, string> = {};
       settings?.forEach(s => {
