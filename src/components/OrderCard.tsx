@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { parseDestinationFromNotes } from '@/lib/floristDestination';
 import { renderFloristItemsHTML, earliestFloristReady, FLORIST_PRINT_CSS } from '@/lib/floristPrint';
 import { Order, OrderStatus } from '@/types/order';
