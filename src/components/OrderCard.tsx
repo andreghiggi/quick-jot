@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { parseDestinationFromNotes } from '@/lib/floristDestination';
 import { renderFloristItemsHTML, earliestFloristReady, FLORIST_PRINT_CSS } from '@/lib/floristPrint';
 import { Order, OrderStatus } from '@/types/order';
@@ -261,18 +261,32 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const tefAlreadyCancelled = isOrderTefCancelled(order.notes);
   const hasTefReceipt = !!tefInfo?.receipt;
 
-  // NFC-e vinculada (se houver) — carregada sob demanda para habilitar
-  // "Reimprimir Venda" como DANFE quando aplicável.
+  // NFC-e vinculada (se houver) — carregada SOB DEMANDA (clique em reimprimir
+  // ou abertura do cancelamento). Exceção: pedidos ainda editáveis
+  // (pending/preparing) consultam ao montar, pois o botão Editar depende disso.
   const [nfceRecord, setNfceRecord] = useState<(NFCeRecord & { request_payload?: any }) | null>(null);
+  const nfceLoadedRef = useRef(false);
   const [reimprimindoVenda, setReimprimindoVenda] = useState(false);
+  const ensureNfceRecord = useCallback(async () => {
+    if (nfceLoadedRef.current || !order.id) return nfceRecord;
+    try {
+      const rec = await getNFCeRecordByOrderId(order.id);
+      nfceLoadedRef.current = true;
+      setNfceRecord(rec);
+      return rec;
+    } catch {
+      return null; // silencioso — pedido sem NFC-e é o caso comum
+    }
+  }, [order.id, nfceRecord]);
+  const needsEagerNfce = order.status === 'pending' || order.status === 'preparing';
   useEffect(() => {
-    let cancelled = false;
-    if (!order.id) return;
-    getNFCeRecordByOrderId(order.id)
-      .then((rec) => { if (!cancelled) setNfceRecord(rec); })
-      .catch(() => { /* silencioso — pedido sem NFC-e é o caso comum */ });
-    return () => { cancelled = true; };
+    nfceLoadedRef.current = false;
+    setNfceRecord(null);
   }, [order.id]);
+  useEffect(() => {
+    if (needsEagerNfce) void ensureNfceRecord();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id, needsEagerNfce]);
   
   // Catalog lookup to enrich legacy order items with prices and group names
   const [optionalsCatalog, setOptionalsCatalog] = useState<Record<string, Record<string, { price: number; groupName: string }>>>({});
@@ -428,10 +442,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     if (reimprimindoVenda) return;
     setReimprimindoVenda(true);
     try {
-      // Caminho 1: tem NFC-e vinculada → DANFE
-      if (nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url)) {
+      // Caminho 1: tem NFC-e vinculada → DANFE (consulta sob demanda)
+      const rec = await ensureNfceRecord();
+      if (rec && (rec.chave_acesso || rec.qrcode_url)) {
         try {
-          await printDanfeFromRecord(nfceRecord);
+          await printDanfeFromRecord(rec);
           return;
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Falha ao reimprimir DANFE');
@@ -1036,7 +1051,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               if (!canCancel) return null;
               const hasNfce = !!nfceRecord && (!!nfceRecord.chave_acesso || !!nfceRecord.qrcode_url);
               return (
-                <AlertDialog open={cancelDialogOpen} onOpenChange={(o) => { setCancelDialogOpen(o); if (!o) setCancelReason(''); }}>
+                <AlertDialog open={cancelDialogOpen} onOpenChange={(o) => { setCancelDialogOpen(o); if (o) void ensureNfceRecord(); if (!o) setCancelReason(''); }}>
                   <AlertDialogTrigger asChild>
                     <Button
                       variant="ghost"
