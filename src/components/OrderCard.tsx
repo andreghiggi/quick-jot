@@ -442,10 +442,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
     if (reimprimindoVenda) return;
     setReimprimindoVenda(true);
     try {
-      // Caminho 1: tem NFC-e vinculada → DANFE
-      if (nfceRecord && (nfceRecord.chave_acesso || nfceRecord.qrcode_url)) {
+      // Caminho 1: tem NFC-e vinculada → DANFE (consulta sob demanda)
+      const rec = await ensureNfceRecord();
+      if (rec && (rec.chave_acesso || rec.qrcode_url)) {
         try {
-          await printDanfeFromRecord(nfceRecord);
+          await printDanfeFromRecord(rec);
           return;
         } catch (err) {
           toast.error(err instanceof Error ? err.message : 'Falha ao reimprimir DANFE');
@@ -1050,7 +1051,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               if (!canCancel) return null;
               const hasNfce = !!nfceRecord && (!!nfceRecord.chave_acesso || !!nfceRecord.qrcode_url);
               return (
-                <AlertDialog open={cancelDialogOpen} onOpenChange={(o) => { setCancelDialogOpen(o); if (!o) setCancelReason(''); }}>
+                <AlertDialog open={cancelDialogOpen} onOpenChange={(o) => { setCancelDialogOpen(o); if (o) void ensureNfceRecord(); if (!o) setCancelReason(''); }}>
                   <AlertDialogTrigger asChild>
                     <Button
                       variant="ghost"
