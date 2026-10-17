@@ -135,7 +135,7 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
 
       if (error) throw error;
 
-      await fetchPaymentMethods();
+      await fetchPaymentMethods(true);
       toast.success('Forma de pagamento adicionada!');
       return true;
     } catch (error) {
@@ -154,7 +154,7 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
 
       if (error) throw error;
 
-      await fetchPaymentMethods();
+      await fetchPaymentMethods(true);
       toast.success('Forma de pagamento atualizada!');
       return true;
     } catch (error) {
@@ -173,7 +173,7 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
 
       if (error) throw error;
 
-      await fetchPaymentMethods();
+      await fetchPaymentMethods(true);
       toast.success('Forma de pagamento removida!');
       return true;
     } catch (error) {
@@ -195,6 +195,6 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
     addPaymentMethod,
     updatePaymentMethod,
     deletePaymentMethod,
-    refetch: fetchPaymentMethods
+    refetch: () => fetchPaymentMethods(true)
   };
 }
