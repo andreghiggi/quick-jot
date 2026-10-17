@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchStoreSettingsRows } from '@/hooks/useStoreSettings';
 
 export function useFiscalEnabled(companyId?: string | null) {
   const [enabled, setEnabled] = useState(false);
@@ -13,13 +13,8 @@ export function useFiscalEnabled(companyId?: string | null) {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('store_settings')
-          .select('key, value')
-          .eq('company_id', companyId)
-          .in('key', ['fiscal_flow_api_token', 'fiscal_token', 'focus_nfe_token', 'focus_nfe_environment']);
-
-        if (error) throw error;
+        // Cache compartilhado de store_settings (evita rajadas repetidas).
+        const data = await fetchStoreSettingsRows(companyId);
 
         // Se tiver qualquer token fiscal configurado
         const hasToken = data?.some(s =>
