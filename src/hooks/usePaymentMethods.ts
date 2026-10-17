@@ -33,6 +33,37 @@ interface UsePaymentMethodsOptions {
   channel?: PaymentChannel;
 }
 
+// Cache compartilhado por empresa: todas as telas/cards/modais que usam formas
+// de pagamento reaproveitam UMA busca (evita tempestade de requisições idênticas).
+const PM_TTL_MS = 30_000;
+const pmCache = new Map<string, { ts: number; rows?: PaymentMethod[]; promise?: Promise<PaymentMethod[]> }>();
+
+export function fetchPaymentMethodRows(companyId: string, force = false): Promise<PaymentMethod[]> {
+  const now = Date.now();
+  const hit = pmCache.get(companyId);
+  if (!force && hit) {
+    if (hit.promise) return hit.promise;
+    if (hit.rows && now - hit.ts < PM_TTL_MS) return Promise.resolve(hit.rows);
+  }
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from('payment_methods')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('display_order', { ascending: true });
+    if (error) throw error;
+    return (data as PaymentMethod[]) || [];
+  })();
+  pmCache.set(companyId, { ts: now, rows: hit?.rows, promise });
+  promise
+    .then((rows) => pmCache.set(companyId, { ts: Date.now(), rows }))
+    .catch(() => {
+      if (hit?.rows) pmCache.set(companyId, { ts: hit.ts, rows: hit.rows });
+      else pmCache.delete(companyId);
+    });
+  return promise;
+}
+
 export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
   const { companyId, channel } = options;
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -47,24 +78,12 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, channel]);
 
-  async function fetchPaymentMethods() {
+  async function fetchPaymentMethods(force = false) {
     if (!companyId) return;
 
     try {
-      let query = supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('company_id', companyId)
-        .order('display_order', { ascending: true });
-
-      if (channel) {
-        query = query.eq('channel', channel);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setPaymentMethods((data as PaymentMethod[]) || []);
+      const rows = await fetchPaymentMethodRows(companyId, force);
+      setPaymentMethods(channel ? rows.filter((m) => m.channel === channel) : rows);
     } catch (error) {
       console.error('Error fetching payment methods:', error);
     } finally {
@@ -116,7 +135,7 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
 
       if (error) throw error;
 
-      await fetchPaymentMethods();
+      await fetchPaymentMethods(true);
       toast.success('Forma de pagamento adicionada!');
       return true;
     } catch (error) {
@@ -135,7 +154,7 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
 
       if (error) throw error;
 
-      await fetchPaymentMethods();
+      await fetchPaymentMethods(true);
       toast.success('Forma de pagamento atualizada!');
       return true;
     } catch (error) {
@@ -154,7 +173,7 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
 
       if (error) throw error;
 
-      await fetchPaymentMethods();
+      await fetchPaymentMethods(true);
       toast.success('Forma de pagamento removida!');
       return true;
     } catch (error) {
@@ -176,6 +195,6 @@ export function usePaymentMethods(options: UsePaymentMethodsOptions = {}) {
     addPaymentMethod,
     updatePaymentMethod,
     deletePaymentMethod,
-    refetch: fetchPaymentMethods
+    refetch: () => fetchPaymentMethods(true)
   };
 }

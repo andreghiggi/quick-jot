@@ -1181,7 +1181,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           )}
         </div>
       </div>
-      {showChargeButton && (
+      {showChargeButton && chargeDialogOpen && (
         <OrderCardChargeDialog
           order={order}
           open={chargeDialogOpen}
@@ -1189,7 +1189,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           onCharged={onCharged}
         />
       )}
-      {showEditButton && company?.id && (
+      {showEditButton && editDialogOpen && company?.id && (
         <OrderEditDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
