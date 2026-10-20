@@ -38,7 +38,7 @@ export function PDVV2TablesGrid({ tabs, onImport, onDelete }: Props) {
                 <div className="flex items-center gap-2">
                   <UtensilsCrossed className="h-5 w-5 text-primary" />
                   <h3 className="font-semibold text-lg truncate">
-                    {tab.tableNumber ? `Mesa ${tab.tableNumber}` : `Comanda ${tab.tabNumber}`}
+                    {tab.tableNumber ? `Mesa ${tab.tableNumber}` : `Comanda ${String(tab.comandaNumber ?? tab.tabNumber).padStart(3, '0')}`}
                   </h3>
                 </div>
                 {tab.customerName && (

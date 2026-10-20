@@ -8,6 +8,8 @@ export interface OccupiedTab {
   id: string;
   tabNumber: number;
   tableNumber?: number | null;
+  /** Número da comanda física (cartão). */
+  comandaNumber?: number | null;
   customerName?: string | null;
   total: number;
   items?: Array<{
@@ -50,7 +52,7 @@ export function PDVV2TablesPanel({ tabs, onImport }: PDVV2TablesPanelProps) {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-semibold text-sm">
-                        {tab.tableNumber ? `Mesa ${tab.tableNumber}` : `Comanda ${tab.tabNumber}`}
+                        {tab.tableNumber ? `Mesa ${tab.tableNumber}` : `Comanda ${String(tab.comandaNumber ?? tab.tabNumber).padStart(3, '0')}`}
                       </p>
                       {tab.customerName && (
                         <p className="text-xs text-muted-foreground truncate">{tab.customerName}</p>

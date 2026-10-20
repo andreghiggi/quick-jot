@@ -299,6 +299,7 @@ export default function PDVV2() {
         id: t.id,
         tabNumber: t.tab_number,
         tableNumber: t.table?.number ?? null,
+        comandaNumber: (t as any).comanda_number ?? null,
         customerName: t.customer_name,
         total: t.items?.reduce((s, i) => s + ((i as any).paid ? 0 : i.total_price), 0) || 0,
         items: (t.items || [])
