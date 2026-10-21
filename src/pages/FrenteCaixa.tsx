@@ -874,8 +874,8 @@ export default function FrenteCaixa() {
 
   // ---- importação de pedido/mesa ----
   function handleImportOrder(order: ImportableOrder) {
-    if (importedOrderId) {
-      toast.error('Já existe um pedido importado neste carrinho.');
+    if (importedOrderId || comandaCharge) {
+      toast.error('Já existe um pedido/comanda importado neste carrinho.');
       return;
     }
     const newLines: CartLine[] = order.items.map((it) => ({
