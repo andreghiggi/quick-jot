@@ -15,6 +15,21 @@ interface UseOrdersOptions {
 
 // Extraído de fetchOrders para ser reaproveitado por fetchOrdersByDateRange
 // (mesma forma de mapear linha do banco -> Order, sem duplicar a lógica).
+// Índice order_id -> itens, construído uma vez por lote (O(N) em vez de O(N×M)).
+const itemsIndexCache = new WeakMap<any[], Map<string, any[]>>();
+function getItemsIndex(itemsData: any[]): Map<string, any[]> {
+  let idx = itemsIndexCache.get(itemsData);
+  if (!idx) {
+    idx = new Map();
+    for (const it of itemsData) {
+      const arr = idx.get(it.order_id);
+      if (arr) arr.push(it); else idx.set(it.order_id, [it]);
+    }
+    itemsIndexCache.set(itemsData, idx);
+  }
+  return idx;
+}
+
 function mapOrderRow(order: any, itemsData: any[]): Order {
   return {
     id: order.id,
@@ -44,8 +59,7 @@ function mapOrderRow(order: any, itemsData: any[]): Order {
         ? 'balcao'
         : ((order as any).origin || 'cardapio')
     ) as 'cardapio' | 'balcao' | 'mesa',
-    items: itemsData
-      .filter((item) => item.order_id === order.id)
+    items: (getItemsIndex(itemsData).get(order.id) || [])
       .map((item) => ({
         id: item.id,
         productId: item.product_id || '',
@@ -70,7 +84,31 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const realtimeReadyRef = useRef(false);
   const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function fetchOrders() {
+  // Trava de concorrência: nunca roda mais de uma busca completa ao mesmo tempo.
+  // Chamadas durante uma busca marcam "rodar de novo" e aguardam a mesma promessa.
+  const fetchInFlightRef = useRef<Promise<void> | null>(null);
+  const fetchRerunRef = useRef(false);
+  const fetchInnerRef = useRef<() => Promise<void>>(async () => {});
+  fetchInnerRef.current = fetchOrdersInner;
+
+  function fetchOrders(): Promise<void> {
+    if (fetchInFlightRef.current) {
+      fetchRerunRef.current = true;
+      return fetchInFlightRef.current;
+    }
+    const run = async () => {
+      do {
+        fetchRerunRef.current = false;
+        await fetchInnerRef.current();
+      } while (fetchRerunRef.current);
+    };
+    fetchInFlightRef.current = run().finally(() => {
+      fetchInFlightRef.current = null;
+    });
+    return fetchInFlightRef.current;
+  }
+
+  async function fetchOrdersInner() {
     // Don't fetch if no companyId - prevents showing orders from other companies
     if (!companyId) {
       setOrders([]);
@@ -285,8 +323,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
       if (itemsError) throw itemsError;
 
-      // Immediately update local state for instant feedback
-      await fetchOrders();
+      // Atualiza a lista em segundo plano — não segura o fechamento do Pedido Express.
+      void fetchOrders();
       return {
         id: newOrder.id,
         shortCode: (newOrder as any).short_code || undefined,
