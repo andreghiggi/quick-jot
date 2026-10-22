@@ -460,7 +460,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
     <div class="order-num">PEDIDO #${escapeHtml(orderRef)}</div>
     <div class="origem">${escapeHtml(resolveOrigemLabel(payload))}</div>
     <div class="date">${dt}</div>
-    <div class="ready-inline">Pronto até: ${floristPerItem ? (earliestFloristReady(payload.items.map((i) => i.floristDestination)) || readyTs) : readyTs}</div>
+    ${floristPerItem ? '' : `<div class="ready-inline">Pronto até: ${readyTs}</div>`}
   </div>
   <hr class="divider">
   <div class="section">

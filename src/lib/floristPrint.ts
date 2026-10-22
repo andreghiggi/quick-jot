@@ -60,11 +60,8 @@ export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
     .map((it, i) => {
       const d = it.destination;
       const out: string[] = [];
-      if (d) {
-        const modo = d.mode === 'delivery' ? '🛵 ENTREGA' : '🏪 RETIRADA NA LOJA';
-        out.push(line(`${modo} - ${d.forWhom === 'gift' ? '🎁 PRESENTE' : 'PARA O COMPRADOR'}`, 'fl-mode'));
-      }
-      out.push(`<div class="fl-line fl-name item-name"><span class="qty">[${it.quantity}x]</span> <span class="name">${esc(it.name)}</span></div>`);
+      // 1) Produto
+      out.push(`<div class="fl-line fl-name item-name"><span class="qty">[${it.quantity}x]</span> <span class="name">${esc(it.name.toUpperCase())}</span></div>`);
       for (const g of it.groupedOptionals || []) {
         g.items
           .split(/,(?!\s*\d{2}\s*(?:,|$))/)
@@ -72,31 +69,45 @@ export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
           .filter(Boolean)
           .forEach((a) => out.push(line(`+ ${esc(a)}`)));
       }
+      // 2) Modalidade, data, horário e pronto até (por produto)
+      if (d) {
+        const modo = d.mode === 'delivery' ? '🛵 ENTREGA' : '🏪 RETIRADA NA LOJA';
+        const quem = d.forWhom === 'gift' ? '🎁 PRESENTE' : 'PARA O COMPRADOR';
+        out.push(line(`${modo} — ${quem}`, 'fl-mode fl-gap'));
+      }
       if (d?.date) {
-        const date = d.date.split('-').reverse().join('/');
-        out.push(line(`Data: ${esc(date)} | Turno: ${esc(d.slot || '')}`));
+        out.push(line(`DATA: ${esc(d.date.split('-').reverse().join('/'))}`));
+        if ((d.slot || '').trim()) out.push(line(`HORÁRIO: ${esc(d.slot!.trim())}`));
+        const ready = floristReadyLabel(d);
+        if (ready) out.push(line(`PRONTO ATÉ: ${esc(ready)}`, 'fl-ready'));
       }
+      // 3) Quem recebe
+      const rec = (d?.recipientName || '').trim();
+      const tel = (d?.recipientPhone || '').trim();
+      if (rec) out.push(line(`RECEBE: ${esc(rec)}`, 'fl-gap'));
+      if (tel) out.push(line(`TEL: ${esc(tel)}`, rec ? '' : 'fl-gap'));
+      // 4) Endereço em linhas separadas
       if (d?.mode === 'delivery') {
-        let addr = `${(d.street || '').trim()}, ${(d.number || '').trim()}`;
-        if ((d.complement || '').trim()) addr += ` - ${d.complement!.trim()}`;
-        addr += ` - ${(d.neighborhood || '').trim()}`;
-        if ((d.reference || '').trim()) addr += ` | Ref: ${d.reference!.trim()}`;
-        out.push(line(`Endereço: ${esc(addr)}`));
+        out.push(line('ENDEREÇO:', 'fl-gap'));
+        let rua = `${(d.street || '').trim()}, ${(d.number || '').trim()}`;
+        if ((d.complement || '').trim()) rua += ` (${d.complement!.trim()})`;
+        out.push(line(esc(rua)));
+        if ((d.neighborhood || '').trim()) out.push(line(esc(d.neighborhood!.trim())));
+        if ((d.reference || '').trim()) out.push(line(`REF.: ${esc(d.reference!.trim())}`));
       }
-      if ((d?.recipientName || '').trim()) out.push(line(`Recebe: ${esc(d!.recipientName!.trim())}`));
-      if ((d?.recipientPhone || '').trim()) out.push(line(`Telefone: ${esc(d!.recipientPhone!.trim())}`));
+      // 5) Mensagem do cartão
       const msg = (d?.cardMessage || '').trim();
       if (d?.forWhom === 'gift' && msg) {
-        out.push(line('Cartão (escrever à mão):'));
+        out.push(line('MENSAGEM DO CARTÃO:', 'fl-gap'));
         out.push(`<div class="fl-line fl-card obs-text item-notes">[OBS]${esc(msg)}[/OBS]</div>`);
       }
-      // Observação livre do cliente (nunca o texto técnico do destino).
       const notes = parseDestinationFromNotes(it.notes).rest;
-      if (notes) out.push(`<div class="fl-line obs-text item-notes">[OBS]Obs: ${esc(notes)}[/OBS]</div>`);
+      if (notes) out.push(`<div class="fl-line obs-text item-notes fl-gap">[OBS]Obs: ${esc(notes)}[/OBS]</div>`);
+      // 6) Valores
       const prod = it.price * it.quantity;
-      out.push(line(`Valor do produto: ${money(prod)}`));
-      out.push(line(`Valor da entrega: ${money(fees[i])}`));
-      out.push(line(`Total: ${money(prod + fees[i])}`, 'fl-total'));
+      out.push(line(`PRODUTO: ${money(prod)}`, 'fl-gap'));
+      out.push(line(`ENTREGA: ${money(fees[i])}`));
+      out.push(line(`TOTAL DO ITEM: ${money(prod + fees[i])}`, 'fl-total'));
       const sep = i < items.length - 1 ? '<div class="fl-sep">--------------------------------</div>' : '';
       return `<div class="item fl-item">${out.join('')}</div>${sep}`;
     })
@@ -106,9 +117,11 @@ export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
 export const FLORIST_PRINT_CSS = `
 .fl-item { margin: 1.5mm 0; }
 .fl-item .fl-line { font-size: 10pt; font-weight: bold; margin: 0.4mm 0; font-style: normal; text-transform: none; background: none; color: inherit; padding: 0; }
-.fl-item .fl-card { border: 1px dashed #000; padding: 0.8mm; }
-.fl-item .fl-mode { text-align: center; border: 1px solid #000; padding: 0.8mm; }
-.fl-item .fl-name { font-size: 11pt; text-transform: uppercase; }
+.fl-item .fl-gap { margin-top: 2.5mm; }
+.fl-item .fl-card { border: 1px dashed #000; padding: 0.8mm; font-weight: normal; }
+.fl-item .fl-mode { font-size: 10.5pt; }
+.fl-item .fl-ready { font-size: 10.5pt; }
+.fl-item .fl-name { font-size: 11.5pt; }
 .fl-item .fl-total { font-size: 11pt; }
 .fl-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; }
 `;
