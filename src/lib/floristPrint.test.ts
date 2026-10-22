@@ -14,6 +14,16 @@ describe('floristPrint', () => {
   it('separa produtos com linha tracejada', () => {
     const html = renderFloristItemsHTML([{ name: 'A', quantity: 1, price: 50, destination: dest }, { name: 'B', quantity: 1, price: 30, destination: dest }]);
     expect(html.match(/fl-sep/g)?.length).toBe(1);
-    expect(html.indexOf('PRESENTE')).toBeLessThan(html.indexOf('<span class="name">A<'));
+    expect(html.indexOf('<span class="name">A<')).toBeLessThan(html.indexOf('PRESENTE'));
+  });
+  it('pronto até sai dentro de cada produto e usa "Mensagem do cartão"', () => {
+    const html = renderFloristItemsHTML([
+      { name: 'A', quantity: 1, price: 50, destination: { ...dest, cardMessage: 'Oi' } },
+      { name: 'B', quantity: 1, price: 30, destination: { ...dest, date: '2026-10-31', slot: '12:00–14:00' } },
+    ]);
+    expect(html).toContain('PRONTO ATÉ: 23/10 16h');
+    expect(html).toContain('PRONTO ATÉ: 31/10 12h');
+    expect(html).toContain('MENSAGEM DO CARTÃO:');
+    expect(html).not.toContain('escrever à mão');
   });
 });

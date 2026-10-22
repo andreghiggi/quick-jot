@@ -321,8 +321,8 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
   // V2: remove "Criado em" redundante e mostra "Pronto até" logo abaixo
   // da data/hora do cabeçalho.
   const readyBlockHTML = '';
-  const readyHeaderHTML = data.showReadyTime
-    ? `<div class="datetime ready-inline"><strong>Pronto até:</strong> ${(data.florist && floristReadyLabel(data.florist.destination)) || readyTimeStr}</div>`
+  const readyHeaderHTML = data.showReadyTime && !data.florist
+    ? `<div class="datetime ready-inline"><strong>Pronto até:</strong> ${readyTimeStr}</div>`
     : '';
 
   const itemsHTML = data.items.map((item, index) => {

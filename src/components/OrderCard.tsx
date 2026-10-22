@@ -609,7 +609,6 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
           <div class="store-name">${storeName.toUpperCase()}</div>
           <div class="order-num">PEDIDO #${order.shortCode || order.orderCode || order.dailyNumber}</div>
           <div class="date">${formattedDate}</div>
-          ${floristReady ? `<div class="date"><strong>Pronto até ${floristReady}</strong></div>` : ''}
         </div>
         <hr class="divider">
         <div class="section">
