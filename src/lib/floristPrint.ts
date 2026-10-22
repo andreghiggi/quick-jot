@@ -55,7 +55,10 @@ export function floristItemFees(items: FloristPrintItem[]): number[] {
  */
 export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
   const fees = floristItemFees(items);
-  const line = (txt: string, extra = '') => `<div class="fl-line description add-line${extra ? ' ' + extra : ''}">${txt}</div>`;
+  const raw = (txt: string, extra = '') => `<div class="fl-line description add-line${extra ? ' ' + extra : ''}">${txt}</div>`;
+  // Blocos: auto_printer ignora margens CSS, então inserimos uma linha em branco real antes de cada bloco.
+  const line = (txt: string, extra = '') =>
+    /\bfl-gap\b/.test(extra) ? `${raw('&nbsp;', 'fl-blank')}${raw(txt, extra)}` : raw(txt, extra);
   return items
     .map((it, i) => {
       const d = it.destination;
@@ -71,8 +74,8 @@ export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
       }
       // 2) Modalidade, data, horário e pronto até (por produto)
       if (d) {
-        const modo = d.mode === 'delivery' ? '🛵 ENTREGA' : '🏪 RETIRADA NA LOJA';
-        const quem = d.forWhom === 'gift' ? '🎁 PRESENTE' : 'PARA O COMPRADOR';
+        const modo = d.mode === 'delivery' ? '[ENTREGA]' : '[RETIRADA NA LOJA]';
+        const quem = d.forWhom === 'gift' ? '[PRESENTE]' : 'PARA O COMPRADOR';
         out.push(line(`${modo} — ${quem}`, 'fl-mode fl-gap'));
       }
       if (d?.date) {
@@ -99,7 +102,7 @@ export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
       const msg = (d?.cardMessage || '').trim();
       if (d?.forWhom === 'gift' && msg) {
         out.push(line('MENSAGEM DO CARTÃO:', 'fl-gap'));
-        out.push(`<div class="fl-line fl-card obs-text item-notes">[OBS]${esc(msg)}[/OBS]</div>`);
+        out.push(line(esc(msg), 'fl-card'));
       }
       const notes = parseDestinationFromNotes(it.notes).rest;
       if (notes) out.push(`<div class="fl-line obs-text item-notes fl-gap">[OBS]Obs: ${esc(notes)}[/OBS]</div>`);
