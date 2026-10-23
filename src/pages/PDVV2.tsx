@@ -1520,6 +1520,17 @@ export default function PDVV2() {
                       )) return;
                       await deleteTab(tab.id);
                     }}
+                    onRelease={async (tab) => {
+                      const label = tab.tableNumber ? `Mesa ${tab.tableNumber}` : `Comanda ${String(tab.comandaNumber ?? tab.tabNumber).padStart(3, '0')}`;
+                      if (!window.confirm(
+                        `Liberar ${label} SEM COBRAR?\n\nUse somente se ela JÁ FOI COBRADA. Nenhuma venda será registrada e o caixa não muda.`
+                      )) return;
+                      const ok = await closeTab(tab.id);
+                      if (ok) {
+                        toast.success(`${label} liberada sem gerar venda.`);
+                        refetchTabs?.();
+                      }
+                    }}
                   />
                 </ScrollArea>
                 {settings.scaleEnabled && companyId && (
