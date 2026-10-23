@@ -619,14 +619,17 @@ export default function PDVV2() {
       // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
       const shouldPrint = printDocument !== false;
       if (wantsNfce) {
-        // Só fecha a comanda depois que o
-        // operador autorizar o fechamento do pop-up de NFC-e.
-        const tabIdToClose = fullTab.id;
-        setPendingPostSale(() => async () => {
-          await closeTab(tabIdToClose);
+        // Venda já gravada: fecha a comanda e libera a mesa IMEDIATAMENTE,
+        // sem depender do operador fechar o pop-up da NFC-e (F5/troca de aba
+        // perdiam o fechamento e a mesa ficava aberta).
+        try {
+          await closeTab(fullTab.id);
           toast.success('Comanda importada e fechada!');
-        });
-        const ok = await emitNFCeAndOpenDialog({
+        } catch (e) {
+          console.error('[PDVV2] falha ao fechar comanda após venda', e);
+        }
+        setPendingPostSale(null);
+        await emitNFCeAndOpenDialog({
           saleId,
           items,
           discount,
@@ -639,10 +642,6 @@ export default function PDVV2() {
           tefData,
           customerDocument,
         });
-        if (!ok) {
-          await closeTab(fullTab.id);
-          setPendingPostSale(null);
-        }
         setImportingTab(null);
         return saleId;
       } else if (shouldPrint) {
