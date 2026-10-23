@@ -522,7 +522,17 @@ export function useTabs(options: UseTabsOptions = {}) {
 
   async function closeTab(tabId: string): Promise<boolean> {
     try {
-      const tab = tabs.find(t => t.id === tabId);
+      let tab: { table_id?: string | null; comanda_number?: number | null } | undefined =
+        tabs.find(t => t.id === tabId);
+      // Sem referência em memória: busca no banco para não deixar a mesa ocupada.
+      if (!tab) {
+        const { data } = await supabase
+          .from('tabs')
+          .select('table_id, comanda_number')
+          .eq('id', tabId)
+          .maybeSingle();
+        tab = (data as any) || undefined;
+      }
       
       const { error } = await supabase
         .from('tabs')
