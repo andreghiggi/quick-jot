@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { UtensilsCrossed, Download, ChevronDown, Trash2 } from 'lucide-react';
+import { UtensilsCrossed, Download, ChevronDown, Trash2, Unlock } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { brl as formatPrice } from './_format';
 import type { OccupiedTab } from './PDVV2TablesPanel';
@@ -10,13 +10,15 @@ interface Props {
   onImport: (tab: OccupiedTab) => void;
   /** Exibido apenas para comandas zeradas (total = 0 e sem itens). */
   onDelete?: (tab: OccupiedTab) => void;
+  /** Fecha a comanda e libera a mesa SEM gerar venda (comanda já cobrada). */
+  onRelease?: (tab: OccupiedTab) => void;
 }
 
 /**
  * Visualização em grid (cards grandes) para a aba "Mesas" do PDV V2.
  * Substitui a coluna lateral em uma exibição mais clicável.
  */
-export function PDVV2TablesGrid({ tabs, onImport, onDelete }: Props) {
+export function PDVV2TablesGrid({ tabs, onImport, onDelete, onRelease }: Props) {
   if (tabs.length === 0) {
     return (
       <Card>
@@ -100,6 +102,17 @@ export function PDVV2TablesGrid({ tabs, onImport, onDelete }: Props) {
                 </Button>
               )}
             </div>
+            {onRelease && tab.items && tab.items.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground"
+                onClick={() => onRelease(tab)}
+              >
+                <Unlock className="h-4 w-4 mr-2" />
+                Liberar sem cobrar (já cobrada)
+              </Button>
+            )}
           </CardContent>
         </Card>
       ))}
