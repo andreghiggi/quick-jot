@@ -102,17 +102,6 @@ export function PDVV2TablesGrid({ tabs, onImport, onDelete, onRelease }: Props) 
                 </Button>
               )}
             </div>
-            {onRelease && tab.items && tab.items.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-muted-foreground"
-                onClick={() => onRelease(tab)}
-              >
-                <Unlock className="h-4 w-4 mr-2" />
-                Liberar sem cobrar (já cobrada)
-              </Button>
-            )}
           </CardContent>
         </Card>
       ))}
