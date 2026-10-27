@@ -582,6 +582,11 @@ export default function PDVV2() {
       toast.error('Caixa precisa estar aberto');
       return;
     }
+    const pendingSplit = readSplitProgress()[importingTab.id];
+    if (pendingSplit && pendingSplit.remaining > 0) {
+      toast.error(`Divisão em andamento: faltam ${pendingSplit.remaining} pessoa(s). A mesa só fecha após a última.`);
+      return;
+    }
     const fullTab = openTabs.find((t) => t.id === importingTab.id);
     if (!fullTab?.items?.length) {
       toast.error('Comanda sem itens');
