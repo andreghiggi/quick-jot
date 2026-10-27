@@ -210,7 +210,6 @@ export default function PDVV2() {
   const [multiPayProcessing, setMultiPayProcessing] = useState(false);
   const [multiPayStatus, setMultiPayStatus] = useState('');
   const [multiPayTab, setMultiPayTab] = useState<OccupiedTab | null>(null);
-  const [multiPayPrefill, setMultiPayPrefill] = useState<{ amount: number; methodId?: string } | undefined>(undefined);
   // Divisão por pessoas em andamento, persistida por comanda (sobrevive a
   // fechar o diálogo, NFC-e por cima e F5). Só é removida quando a última
   // pessoa é cobrada.
@@ -1723,11 +1722,10 @@ export default function PDVV2() {
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
         onConfirm={advancedComandaCharge ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
-        onSplitPayments={(prefill) => {
+        onSplitPayments={() => {
           // Fecha o checkout single-payment e abre o multi-pagamento
           // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.
           if (importingTab) {
-            setMultiPayPrefill(prefill);
             setMultiPayTab(importingTab);
             setImportingTab(null);
             setMultiPayOpen(true);
@@ -1776,14 +1774,13 @@ export default function PDVV2() {
         open={multiPayOpen}
         onOpenChange={(o) => {
           setMultiPayOpen(o);
-          if (!o && !multiPayProcessing) { setMultiPayTab(null); setMultiPayPrefill(undefined); }
+          if (!o && !multiPayProcessing) setMultiPayTab(null);
         }}
         companyId={companyId}
         total={multiPayTab?.total || 0}
         fiscalEnabled={fiscalEnabled}
         cashRegisterId={currentRegister?.id}
         contextKey={multiPayTab ? `tab:${multiPayTab.id}` : undefined}
-        prefill={multiPayPrefill}
         contextLabel={
           multiPayTab?.tableNumber
             ? `Mesa ${multiPayTab.tableNumber}`

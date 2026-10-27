@@ -70,8 +70,6 @@ interface Props {
    * Default: false (mantém comportamento legado se não passar).
    */
   fiscalEnabled?: boolean;
-  /** Pré-preenche a 1ª linha (ex.: valor parcial em dinheiro digitado no checkout). */
-  prefill?: { amount: number; methodId?: string };
   /**
    * Mesma assinatura do v1.6: caller recebe linhas e roda runMultiPayment.
    * Aqui as linhas vêm com `_resolved` preenchido → runMultiPayment vira
@@ -112,7 +110,6 @@ export function PDVV2SequentialPaymentDialog({
   cashRegisterId,
   contextLabel,
   fiscalEnabled = false,
-  prefill,
   onConfirm,
 }: Props) {
   const { activePaymentMethods: rawList } = usePaymentMethods({ companyId, channel });
@@ -174,12 +171,8 @@ export function PDVV2SequentialPaymentDialog({
     hydratedRef.current = true;
 
     // Reset UI
-    setPaymentMethodId(prefill?.methodId || methods[0]?.id || '');
-    setAmountText(
-      prefill && prefill.amount > 0 && prefill.amount < total
-        ? maskCurrencyInput(String(Math.round(prefill.amount * 100)))
-        : '',
-    );
+    setPaymentMethodId(methods[0]?.id || '');
+    setAmountText('');
     setTefModality('avista');
     setTefInstallments('2');
     setTefInstallmentType('adm');
