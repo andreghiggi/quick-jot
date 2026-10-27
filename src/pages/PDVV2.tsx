@@ -210,6 +210,21 @@ export default function PDVV2() {
   const [multiPayProcessing, setMultiPayProcessing] = useState(false);
   const [multiPayStatus, setMultiPayStatus] = useState('');
   const [multiPayTab, setMultiPayTab] = useState<OccupiedTab | null>(null);
+  const [multiPayPrefill, setMultiPayPrefill] = useState<{ amount: number; methodId?: string } | undefined>(undefined);
+  // Divisão por pessoas em andamento, persistida por comanda (sobrevive a
+  // fechar o diálogo, NFC-e por cima e F5). Só é removida quando a última
+  // pessoa é cobrada.
+  const splitStorageKey = companyId ? `pdvv2_split_progress_${companyId}` : null;
+  const readSplitProgress = (): Record<string, { perPerson: number; remaining: number; total: number }> => {
+    if (!splitStorageKey) return {};
+    try { return JSON.parse(localStorage.getItem(splitStorageKey) || '{}') || {}; } catch { return {}; }
+  };
+  const saveSplitProgress = (tabId: string, info: { perPerson: number; remaining: number; total: number } | null) => {
+    if (!splitStorageKey) return;
+    const all = readSplitProgress();
+    if (info && info.remaining > 0) all[tabId] = info; else delete all[tabId];
+    try { localStorage.setItem(splitStorageKey, JSON.stringify(all)); } catch { /* ignore */ }
+  };
   // Status do processamento TEF (banner no topo do diálogo de cobrança)
   const [tefStatus, setTefStatus] = useState('');
   const [showFastCheckout, setShowFastCheckout] = useState(false);
@@ -851,6 +866,16 @@ export default function PDVV2() {
       toast.error('Abra o caixa para cobrar');
       return;
     }
+    // Retoma divisão por pessoas pendente: a mesa NÃO pode ser cobrada
+    // integralmente enquanto houver pessoas a pagar.
+    const pending = readSplitProgress()[tab.id];
+    if (pending && pending.remaining > 0) {
+      setI9SplitInfo(pending);
+      setI9OriginalTabId(tab.id);
+      toast.info(`Divisão em andamento: Pessoa ${pending.total - pending.remaining + 1} de ${pending.total}`);
+      setImportingTab({ ...tab, total: pending.perPerson });
+      return;
+    }
     setImportingTab(tab);
   }
 
@@ -876,6 +901,7 @@ export default function PDVV2() {
       };
       setI9OriginalTabId(importingTab.id);
       setI9SplitInfo(splitData);
+      saveSplitProgress(importingTab.id, splitData);
     } else if (!splitData && importingTab?._splitPerson !== undefined) {
       // Fallback from enriched importingTab
       splitData = { perPerson: importingTab._splitPerPerson!, remaining: importingTab._splitTotal! - importingTab._splitPerson!, total: importingTab._splitTotal! };
@@ -992,6 +1018,7 @@ export default function PDVV2() {
         }
 
         const newRemaining = splitData.remaining - parts;
+        saveSplitProgress(resolvedTabId, newRemaining > 0 ? { ...splitData, remaining: newRemaining } : null);
         if (newRemaining <= 0) {
           await closeTab(resolvedTabId);
           toast.success(parts > 1
@@ -1691,10 +1718,11 @@ export default function PDVV2() {
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
         onConfirm={advancedComandaCharge ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
-        onSplitPayments={() => {
+        onSplitPayments={(prefill) => {
           // Fecha o checkout single-payment e abre o multi-pagamento
           // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.
           if (importingTab) {
+            setMultiPayPrefill(prefill);
             setMultiPayTab(importingTab);
             setImportingTab(null);
             setMultiPayOpen(true);
@@ -1743,13 +1771,14 @@ export default function PDVV2() {
         open={multiPayOpen}
         onOpenChange={(o) => {
           setMultiPayOpen(o);
-          if (!o && !multiPayProcessing) setMultiPayTab(null);
+          if (!o && !multiPayProcessing) { setMultiPayTab(null); setMultiPayPrefill(undefined); }
         }}
         companyId={companyId}
         total={multiPayTab?.total || 0}
         fiscalEnabled={fiscalEnabled}
         cashRegisterId={currentRegister?.id}
         contextKey={multiPayTab ? `tab:${multiPayTab.id}` : undefined}
+        prefill={multiPayPrefill}
         contextLabel={
           multiPayTab?.tableNumber
             ? `Mesa ${multiPayTab.tableNumber}`
