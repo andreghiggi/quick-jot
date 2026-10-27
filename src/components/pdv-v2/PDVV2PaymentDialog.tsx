@@ -127,7 +127,7 @@ interface PDVV2PaymentDialogProps {
    * NÃO aparece quando o I9 está em modo split-por-pessoas ou split-por-itens
    * (TEF v1.1 congelado) para evitar conflito de fluxos.
    */
-  onSplitPayments?: () => void;
+  onSplitPayments?: (prefill?: { amount: number; methodId?: string }) => void;
   /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
@@ -564,6 +564,9 @@ export function PDVV2PaymentDialog({
     ? parseCurrencyInput(amountReceived)
     : parseFloat(amountReceived.replace(',', '.')) || 0;
   const change = isCash ? Math.max(0, receivedValue - finalTotal) : 0;
+  // Regra: dinheiro com valor recebido menor que o total NÃO pode confirmar —
+  // o campo é só de troco; pagamento parcial deve ir para "Dividir formas".
+  const cashPartialBlocked = isCash && receivedValue > 0 && receivedValue < finalTotal - 0.005;
 
   async function finalizeConfirm(
     docMode: DocumentMode,
@@ -1434,7 +1437,26 @@ export function PDVV2PaymentDialog({
           </div>}
 
           <div className="space-y-2">
-            <Label>Forma de pagamento</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label>Forma de pagamento</Label>
+              {onSplitPayments && i9Mode === '' && !activeSplit && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 border-primary text-primary"
+                  onClick={() => onSplitPayments(
+                    isCash && receivedValue > 0 && receivedValue < finalTotal
+                      ? { amount: receivedValue, methodId: paymentMethodId }
+                      : undefined,
+                  )}
+                  disabled={submitting || chargingTef}
+                >
+                  <Split className="w-4 h-4" />
+                  Dividir formas
+                </Button>
+              )}
+            </div>
             {activePaymentMethods.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nenhuma forma de pagamento ativa para o canal PDV.
@@ -1450,16 +1472,6 @@ export function PDVV2PaymentDialog({
                   </div>
                 ))}
               </RadioGroup>
-            )}
-            {onSplitPayments && i9Mode === '' && !activeSplit && (
-              <button
-                type="button"
-                onClick={onSplitPayments}
-                disabled={submitting || chargingTef}
-                className="text-xs text-primary hover:underline disabled:opacity-50 disabled:no-underline mt-1"
-              >
-                Quer dividir em várias formas de pagamento? Clique aqui
-              </button>
             )}
           </div>
 
@@ -1485,10 +1497,24 @@ export function PDVV2PaymentDialog({
                   {formatPrice(change)}
                 </span>
               </div>
-              {receivedValue > 0 && receivedValue < finalTotal && (
-                <p className="text-xs text-destructive">
-                  Valor recebido menor que o total.
-                </p>
+              {cashPartialBlocked && (
+                <div className="rounded-md border border-destructive/50 bg-destructive/5 p-3 space-y-2">
+                  <p className="text-xs text-destructive font-medium">
+                    Valor recebido menor que o total ({formatPrice(finalTotal)}). Este campo é só para calcular troco — não faz pagamento parcial.
+                  </p>
+                  {onSplitPayments && i9Mode === '' && !activeSplit && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full gap-1"
+                      onClick={() => onSplitPayments({ amount: receivedValue, methodId: paymentMethodId })}
+                      disabled={submitting || chargingTef}
+                    >
+                      <Split className="w-4 h-4" />
+                      Pagar {formatPrice(receivedValue)} em dinheiro e o restante em outra forma
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -1658,11 +1684,14 @@ export function PDVV2PaymentDialog({
               !paymentMethodId ||
               activePaymentMethods.length === 0 ||
               splitItemEditingIdx !== null ||
+              cashPartialBlocked ||
               (advancedComandaCharge && i9Mode === 'split' && !activeSplit && splitPeople < 2)
             }
             title={
               splitItemEditingIdx !== null
                 ? 'Aplique ou cancele a divisão do item antes de cobrar'
+                : cashPartialBlocked
+                ? 'Valor recebido menor que o total. Use "Dividir formas" para pagamento parcial.'
                 : (advancedComandaCharge && i9Mode === 'split' && !activeSplit && splitPeople < 2)
                 ? 'Informe pelo menos 2 pessoas para dividir'
                 : undefined
