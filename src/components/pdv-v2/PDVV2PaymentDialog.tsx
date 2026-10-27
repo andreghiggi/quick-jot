@@ -127,7 +127,7 @@ interface PDVV2PaymentDialogProps {
    * NÃO aparece quando o I9 está em modo split-por-pessoas ou split-por-itens
    * (TEF v1.1 congelado) para evitar conflito de fluxos.
    */
-  onSplitPayments?: (prefill?: { amount: number; methodId?: string }) => void;
+  onSplitPayments?: () => void;
   /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
@@ -1445,11 +1445,7 @@ export function PDVV2PaymentDialog({
                   size="sm"
                   variant="outline"
                   className="gap-1 border-primary text-primary"
-                  onClick={() => onSplitPayments(
-                    isCash && receivedValue > 0 && receivedValue < finalTotal
-                      ? { amount: receivedValue, methodId: paymentMethodId }
-                      : undefined,
-                  )}
+                  onClick={onSplitPayments}
                   disabled={submitting || chargingTef}
                 >
                   <Split className="w-4 h-4" />
@@ -1507,7 +1503,7 @@ export function PDVV2PaymentDialog({
                       type="button"
                       size="sm"
                       className="w-full gap-1"
-                      onClick={() => onSplitPayments({ amount: receivedValue, methodId: paymentMethodId })}
+                      onClick={onSplitPayments}
                       disabled={submitting || chargingTef}
                     >
                       <Split className="w-4 h-4" />
