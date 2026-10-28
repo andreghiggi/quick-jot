@@ -1,0 +1,10 @@
+[12:59:48] [ERRO] Falha no modo grafico (GDI): No module named 'win32con'
+Traceback (most recent call last):
+  File "/dev-server/public/auto_printer.py", line 1223, in imprimir_gdi
+    win32ui, win32con = _import_win32ui()
+                        ~~~~~~~~~~~~~~~^^
+  File "/dev-server/public/auto_printer.py", line 193, in _import_win32ui
+    import win32con
+ModuleNotFoundError: No module named 'win32con'
+
+[13:00:10] [GDI] Impressao GRAFICA (GDI) concluida em 'Test Printer' [papel 80mm / canvas 600px / 24 blocos V2]
