@@ -1321,8 +1321,8 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         box_start_y = None
         box_florist = False
         # v1.8.18 (somente floricultura): fontes do cabecalho menores para nao quebrar.
-        # v1.8.19: dados (kv) 10.5pt e data do cabecalho 11pt para nao vazar a borda.
-        fl_pontos = {"title": 13.5, "type": 12, "kv": 10.5, "kvlabel": 10.5, "datetime": 11} if largura_mm >= 80 else {"title": 11, "type": 10, "kv": 9, "kvlabel": 9, "datetime": 9.5}
+        # v1.8.20: somente linhas de dados (kv) em 9.5pt para caber numa linha.
+        fl_pontos = {"title": 13.5, "type": 12, "kv": 9.5, "kvlabel": 9.5} if largura_mm >= 80 else {"title": 11, "type": 10, "kv": 8, "kvlabel": 8}
         def fonte_fl(estilo):
             chave = "fl_" + estilo
             if chave not in cache_fontes:
@@ -1430,21 +1430,8 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 dc.TextOut(margem, y, rotulo)
                 dc.SelectObject(f_val)
                 if is_fl:
-                    # v1.8.19: quebra medida com a fonte real; valor nunca passa da borda.
-                    lim = max(40, largura_util - rot_px)
-                    linhas, atual = [], ""
-                    for pal in str(texto).split(" "):
-                        cand = (atual + " " + pal).strip()
-                        if atual and dc.GetTextExtent(cand)[0] > lim:
-                            linhas.append(atual); atual = pal
-                        else:
-                            atual = cand
-                    while atual and dc.GetTextExtent(atual)[0] > lim and len(atual) > 1:
-                        n = len(atual)
-                        while n > 1 and dc.GetTextExtent(atual[:n])[0] > lim:
-                            n -= 1
-                        linhas.append(atual[:n]); atual = atual[n:]
-                    linhas.append(atual)
+                    # v1.8.20: fonte menor faz caber numa linha; sem fatiar texto.
+                    linhas = [texto] if texto else [" "]
                 else:
                     linhas = quebrar(texto, "kv", max(40, largura_util - rot_px))
                 dc.SelectObject(f_val)
