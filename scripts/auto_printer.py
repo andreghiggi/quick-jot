@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.17"
+SCRIPT_VERSION = "1.8.18"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -971,7 +971,11 @@ def extrair_blocos_v2(html_content):
                         blocos.append({"text": val.strip(), "style": "kv", "label": lab.strip() + ":", "align": "left", "right": ""})
                     else:
                         blocos.append(block(t, "normal"))
-        return [b for b in blocos if b]
+        # v1.8.18: marca blocos florais para ajustes exclusivos no GDI.
+        blocos = [b for b in blocos if b]
+        for b in blocos:
+            b["florist"] = True
+        return blocos
 
     if not is_receipt and by_class("title"):
         blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
@@ -1315,18 +1319,33 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
 
         y = margem
         box_start_y = None
+        box_florist = False
+        # v1.8.18 (somente floricultura): fontes do cabecalho menores para nao quebrar.
+        fl_pontos = {"title": 13.5, "type": 12} if largura_mm >= 80 else {"title": 11, "type": 10}
+        def fonte_fl(estilo):
+            chave = "fl_" + estilo
+            if chave not in cache_fontes:
+                cache_fontes[chave] = win32ui.CreateFont({
+                    "name": "Courier New",
+                    "height": -max(10, int(fl_pontos[estilo] * dpi_y / 72)),
+                    "weight": pesos.get(estilo, 800),
+                })
+            return cache_fontes[chave]
+        fl_pad = max(3, int(dpi_y * 0.4 / 25.4))
         for bloco in blocos:
+            is_fl = bool(bloco.get("florist"))
             estilo = bloco.get("style", "normal")
             texto = bloco.get("text", "")
             direita = bloco.get("right", "")
             alinhamento = bloco.get("align", "left")
             if estilo == "box_start":
                 box_start_y = y
-                y += max(3, margem // 2)
+                box_florist = is_fl
+                y += max(3, margem // 2) + (fl_pad if is_fl else 0)
                 continue
             if estilo == "box_end":
                 if box_start_y is not None:
-                    y += max(3, margem // 2)
+                    y += max(3, margem // 2) + (fl_pad if box_florist else 0)
                     borda = max(2, int(dpi_x * 0.45 / 25.4))
                     box_x = max(0, margem // 3)
                     box_right = largura_canvas - box_x
@@ -1336,12 +1355,27 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     dc.FillSolidRect((box_right - borda, box_start_y, box_right, y), 0x000000)
                     box_start_y = None
                 continue
-            dc.SelectObject(fonte(estilo))
+            usa_fl = is_fl and estilo in fl_pontos
+            dc.SelectObject(fonte_fl(estilo) if usa_fl else fonte(estilo))
             tm = dc.GetTextMetrics()
             altura_linha = max(12, tm["tmHeight"] + tm["tmExternalLeading"])
             espaco_depois = max(2, int(dpi_y * (1.2 if estilo in ("title", "type", "order", "inverse", "ready", "total") else 0.7) / 25.4))
 
             # Separador tracejado ocupando toda a largura util (igual aos PDFs V2).
+            if estilo == "sep" and is_fl:
+                # v1.8.18: tracejado alinhado com as laterais da moldura.
+                bx0 = max(0, margem // 3)
+                bx1 = largura_canvas - bx0
+                traco = max(4, int(dpi_x * 1.5 / 25.4))
+                vao = max(3, int(dpi_x * 1.0 / 25.4))
+                esp = max(2, int(dpi_y * 0.35 / 25.4))
+                yy = y + altura_linha // 2
+                xx = bx0
+                while xx < bx1:
+                    dc.FillSolidRect((xx, yy, min(xx + traco, bx1), yy + esp), 0x000000)
+                    xx += traco + vao
+                y += altura_linha + espaco_depois
+                continue
             if estilo == "sep":
                 traco_px = max(1, dc.GetTextExtent("-")[0])
                 texto = "-" * max(8, largura_util // traco_px)
@@ -1359,11 +1393,16 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     linhas = quebrar(texto, estilo, largura_util - recuo_px)
                 else:
                     linhas = quebrar(texto, estilo, limite_esquerda - recuo_px)
+            elif usa_fl:
+                linhas = [texto]
             else:
                 linhas = quebrar(texto, estilo, largura_util - recuo_px)
+            if usa_fl:
+                dc.SelectObject(fonte_fl(estilo))
 
             total_linhas = len(linhas) + (1 if direita_propria else 0)
             bloco_altura = altura_linha * total_linhas + espaco_depois
+            pad_inv = fl_pad if (is_fl and estilo in invertidos) else 0
             if altura_px > 0 and y + bloco_altura > altura_px:
                 dc.EndPage()
                 dc.StartPage()
@@ -1373,7 +1412,8 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             if estilo in invertidos:
                 inv_x0 = (max(0, margem // 3)) if box_start_y is not None else 0
                 inv_x1 = (largura_canvas - max(0, margem // 3)) if box_start_y is not None else largura_canvas
-                dc.FillSolidRect((inv_x0, y, inv_x1, y + bloco_altura), 0x000000)
+                dc.FillSolidRect((inv_x0, y, inv_x1, y + bloco_altura + pad_inv * 2), 0x000000)
+                y += pad_inv
                 dc.SetTextColor(0xFFFFFF)
             else:
                 dc.SetTextColor(0x000000)
@@ -1409,7 +1449,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 dc.TextOut(margem + max(0, largura_util - direita_px), y_direita, direita)
 
             dc.SetTextColor(0x000000)
-            y += bloco_altura
+            y += bloco_altura + pad_inv
 
 
         dc.EndPage()
