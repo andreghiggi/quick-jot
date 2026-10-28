@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.18"
+SCRIPT_VERSION = "1.8.19"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1321,7 +1321,8 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         box_start_y = None
         box_florist = False
         # v1.8.18 (somente floricultura): fontes do cabecalho menores para nao quebrar.
-        fl_pontos = {"title": 13.5, "type": 12} if largura_mm >= 80 else {"title": 11, "type": 10}
+        # v1.8.19: dados (kv) 10.5pt e data do cabecalho 11pt para nao vazar a borda.
+        fl_pontos = {"title": 13.5, "type": 12, "kv": 10.5, "kvlabel": 10.5, "datetime": 11} if largura_mm >= 80 else {"title": 11, "type": 10, "kv": 9, "kvlabel": 9, "datetime": 9.5}
         def fonte_fl(estilo):
             chave = "fl_" + estilo
             if chave not in cache_fontes:
@@ -1422,12 +1423,31 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             if estilo == "kv" and bloco.get("label"):
                 # v1.8.17: rotulo em negrito + valor normal (igual foto modelo).
                 rotulo = bloco.get("label") + " "
-                dc.SelectObject(fonte("kvlabel"))
+                f_lab = fonte_fl("kvlabel") if is_fl else fonte("kvlabel")
+                f_val = fonte_fl("kv") if is_fl else fonte("kv")
+                dc.SelectObject(f_lab)
                 rot_px = dc.GetTextExtent(rotulo)[0]
                 dc.TextOut(margem, y, rotulo)
-                dc.SelectObject(fonte("kv"))
-                linhas = quebrar(texto, "kv", max(40, largura_util - rot_px))
-                dc.SelectObject(fonte("kv"))
+                dc.SelectObject(f_val)
+                if is_fl:
+                    # v1.8.19: quebra medida com a fonte real; valor nunca passa da borda.
+                    lim = max(40, largura_util - rot_px)
+                    linhas, atual = [], ""
+                    for pal in str(texto).split(" "):
+                        cand = (atual + " " + pal).strip()
+                        if atual and dc.GetTextExtent(cand)[0] > lim:
+                            linhas.append(atual); atual = pal
+                        else:
+                            atual = cand
+                    while atual and dc.GetTextExtent(atual)[0] > lim and len(atual) > 1:
+                        n = len(atual)
+                        while n > 1 and dc.GetTextExtent(atual[:n])[0] > lim:
+                            n -= 1
+                        linhas.append(atual[:n]); atual = atual[n:]
+                    linhas.append(atual)
+                else:
+                    linhas = quebrar(texto, "kv", max(40, largura_util - rot_px))
+                dc.SelectObject(f_val)
                 for indice, linha in enumerate(linhas):
                     dc.TextOut(margem + rot_px, y + indice * altura_linha, linha)
                 y += altura_linha * len(linhas) + espaco_depois
