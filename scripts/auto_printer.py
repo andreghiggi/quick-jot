@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.23"
+SCRIPT_VERSION = "1.8.24"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -494,6 +494,30 @@ def carregar_config_loja(force=False):
     except Exception as e:
         log(f"Falha ao sincronizar configuracoes da loja: {e}", "AVISO")
     return PAPER_SIZE
+
+
+IS_FLORIST = None
+FLORIST_LAST_SYNC = 0
+
+
+def loja_e_floricultura():
+    """v1.8.24: perfil floricultura detectado pelo modulo em company_modules (generico, sem IDs fixos)."""
+    global IS_FLORIST, FLORIST_LAST_SYNC
+    agora = time.time()
+    if IS_FLORIST is not None and (agora - FLORIST_LAST_SYNC) < 300:
+        return IS_FLORIST
+    if not COMPANY_ID:
+        return False
+    try:
+        url = (f"{API_URL}/company_modules?company_id=eq.{COMPANY_ID}"
+               f"&module_name=eq.floricultura&select=enabled")
+        resp = requests.get(url, headers=get_headers(), timeout=10)
+        if resp.status_code == 200:
+            IS_FLORIST = any(r.get("enabled") for r in resp.json())
+            FLORIST_LAST_SYNC = agora
+    except Exception as e:
+        log(f"Falha ao verificar perfil floricultura: {e}", "AVISO")
+    return bool(IS_FLORIST)
 
 
 def carregar_estacoes(force=False):
@@ -1918,7 +1942,13 @@ def _imprimir_html(html_content, station_id=None):
         # v1.8.23: recibo da FLORICULTURA (fl-receipt) sempre no modo grafico,
         # igual a comanda de producao. Nao afeta outras lojas (classe exclusiva).
         is_recibo_floral = "fl-receipt" in html_content
-        usar_gdi_loja = COMPANY_ID in GDI_COMPANY_IDS or is_comanda_producao or is_layout_v2 or is_recibo_floral
+        # v1.8.24: floricultura (modulo ativo ou tags florais) e impressoras virtuais
+        # (PDF/XPS) sempre no modo grafico - impressora virtual descarta RAW.
+        is_floral = is_recibo_floral or ("fl-header" in html_content) or loja_e_floricultura()
+        _pn_v = str(printer_name or "").upper()
+        is_virtual = any(v in _pn_v for v in ("PDF", "XPS", "ONENOTE", "FAX"))
+        usar_gdi_loja = (COMPANY_ID in GDI_COMPANY_IDS or is_comanda_producao or is_layout_v2
+                         or is_recibo_floral or is_floral or is_virtual)
         if usar_gdi_loja and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
