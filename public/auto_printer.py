@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.16"
+SCRIPT_VERSION = "1.8.17"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -966,7 +966,11 @@ def extrair_blocos_v2(html_content):
                 elif "fl-label" in c:
                     blocos.append(block(t, "ready"))
                 elif t:
-                    blocos.append(block(t, "normal"))
+                    if ":" in t and "fl-line" in c:
+                        lab, val = t.split(":", 1)
+                        blocos.append({"text": val.strip(), "style": "kv", "label": lab.strip() + ":", "align": "left", "right": ""})
+                    else:
+                        blocos.append(block(t, "normal"))
         return [b for b in blocos if b]
 
     if not is_receipt and by_class("title"):
@@ -1237,7 +1241,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 "code": 12, "inverse": 16, "datetime": 15, "ready": 16,
                 "item_qty": 15, "item": 14, "description": 12,
                 "group": 13, "additional": 13, "normal": 14, "item_price": 12,
-                "total": 17, "footer": 14, "sep": 12,
+                "total": 17, "footer": 14, "sep": 12, "kv": 14, "kvlabel": 14,
             }
         else:
             # Papel 58mm: fontes menores para o nome do item e o valor caberem
@@ -1247,14 +1251,14 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 "code": 10, "inverse": 14, "datetime": 12, "ready": 11,
                 "item_qty": 12, "item": 12, "description": 10,
                 "group": 11, "additional": 11, "normal": 12, "item_price": 10,
-                "total": 13, "footer": 11, "sep": 10,
+                "total": 13, "footer": 11, "sep": 10, "kv": 12, "kvlabel": 12,
             }
         pesos = {
             "store": 800, "title": 800, "type": 800, "order": 800,
             "code": 500, "inverse": 800, "datetime": 700, "ready": 800,
             "item_qty": 800, "item": 600, "description": 500,
             "group": 800, "additional": 700, "normal": 700, "item_price": 400,
-            "total": 800, "footer": 700, "sep": 700,
+            "total": 800, "footer": 700, "sep": 700, "kv": 400, "kvlabel": 800,
         }
         invertidos = {"inverse"}
 
@@ -1289,6 +1293,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
             return linhas
 
         dc.StartDoc("ComandaTech Comanda")
+        doc_aberto = True
         dc.StartPage()
 
         blocos = extrair_blocos_v2(conteudo) if "<" in conteudo else []
@@ -1366,11 +1371,27 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 dc.SelectObject(fonte(estilo))
 
             if estilo in invertidos:
-                dc.FillSolidRect((0, y, largura_canvas, y + bloco_altura), 0x000000)
+                inv_x0 = (max(0, margem // 3)) if box_start_y is not None else 0
+                inv_x1 = (largura_canvas - max(0, margem // 3)) if box_start_y is not None else largura_canvas
+                dc.FillSolidRect((inv_x0, y, inv_x1, y + bloco_altura), 0x000000)
                 dc.SetTextColor(0xFFFFFF)
             else:
                 dc.SetTextColor(0x000000)
             dc.SetBkMode(win32con.TRANSPARENT)
+
+            if estilo == "kv" and bloco.get("label"):
+                # v1.8.17: rotulo em negrito + valor normal (igual foto modelo).
+                rotulo = bloco.get("label") + " "
+                dc.SelectObject(fonte("kvlabel"))
+                rot_px = dc.GetTextExtent(rotulo)[0]
+                dc.TextOut(margem, y, rotulo)
+                dc.SelectObject(fonte("kv"))
+                linhas = quebrar(texto, "kv", max(40, largura_util - rot_px))
+                dc.SelectObject(fonte("kv"))
+                for indice, linha in enumerate(linhas):
+                    dc.TextOut(margem + rot_px, y + indice * altura_linha, linha)
+                y += altura_linha * len(linhas) + espaco_depois
+                continue
 
             for indice, linha in enumerate(linhas):
                 linha_px = dc.GetTextExtent(linha)[0]
@@ -1401,7 +1422,13 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         )
         return True
     except Exception as e:
-        log(f"Falha no modo grafico (GDI): {e}", "ERRO")
+        import traceback as _tb
+        log(f"Falha no modo grafico (GDI): {e}\n{_tb.format_exc()}", "ERRO")
+        # v1.8.17: fecha o documento aberto para nao gerar arquivo vazio/travado.
+        try:
+            dc.AbortDoc()
+        except Exception:
+            pass
         return False
 
 
@@ -1578,6 +1605,19 @@ def montar_escpos_blocos(blocos, colunas=32):
         if estilo == "sep":
             reset_estilos()
             emitir("-" * colunas)
+            continue
+
+        if estilo in ("box_start", "box_end"):
+            reset_estilos()
+            emitir("=" * colunas)
+            continue
+
+        if estilo == "kv" and bloco.get("label"):
+            reset_estilos()
+            bold(True)
+            out.extend(_escpos_encode(bloco.get("label") + " "))
+            bold(False)
+            emitir(texto)
             continue
 
         if not texto and not direita:
@@ -1772,6 +1812,11 @@ def _imprimir_html(html_content, station_id=None):
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
                 return True
+            _pn = str(printer_name or "").upper()
+            if any(v in _pn for v in ("PDF", "XPS", "ONENOTE", "FAX")):
+                # v1.8.17: impressora virtual nao aceita RAW (gerava PDF de 0 bytes).
+                log("Impressora virtual: repetindo em modo grafico simples (sem RAW)", "AVISO")
+                return imprimir_gdi(printer_name, texto_puro)
             log("Modo grafico indisponivel — usando layout termico nativo", "AVISO")
             usar_escpos = True
         elif usar_gdi_loja:
