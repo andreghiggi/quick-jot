@@ -202,12 +202,16 @@ export const FLORIST_PRODUCTION_CSS = `
 
 export const FLORIST_PRINT_CSS = `
 .fl-item { margin: 1.5mm 0; }
-.fl-item .fl-line { font-size: 10pt; font-weight: bold; margin: 0.4mm 0; font-style: normal; text-transform: none; background: none; color: inherit; padding: 0; }
-.fl-item .fl-gap { margin-top: 2.5mm; }
-.fl-item .fl-card { border: 1px dashed #000; padding: 0.8mm; font-weight: normal; }
-.fl-item .fl-mode { font-size: 10.5pt; }
-.fl-item .fl-ready { font-size: 10.5pt; }
-.fl-item .fl-name { font-size: 11.5pt; }
-.fl-item .fl-total { font-size: 11pt; }
+.fl-receipt .fl-modeband { background: #000 !important; color: #fff !important; text-align: center; font-size: 11pt; font-weight: 900; padding: 1mm 1.5mm; margin: 0.5mm 0 1.5mm; }
+.fl-receipt .fl-name { font-size: 12pt; font-weight: 900; margin-bottom: 1mm; }
+.fl-receipt .fl-line { font-size: 10.5pt; margin: 0.5mm 0; background: none; color: inherit; text-transform: none; font-style: normal; padding: 0; }
+.fl-receipt .fl-line b { font-weight: 900; }
+.fl-receipt .fl-val { font-weight: normal; }
+.fl-receipt .fl-label { font-weight: 900; }
+.fl-receipt .fl-inv { background: #000 !important; color: #fff !important; font-weight: bold; font-size: 10.5pt; padding: 1mm 1.5mm; margin: 0.5mm 0 1mm; }
+.fl-receipt .fl-cardbox { border: 2px solid #000; padding: 1.5mm; font-size: 10.5pt; margin-top: 0.5mm; }
+.fl-receipt .fl-money { display: flex; justify-content: space-between; font-size: 10.5pt; margin: 0.3mm 0; }
+.fl-receipt .fl-money-total { font-weight: 900; }
+@media print { .fl-receipt .fl-modeband, .fl-receipt .fl-inv { background: #000 !important; color: #fff !important; } }
 .fl-sep { font-size: 10pt; line-height: 1; margin: 1mm 0; }
 `;
