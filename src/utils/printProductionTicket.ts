@@ -490,10 +490,26 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
           .add-line { -webkit-text-stroke: 0.5px #000 !important; }
           .order-type-badge { background: #000 !important; background-color: #000 !important; color: #fff !important; }
         }
-      ${data.florist ? FLORIST_PRINT_CSS : ''}
+      ${data.florist ? FLORIST_PRINT_CSS + FLORIST_PRODUCTION_CSS : ''}
       </style>
     </head>
     <body>
+      ${data.florist ? `
+      <div class="fl-header">
+        <div class="fl-h-title">COMANDA DE PRODUÇÃO</div>
+        <div class="fl-h-mode">${floristProductionModeLabel(data.florist.destination)}</div>
+        ${data.customerName ? `<div class="fl-h-client">CLIENTE: ${escFl(data.customerName)}</div>` : ''}
+        <div class="fl-h-date">${dateStr} às ${timeStr}</div>
+      </div>
+      <div class="fl-sep">--------------------------------</div>
+      <div class="items">${renderFloristItemsHTML(data.items.map((it) => ({
+        name: it.productName, quantity: it.quantity, price: it.price || 0,
+        groupedOptionals: it.groupedOptionals, notes: parseNotes(it.notes).observations.join(' | '),
+        destination: it.floristDestination ?? data.florist!.destination,
+      })), { production: true })}</div>
+    </body>
+    </html>
+  ` : ''}
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
@@ -507,11 +523,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       <!--BOX_END-->
       ${data.paymentNote ? `<div class="obs-block"><div class="obs"><span class="obs-text">${data.paymentNote}</span></div></div>` : ''}
       ${readyBlockHTML}
-      <div class="items">${data.florist ? renderFloristItemsHTML(data.items.map((it) => ({
-        name: it.productName, quantity: it.quantity, price: it.price || 0,
-        groupedOptionals: it.groupedOptionals, notes: parseNotes(it.notes).observations.join(' | '),
-        destination: it.floristDestination ?? data.florist!.destination,
-      }))) : itemsHTML}</div>
+      <div class="items">${itemsHTML}</div>
       <div class="footer">--- FIM ---</div>
     </body>
     </html>
