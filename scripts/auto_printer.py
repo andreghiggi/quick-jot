@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.22"
+SCRIPT_VERSION = "1.8.23"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1361,7 +1361,7 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         box_florist = False
         # v1.8.18 (somente floricultura): fontes do cabecalho menores para nao quebrar.
         # v1.8.20: somente linhas de dados (kv) em 9.5pt para caber numa linha.
-        fl_pontos = {"title": 13.5, "type": 12, "kv": 9.5, "kvlabel": 9.5} if largura_mm >= 80 else {"title": 11, "type": 10, "kv": 8, "kvlabel": 8}
+        fl_pontos = {"title": 13.5, "type": 12, "kv": 9.5, "kvlabel": 9.5, "item": 10.5, "total": 11.5} if largura_mm >= 80 else {"title": 11, "type": 10, "kv": 8, "kvlabel": 8, "item": 9, "total": 10}
         def fonte_fl(estilo):
             chave = "fl_" + estilo
             if chave not in cache_fontes:
@@ -1915,7 +1915,10 @@ def _imprimir_html(html_content, station_id=None):
         # v1.8.13: recibo usa modo grafico em TODAS as lojas com Layout V2.
         carregar_config_loja()
         is_layout_v2 = (str(PRINT_LAYOUT or "").strip().lower() == "v2")
-        usar_gdi_loja = COMPANY_ID in GDI_COMPANY_IDS or is_comanda_producao or is_layout_v2
+        # v1.8.23: recibo da FLORICULTURA (fl-receipt) sempre no modo grafico,
+        # igual a comanda de producao. Nao afeta outras lojas (classe exclusiva).
+        is_recibo_floral = "fl-receipt" in html_content
+        usar_gdi_loja = COMPANY_ID in GDI_COMPANY_IDS or is_comanda_producao or is_layout_v2 or is_recibo_floral
         if usar_gdi_loja and win32ui_ok:
             carregar_config_loja()
             if imprimir_gdi(printer_name, html_content):
