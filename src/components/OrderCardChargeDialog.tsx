@@ -730,7 +730,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         </div>
       )}
       <PDVV2PaymentDialog
-        open={open}
+        open={open && !multiPayOpen}
         onOpenChange={onOpenChange}
         companyId={company?.id}
         total={chargeBaseTotal}
@@ -746,7 +746,8 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         activeSplit={activeSplit}
         onConfirm={handleConfirm}
         onSplitPayments={() => {
-          onOpenChange(false);
+          // Não fechar o pai: o card desmonta este componente quando open=false.
+          // Apenas esconde a tela de pagamento enquanto a de várias formas está aberta.
           setMultiPayOpen(true);
         }}
       />
