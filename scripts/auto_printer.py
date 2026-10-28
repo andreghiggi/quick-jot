@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.20"
+SCRIPT_VERSION = "1.8.21"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1400,6 +1400,14 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 linhas = quebrar(texto, estilo, largura_util - recuo_px)
             if usa_fl:
                 dc.SelectObject(fonte_fl(estilo))
+                # v1.8.21: titulo/modalidade sempre numa linha so, dentro da moldura.
+                pt = fl_pontos[estilo]
+                while pt > 6 and dc.GetTextExtent(texto)[0] > largura_util:
+                    pt -= 0.5
+                    _k = "fl_fit_%s_%s" % (estilo, pt)
+                    if _k not in cache_fontes:
+                        cache_fontes[_k] = win32ui.CreateFont({"name": "Courier New", "height": -max(10, int(pt * dpi_y / 72)), "weight": pesos.get(estilo, 800)})
+                    dc.SelectObject(cache_fontes[_k])
 
             total_linhas = len(linhas) + (1 if direita_propria else 0)
             bloco_altura = altura_linha * total_linhas + espaco_depois
@@ -1427,16 +1435,29 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 f_val = fonte_fl("kv") if is_fl else fonte("kv")
                 dc.SelectObject(f_lab)
                 rot_px = dc.GetTextExtent(rotulo)[0]
-                dc.TextOut(margem, y, rotulo)
                 dc.SelectObject(f_val)
                 if is_fl:
-                    # v1.8.20: fonte menor faz caber numa linha; sem fatiar texto.
-                    linhas = [texto] if texto else [" "]
+                    # v1.8.21: reduz a fonte ate rotulo+valor caberem numa linha (nunca fatia).
+                    pt = fl_pontos["kv"]
+                    while pt > 6 and dc.GetTextExtent(rotulo)[0] + dc.GetTextExtent(texto or " ")[0] > largura_util:
+                        pt -= 0.5
+                        _k = "fl_auto_%s" % pt
+                        if _k not in cache_fontes:
+                            cache_fontes[_k + "_l"] = win32ui.CreateFont({"name": "Courier New", "height": -max(10, int(pt * dpi_y / 72)), "weight": 800})
+                            cache_fontes[_k] = win32ui.CreateFont({"name": "Courier New", "height": -max(10, int(pt * dpi_y / 72)), "weight": 400})
+                        f_lab, f_val = cache_fontes[_k + "_l"], cache_fontes[_k]
+                        dc.SelectObject(f_lab)
+                        rot_px = dc.GetTextExtent(rotulo)[0]
+                        dc.SelectObject(f_val)
+                    linhas = [texto or " "]
                 else:
                     linhas = quebrar(texto, "kv", max(40, largura_util - rot_px))
+                dc.SelectObject(f_lab)
+                dc.TextOut(margem, y, rotulo)
                 dc.SelectObject(f_val)
                 for indice, linha in enumerate(linhas):
-                    dc.TextOut(margem + rot_px, y + indice * altura_linha, linha)
+                    if linha.strip():
+                        dc.TextOut(margem + rot_px, y + indice * altura_linha, linha)
                 y += altura_linha * len(linhas) + espaco_depois
                 continue
 
@@ -1448,7 +1469,8 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                     x = margem + max(0, largura_util - linha_px)
                 else:
                     x = margem + recuo_px
-                dc.TextOut(x, y + indice * altura_linha, linha)
+                if linha and linha.strip():
+                    dc.TextOut(x, y + indice * altura_linha, linha)
 
             if direita:
                 direita_px = dc.GetTextExtent(direita)[0]
