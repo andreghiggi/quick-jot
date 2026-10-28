@@ -1400,6 +1400,14 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
                 linhas = quebrar(texto, estilo, largura_util - recuo_px)
             if usa_fl:
                 dc.SelectObject(fonte_fl(estilo))
+                # v1.8.21: titulo/modalidade sempre numa linha so, dentro da moldura.
+                pt = fl_pontos[estilo]
+                while pt > 6 and dc.GetTextExtent(texto)[0] > largura_util:
+                    pt -= 0.5
+                    _k = "fl_fit_%s_%s" % (estilo, pt)
+                    if _k not in cache_fontes:
+                        cache_fontes[_k] = win32ui.CreateFont({"name": "Courier New", "height": -max(10, int(pt * dpi_y / 72)), "weight": pesos.get(estilo, 800)})
+                    dc.SelectObject(cache_fontes[_k])
 
             total_linhas = len(linhas) + (1 if direita_propria else 0)
             bloco_altura = altura_linha * total_linhas + espaco_depois
