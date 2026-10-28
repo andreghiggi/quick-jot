@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.21"
+SCRIPT_VERSION = "1.8.22"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -1146,6 +1146,45 @@ def extrair_blocos_v2(html_content):
             if not any("item" in child.classes() for child in item.children)
         ]
         for item_index, item in enumerate(receipt_items):
+            # v1.8.22: recibo da FLORICULTURA (fl-receipt) - faixa de modalidade, dados,
+            # endereco invertido, cartao em caixa e valores. Demais lojas nao entram aqui.
+            if "fl-receipt" in item.classes():
+                fl_bl = []
+                if item_index > 0:
+                    fl_bl.append({"text": "", "style": "sep", "align": "left", "right": ""})
+                for child in item.children:
+                    c = child.classes()
+                    t = child.text()
+                    if "fl-modeband" in c:
+                        fl_bl.append(block(t, "inverse", "center"))
+                    elif "fl-name" in c:
+                        fl_bl.append(block(t, "item_qty"))
+                    elif "fl-blank" in c:
+                        fl_bl.append({"text": " ", "style": "normal", "align": "left", "right": ""})
+                    elif "fl-inv" in c:
+                        for row in child.children:
+                            fl_bl.append(block(row.text(), "inverse"))
+                    elif "fl-cardbox" in c:
+                        fl_bl.append({"text": "", "style": "box_start", "align": "left", "right": ""})
+                        fl_bl.append(block(t, "normal"))
+                        fl_bl.append({"text": "", "style": "box_end", "align": "left", "right": ""})
+                    elif "fl-label" in c:
+                        fl_bl.append(block(t, "ready"))
+                    elif "fl-money" in c:
+                        spans = [s.text() for s in child.children if s.tag == "span"]
+                        if len(spans) >= 2:
+                            fl_bl.append(block(spans[0], "total" if "fl-money-total" in c else "item", "left", spans[1]))
+                    elif t:
+                        if ":" in t and "fl-line" in c:
+                            lab, val = t.split(":", 1)
+                            fl_bl.append({"text": val.strip(), "style": "kv", "label": lab.strip() + ":", "align": "left", "right": ""})
+                        else:
+                            fl_bl.append(block(t, "normal"))
+                for b in fl_bl:
+                    if b:
+                        b["florist"] = True
+                        blocos.append(b)
+                continue
             name_node = next((n for n in walk_item(item) if "item-name" in n.classes()), None)
             detail_node = next((n for n in walk_item(item) if "item-detail" in n.classes()), None)
             # Piloto I9: valor do item vai para o FINAL do bloco (italico, menor).

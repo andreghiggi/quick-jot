@@ -275,7 +275,7 @@ function buildReceiptHtmlV2Rich(payload: PrintPayload): string {
       : Math.max(0, payload.total - subtotal);
   const paymentHtml = resolvePaymentHtml(payload.notes);
   const phoneHtml = payload.customerPhone
-    ? `<p><span class="label">Tel:</span> ${escapeHtml(payload.customerPhone)}</p>`
+    ? `<p><span class="label">${payload.isFlorist ? 'TEL:' : 'Tel:'}</span> ${escapeHtml(payload.customerPhone)}</p>`
     : '';
   const comandaHeader = payload.comandaHeader;
   const fmtBr = (iso: string, withDate: boolean) => {
