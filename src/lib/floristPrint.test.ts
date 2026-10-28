@@ -14,15 +14,23 @@ describe('floristPrint', () => {
   it('separa produtos com linha tracejada', () => {
     const html = renderFloristItemsHTML([{ name: 'A', quantity: 1, price: 50, destination: dest }, { name: 'B', quantity: 1, price: 30, destination: dest }]);
     expect(html.match(/fl-sep/g)?.length).toBe(1);
-    expect(html.indexOf('<span class="name">A<')).toBeLessThan(html.indexOf('PRESENTE'));
+    // Recibo: faixa "ENTREGA - PRESENTE" vem antes do nome do produto.
+    expect(html.indexOf('ENTREGA - PRESENTE')).toBeLessThan(html.indexOf('<span class="name">A<'));
+  });
+  it('recibo usa VALOR, DATA DE ENTREGA e horário com hífen', () => {
+    const html = renderFloristItemsHTML([{ name: 'A', quantity: 1, price: 120, destination: dest }]);
+    expect(html).toContain('<b>DATA DE ENTREGA:</b> <span class="fl-val">23/10/2026</span>');
+    expect(html).toContain('16:00-18:00');
+    expect(html).toContain('<span>VALOR:</span><span>R$ 120,00</span>');
+    expect(html).toContain('<span>TOTAL DO ITEM:</span><span>R$ 130,00</span>');
   });
   it('pronto até sai dentro de cada produto e usa "Mensagem do cartão"', () => {
     const html = renderFloristItemsHTML([
       { name: 'A', quantity: 1, price: 50, destination: { ...dest, cardMessage: 'Oi' } },
       { name: 'B', quantity: 1, price: 30, destination: { ...dest, date: '2026-10-31', slot: '12:00–14:00' } },
     ]);
-    expect(html).toContain('PRONTO ATÉ: 23/10 16h');
-    expect(html).toContain('PRONTO ATÉ: 31/10 12h');
+    expect(html).toContain('PRONTO ATÉ:</b> <span class="fl-val">23/10 16h');
+    expect(html).toContain('PRONTO ATÉ:</b> <span class="fl-val">31/10 12h');
     expect(html).toContain('MENSAGEM DO CARTÃO:');
     expect(html).not.toContain('escrever à mão');
   });
