@@ -1,4 +1,4 @@
-import { renderFloristItemsHTML, floristReadyLabel, FLORIST_PRINT_CSS } from '@/lib/floristPrint';
+import { renderFloristItemsHTML, floristReadyLabel, FLORIST_PRINT_CSS, FLORIST_PRODUCTION_CSS, floristProductionModeLabel } from '@/lib/floristPrint';
 // Utility for printing production tickets on 80mm thermal printers
 
 export type PrintLayoutVersion = 'v1' | 'v2' | 'v3';
@@ -507,9 +507,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
         groupedOptionals: it.groupedOptionals, notes: parseNotes(it.notes).observations.join(' | '),
         destination: it.floristDestination ?? data.florist!.destination,
       })), { production: true })}</div>
-    </body>
-    </html>
-  ` : ''}
+      ` : `
       <!--BOX_START-->
       <div class="header">
         <div class="title">COMANDA DE PRODUÇÃO</div>
@@ -525,6 +523,7 @@ function generateProductionTicketHTMLv2(data: PrintTicketData): string {
       ${readyBlockHTML}
       <div class="items">${itemsHTML}</div>
       <div class="footer">--- FIM ---</div>
+      `}
     </body>
     </html>
   `;
