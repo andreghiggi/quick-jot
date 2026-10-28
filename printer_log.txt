@@ -8,3 +8,4 @@ Traceback (most recent call last):
 ModuleNotFoundError: No module named 'win32con'
 
 [13:00:10] [GDI] Impressao GRAFICA (GDI) concluida em 'Test Printer' [papel 80mm / canvas 600px / 24 blocos V2]
+[13:16:21] [GDI] Impressao GRAFICA (GDI) concluida em 'X' [papel 80mm / canvas 463px / 24 blocos V2]
