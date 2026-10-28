@@ -53,7 +53,8 @@ export function floristItemFees(items: FloristPrintItem[]): number[] {
  * (item / item-name / qty / name / description / add-line / obs-text / item-notes),
  * para sair igual no navegador, na fila automática e na reimpressão.
  */
-export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
+export function renderFloristItemsHTML(items: FloristPrintItem[], opts?: { production?: boolean }): string {
+  if (opts?.production) return renderFloristProductionItemsHTML(items);
   const fees = floristItemFees(items);
   const raw = (txt: string, extra = '') => `<div class="fl-line description add-line${extra ? ' ' + extra : ''}">${txt}</div>`;
   // Blocos: auto_printer ignora margens CSS, então inserimos uma linha em branco real antes de cada bloco.
@@ -116,6 +117,77 @@ export function renderFloristItemsHTML(items: FloristPrintItem[]): string {
     })
     .join('');
 }
+
+/** Cabeçalho "ENTREGA - PRESENTE" da comanda de produção floral. */
+export function floristProductionModeLabel(d?: FloristDestination | null): string {
+  if (!d) return '';
+  const modo = d.mode === 'delivery' ? 'ENTREGA' : 'RETIRADA';
+  const quem = d.forWhom === 'gift' ? 'PRESENTE' : 'COMPRADOR';
+  return `&gt;&gt; ${modo} - ${quem} &lt;&lt;`;
+}
+
+/** Comanda de produção floral (modelo da foto): sem valores, endereço invertido e cartão em caixa. */
+function renderFloristProductionItemsHTML(items: FloristPrintItem[]): string {
+  const ln = (label: string, value: string) =>
+    `<div class="fl-line description add-line"><b>${label}:</b> <span class="fl-val">${value}</span></div>`;
+  return items
+    .map((it) => {
+      const d = it.destination;
+      const out: string[] = [];
+      out.push(`<div class="fl-line fl-name item-name"><span class="qty">[${it.quantity}x]</span> <span class="name">${esc(it.name.toUpperCase())}</span></div>`);
+      for (const g of it.groupedOptionals || []) {
+        g.items.split(/,(?!\s*\d{2}\s*(?:,|$))/).map((s) => s.trim()).filter(Boolean)
+          .forEach((a) => out.push(`<div class="fl-line description add-line">+ ${esc(a)}</div>`));
+      }
+      out.push('<div class="fl-line fl-blank">&nbsp;</div>');
+      if (d?.date) {
+        out.push(ln(d.mode === 'delivery' ? 'DATA DE ENTREGA' : 'DATA DE RETIRADA', esc(d.date.split('-').reverse().join('/'))));
+        if ((d.slot || '').trim()) out.push(ln('HORÁRIO', esc(d.slot!.trim().replace(/\s*[–—]\s*/g, '-'))));
+        const ready = floristReadyLabel(d);
+        if (ready) out.push(ln('PRONTO ATÉ', esc(ready)));
+      }
+      const rec = (d?.recipientName || '').trim();
+      const tel = (d?.recipientPhone || '').trim();
+      if (rec) out.push(ln('RECEBE', esc(rec)));
+      if (tel) out.push(ln('TEL', esc(tel)));
+      if (d?.mode === 'delivery') {
+        out.push('<div class="fl-line fl-blank">&nbsp;</div>');
+        out.push('<div class="fl-line fl-label">ENDEREÇO DE ENTREGA:</div>');
+        let rua = `${(d.street || '').trim()}, ${(d.number || '').trim()}`;
+        if ((d.complement || '').trim()) rua += ` (${d.complement!.trim()})`;
+        const rows = [esc(rua)];
+        if ((d.neighborhood || '').trim()) rows.push(esc(d.neighborhood!.trim()));
+        if ((d.reference || '').trim()) rows.push(`REF.: ${esc(d.reference!.trim())}`);
+        out.push(`<div class="fl-inv">${rows.map((r) => `<div>${r}</div>`).join('')}</div>`);
+      }
+      const msg = (d?.cardMessage || '').trim();
+      if (d?.forWhom === 'gift' && msg) {
+        out.push('<div class="fl-line fl-blank">&nbsp;</div>');
+        out.push('<div class="fl-line fl-label">MENSAGEM DO CARTÃO:</div>');
+        out.push(`<div class="fl-cardbox">${esc(msg)}</div>`);
+      }
+      const notes = parseDestinationFromNotes(it.notes).rest;
+      if (notes) out.push(`<div class="fl-line fl-label">OBS: ${esc(notes)}</div>`);
+      return `<div class="item fl-item fl-prod">${out.join('')}</div>`;
+    })
+    .join('<div class="fl-sep">--------------------------------</div>');
+}
+
+export const FLORIST_PRODUCTION_CSS = `
+.fl-header { border: 2px solid #000; padding: 0; margin: 2mm 0; text-align: left; }
+.fl-header .fl-h-title { font-size: 14pt; font-weight: 900; padding: 2mm 2mm 1mm; }
+.fl-header .fl-h-mode { font-size: 13pt; font-weight: 900; padding: 1mm 2mm 2mm; }
+.fl-header .fl-h-client { background: #000 !important; color: #fff !important; font-size: 13pt; font-weight: 900; padding: 1mm 2mm; }
+.fl-header .fl-h-date { text-align: center; font-size: 11pt; padding: 1mm 2mm; }
+.fl-prod .fl-name { font-size: 13pt; font-weight: 900; margin-bottom: 1mm; }
+.fl-prod .fl-line { font-size: 10.5pt; margin: 0.5mm 0; background: none; color: inherit; text-transform: none; font-style: normal; padding: 0; }
+.fl-prod .fl-line b { font-weight: 900; }
+.fl-prod .fl-val { font-weight: normal; }
+.fl-prod .fl-label { font-weight: 900; }
+.fl-prod .fl-inv { background: #000 !important; color: #fff !important; font-weight: bold; font-size: 10.5pt; padding: 1mm 1.5mm; margin: 0.5mm 0 1mm; }
+.fl-prod .fl-cardbox { border: 2px solid #000; padding: 1.5mm; font-size: 10.5pt; margin-top: 0.5mm; }
+@media print { .fl-header .fl-h-client, .fl-prod .fl-inv { background: #000 !important; color: #fff !important; } }
+`;
 
 export const FLORIST_PRINT_CSS = `
 .fl-item { margin: 1.5mm 0; }
