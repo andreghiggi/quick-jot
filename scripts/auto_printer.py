@@ -209,7 +209,7 @@ _prepare_pywin32_dll_path()
 # ==============================================================================
 # CONFIGURAÇÕES TÉCNICAS
 # ==============================================================================
-SCRIPT_VERSION = "1.8.15"
+SCRIPT_VERSION = "1.8.16"
 CHECK_INTERVAL = 5  # Segundos entre verificações
 API_URL = (os.environ.get("COMANDATECH_API_URL") or "https://api.comandatech.com.br").rstrip("/") + "/rest/v1"
 API_KEY = "" # Injetado pelo frontend
@@ -932,6 +932,43 @@ def extrair_blocos_v2(html_content):
     blocos = []
     is_receipt = any(node.tag == "h2" and "RECIBO" in node.text().upper() for node in nodes)
 
+    # v1.8.16: comanda de producao da FLORICULTURA (classes fl-*), igual a foto modelo.
+    if by_class("fl-header"):
+        hdr = by_class("fl-header")[0]
+        def hcls(c):
+            n = next((x for x in walk(hdr) if c in x.classes()), None)
+            return n.text() if n else ""
+        blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
+        blocos.append(block(hcls("fl-h-title"), "title", "center"))
+        blocos.append(block(hcls("fl-h-mode"), "type", "center"))
+        blocos.append(block(prefixo_cliente(hcls("fl-h-client")) if hcls("fl-h-client") else "", "inverse"))
+        blocos.append(block(hcls("fl-h-date"), "datetime", "center"))
+        blocos.append({"text": "", "style": "box_end", "align": "left", "right": ""})
+        blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+        itens = by_class("fl-prod")
+        for idx, item in enumerate(itens):
+            if idx > 0:
+                blocos.append({"text": "", "style": "sep", "align": "left", "right": ""})
+            for child in item.children:
+                c = child.classes()
+                t = child.text()
+                if "fl-name" in c:
+                    blocos.append(block(t, "item_qty"))
+                elif "fl-blank" in c:
+                    blocos.append({"text": " ", "style": "normal", "align": "left", "right": ""})
+                elif "fl-inv" in c:
+                    for row in child.children:
+                        blocos.append(block(row.text(), "inverse"))
+                elif "fl-cardbox" in c:
+                    blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
+                    blocos.append(block(t, "normal"))
+                    blocos.append({"text": "", "style": "box_end", "align": "left", "right": ""})
+                elif "fl-label" in c:
+                    blocos.append(block(t, "ready"))
+                elif t:
+                    blocos.append(block(t, "normal"))
+        return [b for b in blocos if b]
+
     if not is_receipt and by_class("title"):
         blocos.append({"text": "", "style": "box_start", "align": "left", "right": ""})
         title = block(by_class("title")[0].text(), "title", "center")
@@ -1257,6 +1294,14 @@ def imprimir_gdi(printer_name, conteudo, largura_mm=None):
         blocos = extrair_blocos_v2(conteudo) if "<" in conteudo else []
         if not blocos:
             # Compatibilidade para algum job antigo que ainda esteja em texto.
+            # v1.8.16: nunca imprimir codigo HTML/CSS cru.
+            if "<" in conteudo:
+                import re as _re_fb
+                _t = _re_fb.sub(r'(?is)<(style|script|head|title)[^>]*>.*?</\1>', ' ', conteudo)
+                _t = _re_fb.sub(r'(?is)<br\s*/?>|</(div|p|tr|li|h[1-6])>', '\n', _t)
+                _t = _re_fb.sub(r'(?s)<[^>]+>', '', _t)
+                import html as _h_fb
+                conteudo = "\n".join(l.strip() for l in _h_fb.unescape(_t).split("\n") if l.strip())
             blocos = [
                 {"text": linha, "style": estilo, "align": "left", "right": ""}
                 for linha, estilo in montar_linhas_estilizadas(conteudo, 44 if largura_mm >= 80 else 32)
