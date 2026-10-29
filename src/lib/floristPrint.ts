@@ -122,8 +122,10 @@ function renderFloristReceiptItemsHTML(items: FloristPrintItem[]): string {
       const prod = it.price * it.quantity;
       out.push('<div class="fl-line fl-blank">&nbsp;</div>');
       out.push(money2('VALOR:', money(prod)));
-      out.push(money2('ENTREGA:', money(fees[i])));
-      out.push(money2('TOTAL DO ITEM:', money(prod + fees[i]), 'fl-money-total'));
+      if (fees[i] > 0) {
+        out.push(money2('ENTREGA:', money(fees[i])));
+        out.push(money2('SUBTOTAL:', money(prod + fees[i]), 'fl-money-total'));
+      }
       return `<div class="item fl-item fl-prod fl-receipt">${out.join('')}</div>`;
     })
     .join('<div class="fl-sep">--------------------------------</div>');

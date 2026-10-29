@@ -22,7 +22,13 @@ describe('floristPrint', () => {
     expect(html).toContain('<b>DATA DE ENTREGA:</b> <span class="fl-val">23/10/2026</span>');
     expect(html).toContain('16:00-18:00');
     expect(html).toContain('<span>VALOR:</span><span>R$ 120,00</span>');
-    expect(html).toContain('<span>TOTAL DO ITEM:</span><span>R$ 130,00</span>');
+    expect(html).toContain('<span>SUBTOTAL:</span><span>R$ 130,00</span>');
+  });
+  it('entrega zerada oculta ENTREGA e SUBTOTAL', () => {
+    const html = renderFloristItemsHTML([{ name: 'A', quantity: 1, price: 120, destination: { ...dest, fee: 0 } }]);
+    expect(html).toContain('<span>VALOR:</span><span>R$ 120,00</span>');
+    expect(html).not.toContain('ENTREGA:</span>');
+    expect(html).not.toContain('SUBTOTAL:');
   });
   it('pronto até sai dentro de cada produto e usa "Mensagem do cartão"', () => {
     const html = renderFloristItemsHTML([
