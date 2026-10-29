@@ -56,17 +56,23 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
 
       {value.mode === "delivery" && (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="min-w-0">
               <Label className="font-bold">Data da entrega *</Label>
-              <Input type="date" min={today} value={value.date ?? ""} onChange={(e) => set({ date: e.target.value })} className="border-primary" />
+              <Input
+                type="date"
+                min={today}
+                value={value.date ?? ""}
+                onChange={(e) => set({ date: e.target.value })}
+                className="block h-10 min-h-10 w-full min-w-0 max-w-full appearance-none px-2 py-0 text-left leading-10 text-base md:text-sm border-primary"
+              />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="font-bold">Turno *</Label>
               <select
                 value={value.slot ?? ""}
                 onChange={(e) => set({ slot: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-primary bg-background px-3 text-sm"
+                className="flex h-10 w-full min-w-0 rounded-md border border-primary bg-background px-2 text-base md:text-sm"
               >
                 <option value="">Escolha o turno</option>
                 {FLORIST_TIME_SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -108,7 +114,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
               <select
                 value={value.neighborhood ?? ""}
                 onChange={(e) => set({ neighborhood: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-primary bg-background px-3 text-sm"
+                className="flex h-10 w-full rounded-md border border-primary bg-background px-3 text-base md:text-sm"
               >
                 <option value="">Escolha o bairro</option>
                 {neighborhoods.map((n) => (
@@ -123,7 +129,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
           </div>
           <div>
             <Label>Ponto de referência *</Label>
-            <Input value={value.reference ?? ""} onChange={(e) => set({ reference: e.target.value })} className="border-primary" />
+            <Textarea value={value.reference ?? ""} onChange={(e) => set({ reference: e.target.value })} rows={2} className="min-h-[56px] resize-none break-words text-base md:text-sm border-primary" />
           </div>
         </>
       )}
@@ -137,7 +143,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
             onChange={(e) => set({ cardMessage: e.target.value })}
             placeholder="Escreva a mensagem que será escrita à mão no cartão"
             rows={4}
-            className="mt-2 border-primary"
+            className="mt-2 text-base md:text-sm border-primary"
           />
           <p className="mt-1 text-right text-xs text-muted-foreground">{msgLen} / {GIFT_CARD_MAX_CHARS}</p>
         </div>

@@ -18,6 +18,7 @@ import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import { Product, ProductOptional, CartItem } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -2196,7 +2197,7 @@ export default function Menu() {
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) { setSelectedProduct(null); setSelectedOptionals([]); setSelectedGroupItems({}); setItemNotes(''); setComboFlow(null); setItemDestination({}); } }}>
-        <DialogContent style={buttonColorStyle} className="h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent style={buttonColorStyle} className="h-[96dvh] sm:h-[85dvh] w-[calc(100vw-8px)] sm:w-full rounded-xl flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             {comboFlow && (
               <Badge variant="secondary" className="self-start mb-1">
@@ -2477,7 +2478,7 @@ export default function Menu() {
 
       {/* Cart Dialog */}
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <DialogContent style={buttonColorStyle} className="max-h-[85dvh] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent style={buttonColorStyle} className="max-h-[96dvh] sm:max-h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
             <DialogTitle>Seu Pedido</DialogTitle>
           </DialogHeader>
@@ -2693,11 +2694,12 @@ export default function Menu() {
                   </div>
                   <div>
                     <Label className="font-bold">Ponto de referência *</Label>
-                    <Input
+                    <Textarea
                       value={deliveryReference}
                       onChange={(e) => { setDeliveryReference(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryReference'); return n; }); }}
                       placeholder="Próximo ao mercado, em frente à escola..."
-                      className={cn('border-primary', fieldErrors.has('deliveryReference') && 'border-destructive')}
+                      rows={2}
+                      className={cn('min-h-[56px] resize-none break-words text-base md:text-sm border-primary', fieldErrors.has('deliveryReference') && 'border-destructive')}
                     />
                   </div>
                   {isFlorist && floristDeliveryCount > 0 && (
