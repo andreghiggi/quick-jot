@@ -48,6 +48,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ClipboardList, UtensilsCrossed, Zap } from 'lucide-react';
 import { PDVV2FastCheckout } from '@/components/pdv-v2/PDVV2FastCheckout';
 import { useFastSalesToday, FAST_SALE_EVENT } from '@/hooks/useFastSalesToday';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { FloristDashboardView } from '@/components/florist/FloristDashboardView';
 
 import { printOnlyReceipt } from '@/utils/pdvV2Print';
 import { enqueueProductionByStation } from '@/utils/printRouting';
@@ -72,6 +74,8 @@ function isDelivery(o: Order) {
 export default function PDVV2() {
   const { company, user } = useAuthContext();
   const companyId = company?.id;
+  // Perfil floricultura: troca só a área de pedidos pela agenda floral.
+  const { isFlorist } = useCompanyProfile(companyId);
   // Hide delivered orders from PDV V2 dashboard — aplicado a todas as lojas com PDV V2 ativo.
   // Pedidos entregues continuam disponíveis em Pedidos / Relatórios; aqui apenas saem do grid
   // para manter o painel operacional limpo.
@@ -1398,6 +1402,17 @@ export default function PDVV2() {
     }
   }
 
+  const floristView = (
+    <ScrollArea className="flex-1 h-full px-4 pb-4 pt-3">
+      <FloristDashboardView
+        orders={orders}
+        companyId={companyId}
+        paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+        storeName={company?.name}
+      />
+    </ScrollArea>
+  );
+
   return (
     <>
     <PDVV2Layout>
@@ -1467,6 +1482,7 @@ export default function PDVV2() {
             </div>
 
             <TabsContent value="orders" className="mt-3 hidden min-h-0 flex-1 flex-col overflow-hidden data-[state=active]:flex">
+              {isFlorist ? floristView : (<>
               <PDVV2SummaryCards
                 pending={counts.pending}
                 preparing={counts.preparing}
@@ -1519,6 +1535,7 @@ export default function PDVV2() {
                   </div>
                 )}
               </div>
+              </>)}
             </TabsContent>
 
             <TabsContent value="tables" className="hidden !mt-0 min-h-0 flex-1 flex-col overflow-hidden pt-3 data-[state=active]:flex data-[state=active]:!mt-0">
@@ -1573,6 +1590,8 @@ export default function PDVV2() {
             </TabsContent>
           </Tabs>
           )
+        ) : isFlorist ? (
+          floristView
         ) : (
           <>
             <PDVV2SummaryCards
