@@ -2693,11 +2693,12 @@ export default function Menu() {
                   </div>
                   <div>
                     <Label className="font-bold">Ponto de referência *</Label>
-                    <Input
+                    <Textarea
                       value={deliveryReference}
                       onChange={(e) => { setDeliveryReference(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryReference'); return n; }); }}
                       placeholder="Próximo ao mercado, em frente à escola..."
-                      className={cn('border-primary', fieldErrors.has('deliveryReference') && 'border-destructive')}
+                      rows={2}
+                      className={cn('min-h-[56px] resize-none break-words text-base md:text-sm border-primary', fieldErrors.has('deliveryReference') && 'border-destructive')}
                     />
                   </div>
                   {isFlorist && floristDeliveryCount > 0 && (
