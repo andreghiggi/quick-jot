@@ -2402,15 +2402,6 @@ export default function Menu() {
                         </div>
                       )}
 
-                      <div>
-                        <Label>Observações (opcional)</Label>
-                        <Input
-                          value={itemNotes}
-                          onChange={(e) => setItemNotes(e.target.value)}
-                          placeholder={isFlorist ? 'Ex: Tom de flor preferido, detalhes da embalagem...' : 'Ex: Sem cebola, bem passado...'}
-                          className="mt-2"
-                        />
-                      </div>
                       {isFlorist && !comboFlow && (
                         <FloristItemDestination
                           value={itemDestination}
@@ -2420,6 +2411,15 @@ export default function Menu() {
                           pickupEnabled={settings.enablePickup !== false}
                         />
                       )}
+                      <div>
+                        <Label>Observações (opcional)</Label>
+                        <Input
+                          value={itemNotes}
+                          onChange={(e) => setItemNotes(e.target.value)}
+                          placeholder={isFlorist ? 'Ex: Tom de flor preferido, detalhes da embalagem...' : 'Ex: Sem cebola, bem passado...'}
+                          className="mt-2"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
