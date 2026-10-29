@@ -10,6 +10,8 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { OrderTabs } from '@/components/OrderTabs';
 import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 import { useFastSalesToday } from '@/hooks/useFastSalesToday';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { FloristDashboardView } from '@/components/florist/FloristDashboardView';
 
 const Index = () => {
   const [isPedidoExpressOpen, setIsPedidoExpressOpen] = useState(false);
@@ -18,6 +20,7 @@ const Index = () => {
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
   const { isUnlocked, playSound } = useOrderNotificationSound(!!company?.id);
+  const { isFlorist } = useCompanyProfile(company?.id);
 
   const toSPDateString = (date: Date) => {
     return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
@@ -92,6 +95,14 @@ const Index = () => {
             <Volume2 className="w-5 h-5 text-warning shrink-0" />
           </button>
         )}
+        {isFlorist ? (
+          <FloristDashboardView
+            orders={orders}
+            companyId={company?.id}
+            paperSize={settings.printerPaperSize}
+            storeName={settings.storeName}
+          />
+        ) : (<>
         <section className="flex flex-nowrap gap-3 overflow-x-auto">
           {settings.showCardPendentes && (
             <StatsCard
@@ -158,6 +169,7 @@ const Index = () => {
         </section>
 
         <OrderTabs filteredOrders={activeOrders} />
+        </>)}
       </div>
 
       <PedidoExpressDialog open={isPedidoExpressOpen} onOpenChange={setIsPedidoExpressOpen} />
