@@ -1402,6 +1402,17 @@ export default function PDVV2() {
     }
   }
 
+  const floristView = (
+    <ScrollArea className="flex-1 h-full px-4 pb-4 pt-3">
+      <FloristDashboardView
+        orders={orders}
+        companyId={companyId}
+        paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
+        storeName={company?.name}
+      />
+    </ScrollArea>
+  );
+
   return (
     <>
     <PDVV2Layout>
