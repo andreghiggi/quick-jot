@@ -56,17 +56,23 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
 
       {value.mode === "delivery" && (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="min-w-0">
               <Label className="font-bold">Data da entrega *</Label>
-              <Input type="date" min={today} value={value.date ?? ""} onChange={(e) => set({ date: e.target.value })} className="border-primary" />
+              <Input
+                type="date"
+                min={today}
+                value={value.date ?? ""}
+                onChange={(e) => set({ date: e.target.value })}
+                className="block h-10 min-h-10 w-full min-w-0 max-w-full appearance-none px-2 py-0 text-left leading-10 text-base md:text-sm border-primary"
+              />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="font-bold">Turno *</Label>
               <select
                 value={value.slot ?? ""}
                 onChange={(e) => set({ slot: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-primary bg-background px-3 text-sm"
+                className="flex h-10 w-full min-w-0 rounded-md border border-primary bg-background px-2 text-base md:text-sm"
               >
                 <option value="">Escolha o turno</option>
                 {FLORIST_TIME_SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
