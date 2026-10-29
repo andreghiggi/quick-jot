@@ -114,7 +114,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
               <select
                 value={value.neighborhood ?? ""}
                 onChange={(e) => set({ neighborhood: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-primary bg-background px-3 text-sm"
+                className="flex h-10 w-full rounded-md border border-primary bg-background px-3 text-base md:text-sm"
               >
                 <option value="">Escolha o bairro</option>
                 {neighborhoods.map((n) => (
@@ -129,7 +129,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
           </div>
           <div>
             <Label>Ponto de referência *</Label>
-            <Input value={value.reference ?? ""} onChange={(e) => set({ reference: e.target.value })} className="border-primary" />
+            <Textarea value={value.reference ?? ""} onChange={(e) => set({ reference: e.target.value })} rows={2} className="min-h-[56px] resize-none break-words text-base md:text-sm border-primary" />
           </div>
         </>
       )}
@@ -143,7 +143,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
             onChange={(e) => set({ cardMessage: e.target.value })}
             placeholder="Escreva a mensagem que será escrita à mão no cartão"
             rows={4}
-            className="mt-2 border-primary"
+            className="mt-2 text-base md:text-sm border-primary"
           />
           <p className="mt-1 text-right text-xs text-muted-foreground">{msgLen} / {GIFT_CARD_MAX_CHARS}</p>
         </div>
