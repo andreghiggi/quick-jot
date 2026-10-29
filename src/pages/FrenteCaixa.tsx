@@ -105,6 +105,8 @@ import {
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { FrenteCaixaCashIndicator } from '@/components/frente-caixa/FrenteCaixaCashIndicator';
 
 interface CartLine {
   id: string; // local uuid
@@ -267,6 +269,7 @@ export default function FrenteCaixa() {
     openRegister,
     isOpening,
   } = useCashRegister({ companyId: company?.id });
+  const { isFlorist } = useCompanyProfile(company?.id);
 
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
@@ -1517,7 +1520,14 @@ export default function FrenteCaixa() {
             <ScanBarcode className="h-5 w-5 text-primary" />
             <span className="font-semibold">Frente de Caixa</span>
             <Badge variant="outline" className="ml-2">Loja</Badge>
-            {currentRegister && (
+            {isFlorist ? (
+              <FrenteCaixaCashIndicator
+                companyId={company?.id}
+                register={currentRegister as any}
+                cashOpenKnown={cashOpenKnown}
+                refreshKey={`${paymentOpen}-${postSaleOpen}`}
+              />
+            ) : currentRegister && (
               <Badge variant="secondary" className="ml-1">Caixa aberto</Badge>
             )}
           </div>

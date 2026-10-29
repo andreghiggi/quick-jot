@@ -35,6 +35,8 @@ import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@
 import { OrderCardChargeDialog } from '@/components/OrderCardChargeDialog';
 import { OrderEditDialog } from '@/components/OrderEditDialog';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { floristNextStatus } from '@/lib/floristAgenda';
 
 interface OrderCardProps {
   order: Order;
@@ -186,7 +188,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   
-  const config = statusConfig[order.status] ?? FALLBACK_STATUS_CONFIG;
+  const { isFlorist } = useCompanyProfile(order.companyId ?? company?.id);
+  const baseConfig = statusConfig[order.status] ?? FALLBACK_STATUS_CONFIG;
+  // Perfil floricultura: sem etapa "Preparar" (Confirmar → Pronto → Entregar).
+  const config = isFlorist ? { ...baseConfig, next: floristNextStatus(order.status) } : baseConfig;
+  const advanceLabel = isFlorist && order.status === 'pending' ? 'Pronto' : nextStatusLabel[order.status];
   const [confirming, setConfirming] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [tefEstornoLoading, setTefEstornoLoading] = useState(false);
@@ -1171,7 +1177,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               {advancing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               {isClienteLojaExpress && order.status === 'pending'
                 ? 'Entregar'
-                : nextStatusLabel[order.status]}
+                : advanceLabel}
               {!advancing && <ChevronRight className="w-4 h-4" />}
             </Button>
           )}
