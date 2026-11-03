@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import React, { useState } from 'react';
 import { useCategories, CategorySortMode } from '@/hooks/useCategories';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -19,6 +20,7 @@ import { usePrintStations } from '@/hooks/usePrintStations';
 
 export default function Categories() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const showPrintDescriptionToggle = true;
   const showProductionPrintToggle = true;
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
@@ -61,7 +63,7 @@ export default function Categories() {
           <FolderOpen className="h-7 w-7 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Categorias</h1>
-            <p className="text-sm text-muted-foreground">Gerencie as categorias do seu cardápio</p>
+            <p className="text-sm text-muted-foreground">{profileText('Gerencie as categorias do seu cardápio')}</p>
           </div>
         </div>
 
@@ -273,7 +275,7 @@ export default function Categories() {
                         {cat.menuItem === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       </Button>
                       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                        {cat.menuItem === false ? 'Oculta no cardápio' : 'Visível no cardápio'}
+                        {cat.menuItem === false ? profileText('Oculta no cardápio') : profileText('Visível no cardápio')}
                       </span>
                     </div>
                     <div className="relative group">

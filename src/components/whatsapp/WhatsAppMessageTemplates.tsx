@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -218,6 +219,7 @@ function ProtectedVariableEditor({ value, onChange, variables }: { value: string
 }
 
 export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSetting }: WhatsAppMessageTemplatesProps) {
+  const { profileText } = useCompanyProfile(companyId);
   const [customMessages, setCustomMessages] = useState<Record<string, string>>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -253,12 +255,12 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
   }, [companyId]);
 
   function getDisplayMessage(config: typeof TEMPLATE_CONFIGS[0]) {
-    return customMessages[config.settingKey] || config.defaultMsg;
+    return customMessages[config.settingKey] || profileText(config.defaultMsg);
   }
 
   function startEditing(config: typeof TEMPLATE_CONFIGS[0]) {
     setEditingKey(config.settingKey);
-    setEditValue(customMessages[config.settingKey] || config.defaultMsg);
+    setEditValue(customMessages[config.settingKey] || profileText(config.defaultMsg));
   }
 
   function cancelEditing() {
@@ -358,7 +360,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
                   variables={SYSTEM_VARIABLES}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {config.hint} As variáveis destacadas não podem ser removidas. Clique em uma variável abaixo para adicioná-la.
+                  {profileText(config.hint)} As variáveis destacadas não podem ser removidas. Clique em uma variável abaixo para adicioná-la.
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   {SYSTEM_VARIABLES.map(v => (
@@ -405,7 +407,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
 
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do cardápio público, {'{{chave_pix}}'} = chave PIX cadastrada, {'{{google_review}}'} = link de avaliação Google, {'{{horario}}'} = horário de atendimento do dia. As variáveis são substituídas automaticamente ao enviar.
+            <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do {profileText("cardápio")} público, {'{{chave_pix}}'} = chave PIX cadastrada, {'{{google_review}}'} = link de avaliação Google, {'{{horario}}'} = horário de atendimento do dia. As variáveis são substituídas automaticamente ao enviar.
           </p>
         </div>
       </CardContent>

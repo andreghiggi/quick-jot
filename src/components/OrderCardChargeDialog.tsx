@@ -22,6 +22,7 @@ import { PDVV2SequentialPaymentDialog } from '@/components/pdv-v2/PDVV2Sequentia
 import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } from '@/utils/pdvV2MultiPayment';
 import { recordSalePayments } from '@/utils/recordSalePayments';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import {
   hasActiveTefPaymentMethod,
   shouldChargeTefBeforePopups,
@@ -55,6 +56,7 @@ interface OrderCardChargeDialogProps {
 const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
 export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: OrderCardChargeDialogProps) {
   const { company } = useAuthContext();
+  const { terminology } = useCompanyProfile(order.companyId ?? company?.id);
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
@@ -333,7 +335,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
           integration: params.tefIntegration,
           amount: params.finalTotal,
           options: params.tefOptions,
-          description: order.customerName ? `Cardápio - ${order.customerName}` : 'Pedido Cardápio',
+          description: order.customerName ? `${terminology.menu} - ${order.customerName}` : `Pedido ${terminology.menu}`,
           onStatus: setTefStatus,
           tefFirstFlow: chargeTefBeforePopups,
         });
@@ -588,7 +590,7 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
       const mp = await runMultiPayment({
         companyId: company.id,
         lines,
-        description: order.customerName ? `Cardápio - ${order.customerName}` : 'Pedido Cardápio',
+        description: order.customerName ? `${terminology.menu} - ${order.customerName}` : `Pedido ${terminology.menu}`,
         onStatus: setMultiPayStatus,
       });
       if (!mp.ok || !mp.primary || !mp.lines) {

@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ function today(): string {
 
 export default function InventarioCMV() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
 
@@ -363,9 +365,9 @@ export default function InventarioCMV() {
                 <Select value={sourceFilter} onValueChange={(v: any) => setSourceFilter(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas (PDV + Cardápio)</SelectItem>
+                    <SelectItem value="all">{profileText('Todas (PDV + Cardápio)')}</SelectItem>
                     <SelectItem value="pdv">Somente PDV / Frente de Caixa</SelectItem>
-                    <SelectItem value="cardapio">Somente Cardápio Online</SelectItem>
+                    <SelectItem value="cardapio">{profileText('Somente Cardápio Online')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

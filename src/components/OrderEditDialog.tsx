@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -64,6 +65,7 @@ export function OrderEditDialog({
   paperSize = '80mm',
   onSaved,
 }: OrderEditDialogProps) {
+  const { profileText } = useCompanyProfile(companyId);
   const { products } = useProducts({ companyId });
   const { groups: optionalGroups } = useOptionalGroups({ companyId });
   const { categories } = useCategories({ companyId });
@@ -556,7 +558,7 @@ export function OrderEditDialog({
     const notesRaw = effectiveNotes || '';
     const isExpressNote = notesRaw.includes('[EXPRESS]');
     const source = (order as any).source || '';
-    let origemLabel = '📱 CARDÁPIO ONLINE';
+    let origemLabel = profileText('📱 CARDÁPIO ONLINE');
     if (source === 'express' || isExpressNote) origemLabel = '⚡ PEDIDO EXPRESS';
     else if (source === 'waiter') origemLabel = '🍽️ PEDIDO GARÇOM';
     origemLabel += ' — EDITADO';

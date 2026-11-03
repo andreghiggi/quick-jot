@@ -21,6 +21,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 function fmtQty(v: number) {
   return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
@@ -77,6 +78,7 @@ function today(): string {
 
 export default function InventarioKardex() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
 
@@ -190,7 +192,7 @@ export default function InventarioKardex() {
     const XLSX = await import('xlsx');
     const header = ['Data/Hora', 'Tipo', 'Origem', 'Quantidade', 'Saldo após', 'Observação'];
     const data = rows.map((r) => [
-      fmtDateTime(r.created_at), labelType(r.type), labelRef(r.reference_type),
+      fmtDateTime(r.created_at), labelType(r.type), profileText(labelRef(r.reference_type)),
       r.quantity, r.balance_after ?? '', r.notes || '',
     ]);
     const ws = XLSX.utils.aoa_to_sheet([
@@ -228,7 +230,7 @@ export default function InventarioKardex() {
       startY: 115,
       head: [['Data/Hora', 'Tipo', 'Origem', 'Qtd.', 'Saldo após', 'Observação']],
       body: rows.map((r) => [
-        fmtDateTime(r.created_at), labelType(r.type), labelRef(r.reference_type),
+        fmtDateTime(r.created_at), labelType(r.type), profileText(labelRef(r.reference_type)),
         fmtSigned(r.quantity), r.balance_after != null ? fmtQty(r.balance_after) : '—',
         r.notes || '',
       ]),
@@ -409,7 +411,7 @@ export default function InventarioKardex() {
                         <TableCell>
                           <Badge variant="outline" className="font-normal">{labelType(r.type)}</Badge>
                         </TableCell>
-                        <TableCell className="text-xs">{labelRef(r.reference_type)}</TableCell>
+                        <TableCell className="text-xs">{profileText(labelRef(r.reference_type))}</TableCell>
                         <TableCell className={cn('text-right font-medium', r.quantity > 0 ? 'text-emerald-600' : r.quantity < 0 ? 'text-red-600' : '')}>
                           {fmtSigned(r.quantity)}
                         </TableCell>

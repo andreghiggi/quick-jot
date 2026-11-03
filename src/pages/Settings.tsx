@@ -54,7 +54,7 @@ export default function Settings() {
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
   const { stations, addStation, deleteStation, updateStationPrinter } = usePrintStations(company?.id);
-  const { isFlorist, terminology } = useCompanyProfile(company?.id);
+  const { isFlorist, terminology, profileText } = useCompanyProfile(company?.id);
   const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
@@ -1470,9 +1470,7 @@ if errorlevel 1 (
                 <Printer className="w-5 h-5" />
                 Comanda de Produção
               </CardTitle>
-              <CardDescription>
-                Imprime automaticamente uma comanda de produção (somente itens, sem preços) junto com o pedido do cardápio
-              </CardDescription>
+              <CardDescription>{profileText('Imprime automaticamente uma comanda de produção (somente itens, sem preços) junto com o pedido do cardápio')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
@@ -1546,7 +1544,7 @@ if errorlevel 1 (
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Impressão Comanda Produção</p>
-                  <p className="text-sm text-muted-foreground">Ao receber pedido do cardápio, imprime também a comanda para a cozinha</p>
+                  <p className="text-sm text-muted-foreground">{profileText('Ao receber pedido do cardápio, imprime também a comanda para a cozinha')}</p>
                 </div>
                 <Switch
                   checked={storeSettings.autoPrintProductionTicket}
@@ -1555,7 +1553,7 @@ if errorlevel 1 (
                     toast({
                       title: value ? 'Comanda de produção ativada' : 'Comanda de produção desativada',
                       description: value
-                        ? 'Pedidos do cardápio também imprimirão a comanda de produção'
+                        ? profileText('Pedidos do cardápio também imprimirão a comanda de produção')
                         : 'Apenas o recibo do pedido será impresso',
                     });
                   }}
@@ -1566,9 +1564,7 @@ if errorlevel 1 (
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">Confirmação automática de pedidos</p>
-                    <p className="text-sm text-muted-foreground">
-                      Ao imprimir o pedido do cardápio online, confirma o pedido e envia a mensagem no WhatsApp do cliente automaticamente. Pedidos agendados fora do expediente continuarão exigindo confirmação manual.
-                    </p>
+                    <p className="text-sm text-muted-foreground">{profileText('Ao imprimir o pedido do cardápio online, confirma o pedido e envia a mensagem no WhatsApp do cliente automaticamente. Pedidos agendados fora do expediente continuarão exigindo confirmação manual.')}</p>
                   </div>
                   <Switch
                     checked={storeSettings.autoConfirmOrders}

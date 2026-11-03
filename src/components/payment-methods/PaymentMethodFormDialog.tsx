@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Bike, Store, Plug } from 'lucide-react';
 import type { PaymentChannel, PaymentMethod } from '@/hooks/usePaymentMethods';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 export type PaymentMethodDraft = Partial<PaymentMethod> & {
   name: string;
@@ -77,6 +79,8 @@ const bare = 'bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-8 
 export function PaymentMethodFormDialog({
   open, onOpenChange, channel, mode, initial, busy, onSubmit,
 }: Props) {
+  const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [paymentType, setPaymentType] = useState<'a_vista' | 'a_prazo' | 'crediario'>('a_vista');
@@ -230,7 +234,7 @@ export function PaymentMethodFormDialog({
           {(isPix || showIntegration || showModalitySplit) && (
             <Section title="Ajustes do canal">
               {isPix && (
-                <Field label="Chave PIX" hint="Exibida ao cliente no cardápio quando aplicável">
+                <Field label="Chave PIX" hint={profileText('Exibida ao cliente no cardápio quando aplicável')}>
                   <Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} className={bare} />
                 </Field>
               )}

@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -32,6 +33,7 @@ function emptyForm(): CouponInput {
 
 export default function CouponsPage() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { coupons, loading, createCoupon, updateCoupon, deleteCoupon } = useCoupons(company?.id);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -96,9 +98,7 @@ export default function CouponsPage() {
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Ticket className="h-6 w-6 text-primary" /> Cupons de Desconto
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Crie cupons para o cardápio online. Eles serão aplicados automaticamente quando o cliente atingir as condições e ficam visíveis no topo do cardápio.
-            </p>
+            <p className="text-muted-foreground text-sm mt-1">{profileText('Crie cupons para o cardápio online. Eles serão aplicados automaticamente quando o cliente atingir as condições e ficam visíveis no topo do cardápio.')}</p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" /> Novo cupom
@@ -177,9 +177,7 @@ export default function CouponsPage() {
         <DialogContent className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Editar cupom' : 'Novo cupom'}</DialogTitle>
-            <DialogDescription>
-              Defina o código, o desconto e as regras. Se "Valor mínimo do pedido" ficar em branco, o cupom vale para o cardápio inteiro.
-            </DialogDescription>
+            <DialogDescription>{profileText('Defina o código, o desconto e as regras. Se "Valor mínimo do pedido" ficar em branco, o cupom vale para o cardápio inteiro.')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -227,7 +225,7 @@ export default function CouponsPage() {
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="Em branco = cardápio todo"
+                  placeholder={profileText('Em branco = cardápio todo')}
                   value={form.min_order_value ?? ''}
                   onChange={(e) => setForm({ ...form, min_order_value: e.target.value === '' ? null : parseFloat(e.target.value) })}
                 />
@@ -284,7 +282,7 @@ export default function CouponsPage() {
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <Label htmlFor="is_secret" className="cursor-pointer">Cupom secreto</Label>
-                <p className="text-xs text-muted-foreground">Não aparece no banner do cardápio. Só funciona quando o cliente digita o código.</p>
+                <p className="text-xs text-muted-foreground">{profileText('Não aparece no banner do cardápio. Só funciona quando o cliente digita o código.')}</p>
               </div>
               <Switch
                 id="is_secret"
@@ -308,7 +306,7 @@ export default function CouponsPage() {
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <Label htmlFor="active" className="cursor-pointer">Ativo</Label>
-                <p className="text-xs text-muted-foreground">Cupons inativos não aparecem no cardápio nem podem ser aplicados.</p>
+                <p className="text-xs text-muted-foreground">{profileText('Cupons inativos não aparecem no cardápio nem podem ser aplicados.')}</p>
               </div>
               <Switch
                 id="active"

@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -49,6 +50,7 @@ interface ChannelManagerProps {
 
 function ChannelManager({ channel }: ChannelManagerProps) {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { paymentMethods, loading, addPaymentMethod, updatePaymentMethod, deletePaymentMethod } = usePaymentMethods({
     companyId: company?.id,
     channel,
@@ -278,9 +280,9 @@ function ChannelManager({ channel }: ChannelManagerProps) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
-                {CHANNEL_LABELS[channel]}
+                {profileText(CHANNEL_LABELS[channel])}
               </CardTitle>
-              <CardDescription>{CHANNEL_DESCRIPTIONS[channel]}</CardDescription>
+              <CardDescription>{profileText(CHANNEL_DESCRIPTIONS[channel])}</CardDescription>
             </div>
             <Button onClick={openAddLegacy} className="gap-2 shrink-0">
               <Plus className="w-4 h-4" />
@@ -334,7 +336,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
           {paymentMethods.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Nenhuma forma de pagamento cadastrada para {CHANNEL_LABELS[channel]}</p>
+              <p className="text-muted-foreground mb-4">Nenhuma forma de pagamento cadastrada para {profileText(CHANNEL_LABELS[channel])}</p>
               <Button onClick={openAddLegacy} className="gap-2">
                 <Plus className="w-4 h-4" />
                 Adicionar Forma de Pagamento
@@ -434,7 +436,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova Forma de Pagamento — {CHANNEL_LABELS[channel]}</DialogTitle>
+            <DialogTitle>Nova Forma de Pagamento — {profileText(CHANNEL_LABELS[channel])}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -454,7 +456,7 @@ function ChannelManager({ channel }: ChannelManagerProps) {
                   value={legacyPixKey}
                   onChange={(e) => setLegacyPixKey(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">Essa chave será exibida para o cliente no cardápio</p>
+                <p className="text-xs text-muted-foreground">{profileText('Essa chave será exibida para o cliente no cardápio')}</p>
               </div>
             )}
             {(channel === 'pdv' || channel === 'express') && (
@@ -591,6 +593,8 @@ function ChannelManager({ channel }: ChannelManagerProps) {
 }
 
 export default function PaymentMethods() {
+  const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const [activeChannel, setActiveChannel] = useState<PaymentChannel>('menu');
 
   return (
@@ -600,8 +604,8 @@ export default function PaymentMethods() {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="menu" className="gap-2">
               <Globe className="w-4 h-4" />
-              <span className="hidden sm:inline">Cardápio Online</span>
-              <span className="sm:hidden">Cardápio</span>
+              <span className="hidden sm:inline">{profileText('Cardápio Online')}</span>
+              <span className="sm:hidden">{profileText('Cardápio')}</span>
             </TabsTrigger>
             <TabsTrigger value="pdv" className="gap-2">
               <Monitor className="w-4 h-4" />

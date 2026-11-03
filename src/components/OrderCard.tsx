@@ -188,7 +188,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
   
-  const { isFlorist } = useCompanyProfile(order.companyId ?? company?.id);
+  const { isFlorist, profileText } = useCompanyProfile(order.companyId ?? company?.id);
   const baseConfig = statusConfig[order.status] ?? FALLBACK_STATUS_CONFIG;
   // Perfil floricultura: sem etapa "Preparar" (Confirmar → Pronto → Entregar).
   const config = isFlorist ? { ...baseConfig, next: floristNextStatus(order.status) } : baseConfig;
@@ -768,11 +768,11 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               const o = order.origin || 'cardapio';
               const map: Record<string, { label: string; className: string }> = {
                 cardapio: {
-                  label: '🌐 Cardápio',
+                  label: isFlorist ? '🌐 Catálogo Online' : '🌐 Cardápio',
                   className: 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-700',
                 },
                 balcao: {
-                  label: '⚡ Express',
+                  label: isFlorist ? '⚡ Balcão' : '⚡ Express',
                   className: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-700',
                 },
                 mesa: {

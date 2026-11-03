@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown } from 'lucide-react';
 import { extractPaymentName } from '@/utils/orderNotesDisplay';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { getCompanyOrderOrigins } from '@/lib/companyProfile';
 
 export type DeliveryFilter = 'all' | 'entrega' | 'retirada';
 export type OriginFilter = 'all' | 'cardapio' | 'balcao' | 'mesa' | 'mesa_qr';
@@ -30,6 +33,9 @@ export function OrderFilters({
   onOriginChange,
   onPaymentChange,
 }: OrderFiltersProps) {
+  const { company } = useAuthContext();
+  const { isFlorist, profileText } = useCompanyProfile(company?.id);
+  const originOptions = getCompanyOrderOrigins(isFlorist);
   const paymentOptions = useMemo(() => {
     const set = new Set<string>();
     let hasMulti = false;
@@ -80,10 +86,13 @@ export function OrderFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as origens</SelectItem>
-          <SelectItem value="cardapio">Cardápio Online</SelectItem>
-          <SelectItem value="balcao">Balcão / Express</SelectItem>
-          <SelectItem value="mesa">Mesa</SelectItem>
-          <SelectItem value="mesa_qr">Mesa via QR</SelectItem>
+          {originOptions.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value === 'cardapio' ? profileText('Cardápio Online')
+                : value === 'balcao' ? (isFlorist ? 'Balcão' : 'Balcão / Express')
+                : value === 'mesa' ? 'Mesa' : 'Mesa via QR'}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -16,9 +17,10 @@ interface Props {
 }
 
 export function NewCampaignDialog({ open, onOpenChange, company, onCreate }: Props) {
-  const [name, setName] = useState('Atualização de Cardápio');
-  const [messageA, setMessageA] = useState(DEFAULT_MESSAGE_A);
-  const [messageB, setMessageB] = useState(DEFAULT_MESSAGE_B);
+  const { profileText } = useCompanyProfile(company?.id);
+  const [name, setName] = useState(() => profileText('Atualização de Cardápio'));
+  const [messageA, setMessageA] = useState(() => profileText(DEFAULT_MESSAGE_A));
+  const [messageB, setMessageB] = useState(() => profileText(DEFAULT_MESSAGE_B));
   const [count, setCount] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

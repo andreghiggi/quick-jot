@@ -12,6 +12,8 @@ import {
 import { Order, OrderStatus } from '@/types/order';
 import { brl as formatPrice } from './_format';
 import { extractPaymentName } from '@/utils/orderNotesDisplay';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { useAuthContext } from '@/contexts/AuthContext';
 import {
   Clock,
   Store,
@@ -58,7 +60,7 @@ function statusVariantOf(status: OrderStatus): 'default' | 'secondary' | 'outlin
   return STATUS_VARIANT[status] ?? 'outline';
 }
 
-function originBadge(origin?: string) {
+function originBadge(origin?: string, onlineLabel = 'Cardápio') {
   switch (origin) {
     case 'balcao':
       return {
@@ -74,7 +76,7 @@ function originBadge(origin?: string) {
       };
     default:
       return {
-        label: 'Cardápio',
+        label: onlineLabel,
         icon: Globe,
         className: 'bg-orange-500/10 text-orange-700 border-orange-500/30',
       };
@@ -92,7 +94,9 @@ export function PDVV2OrderCard({
   onChangePayment,
   paymentOptions = [],
 }: PDVV2OrderCardProps) {
-  const origin = originBadge(order.origin);
+  const { company } = useAuthContext();
+  const { isFlorist, terminology } = useCompanyProfile(order.companyId ?? company?.id);
+  const origin = originBadge(order.origin, isFlorist ? terminology.onlineMenu : 'Cardápio');
   const OriginIcon = origin.icon;
 
   const delivery = isDelivery(order);

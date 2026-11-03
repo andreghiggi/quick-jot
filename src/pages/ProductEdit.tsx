@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useParams, useNavigate, Navigate, Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -49,6 +50,7 @@ export default function ProductEdit() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { products, loading, addProduct, updateProduct } = useProducts({ companyId: company?.id });
   const { categories, addCategory } = useCategories({ companyId: company?.id });
   const { subcategories } = useSubcategories({ companyId: company?.id });
@@ -472,7 +474,7 @@ export default function ProductEdit() {
           >
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {([
-                { v: 'cardapio', label: 'Cardápio', desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
+                { v: 'cardapio', label: profileText('Cardápio'), desc: 'Pratos, lanches, bebidas preparadas', Icon: UtensilsCrossed },
                 { v: 'mercado', label: 'Loja', desc: 'Refrigerantes, salgadinhos, conveniência', Icon: ShoppingCart },
                 { v: 'ambos', label: 'Ambos', desc: 'Vendido nos dois canais', Icon: Repeat },
               ] as const).map(({ v, label, desc, Icon }) => {
@@ -583,7 +585,7 @@ export default function ProductEdit() {
         </Section>
 
         {/* ===================== CATEGORIA ===================== */}
-        <Section title="Categoria" description="Onde o produto aparece no cardápio.">
+        <Section title="Categoria" description={profileText('Onde o produto aparece no cardápio.')}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Categoria" required={productType !== 'mercado'} hint={productType === 'mercado' ? 'Opcional — sem categoria cai em "Geral".' : undefined}>
               <Select
@@ -680,7 +682,7 @@ export default function ProductEdit() {
             {!isNew && (
               <ToggleRow
                 label="Destaque (Novidade)"
-                description="Aparece na seção em destaque do cardápio. Limite de 5 produtos."
+                description={profileText('Aparece na seção em destaque do cardápio. Limite de 5 produtos.')}
                 checked={isFeatured}
                 onCheckedChange={setIsFeatured}
               />
@@ -700,8 +702,8 @@ export default function ProductEdit() {
                   Use para exceções. Em geral, basta escolher o <strong>Tipo do produto</strong> acima.
                 </p>
                 <ToggleRow
-                  label="Cardápio digital"
-                  description="Exibe no cardápio online para clientes."
+                  label={profileText('Cardápio digital')}
+                  description={profileText('Exibe no cardápio online para clientes.')}
                   checked={menuItem}
                   onCheckedChange={setMenuItem}
                 />
@@ -713,13 +715,13 @@ export default function ProductEdit() {
                 />
                 <ToggleRow
                   label="Garçom / Mesas"
-                  description="Disponível no app do garçom e no cardápio de mesa."
+                  description={profileText('Disponível no app do garçom e no cardápio de mesa.')}
                   checked={waiterItem}
                   onCheckedChange={setWaiterItem}
                 />
                 <ToggleRow
                   label="QR de Mesa"
-                  description="Exibe no cardápio público acessado pelo QR Code da mesa (/mesa)."
+                  description={profileText('Exibe no cardápio público acessado pelo QR Code da mesa (/mesa).')}
                   checked={qrItem}
                   onCheckedChange={setQrItem}
                 />

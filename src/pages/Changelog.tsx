@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ClipboardList } from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 interface ChangelogEntry {
   date: string;
@@ -12,6 +14,12 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: '03/11/2026',
+    version: '1.76.0-beta',
+    type: 'improvement',
+    description: 'Perfil Floricultura: filtro de origens somente com Balcão e Catálogo Online; linguagem de catálogo padronizada nas telas de pedidos, produtos, categorias, adicionais, cupons, configurações e pagamentos. Restaurantes mantêm seus nomes e origens anteriores.',
+  },
   {
     date: '10/10/2026',
     version: '1.76.0-beta',
@@ -1061,6 +1069,8 @@ const typeBadge: Record<string, { label: string; variant: 'default' | 'secondary
 };
 
 export default function Changelog() {
+  const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   return (
     <AppLayout title="Novidades">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -1086,7 +1096,7 @@ export default function Changelog() {
                         </Badge>
                         <span className="text-xs text-muted-foreground">v{entry.version}</span>
                       </div>
-                      <p className="text-sm">{entry.description}</p>
+                      <p className="text-sm">{profileText(entry.description)}</p>
                     </div>
                   </div>
                 ))}

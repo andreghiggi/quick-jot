@@ -1,3 +1,5 @@
+import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bot, MessageCircle } from 'lucide-react';
@@ -13,6 +15,8 @@ const GREETING_EXAMPLES = [
 ];
 
 export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoReplyInfoProps) {
+  const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const exampleUrl = menuUrl || (companySlug ? `${window.location.origin}/cardapio/${companySlug}` : 'https://seusite.com/cardapio/sua-loja');
 
   return (
@@ -20,10 +24,10 @@ export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoRepl
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Bot className="w-4 h-4 text-green-600" />
-          Resposta automática (Saudação + Cardápio)
+          {profileText("Resposta automática (Saudação + Cardápio)")}
         </CardTitle>
         <CardDescription>
-          Quando um cliente mandar uma saudação no WhatsApp, o sistema responde automaticamente com o link do cardápio.
+          {profileText("Quando um cliente mandar uma saudação no WhatsApp, o sistema responde automaticamente com o link do cardápio.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -32,8 +36,8 @@ export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoRepl
           <p className="text-sm font-medium mb-2">Palavras que ativam a resposta:</p>
           <div className="flex flex-wrap gap-1.5">
             {GREETING_EXAMPLES.map((word) => (
-              <Badge key={word} variant="secondary" className="text-xs">
-                {word}
+              <Badge key={profileText(word)} variant="secondary" className="text-xs">
+                {profileText(word)}
               </Badge>
             ))}
           </div>
@@ -46,7 +50,7 @@ export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoRepl
             <div className="flex items-start gap-2">
               <MessageCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
               <p className="text-sm text-foreground whitespace-pre-line">
-                {`Olá! 👋 Bem-vindo(a) ao *Sua Lancheria*!\n\nAcesse nosso cardápio digital e faça seu pedido:\n${exampleUrl}\n\nQualquer dúvida, estamos à disposição!`}
+                {profileText(`Olá! 👋 Bem-vindo(a) ao *Sua Lancheria*!\n\nAcesse nosso cardápio digital e faça seu pedido:\n${exampleUrl}\n\nQualquer dúvida, estamos à disposição!`)}
               </p>
             </div>
           </div>
