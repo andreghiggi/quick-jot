@@ -43,6 +43,7 @@ import { FloristGiftSection } from '@/components/menu/FloristGiftSection';
 import { FloristItemDestination } from '@/components/menu/FloristItemDestination';
 import { validateDestination, destinationKey, totalDeliveryFee, describeDestination, type FloristDestination } from '@/lib/floristDestination';
 import { validateGift, normalizePhone, GiftInput } from '@/lib/floristGift';
+import { DeliveryShift, fetchDeliveryShifts, getSlotsForDate } from '@/lib/floristShifts';
 const todaySP = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
@@ -179,6 +180,7 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
   const [itemDestination, setItemDestination] = useState<Partial<FloristDestination>>({});
+  const [deliveryShifts, setDeliveryShifts] = useState<DeliveryShift[]>([]);
   const [showNewCustomerPopup, setShowNewCustomerPopup] = useState(false);
   const [newCustomerPromptedFor, setNewCustomerPromptedFor] = useState<string | null>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
