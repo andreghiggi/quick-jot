@@ -134,7 +134,20 @@ function ChannelManager({ channel }: ChannelManagerProps) {
     if (!ok) return;
     // aguarda o próximo tick pra pegar o item recém-inserido no state
     setTimeout(() => {
-      const justCreated = paymentMethods.find((m) =>{profileText("(m as any).payment_type === 'crediario');\n      if (justCreated) openEditDialog(justCreated);\n      else setAddDialog(true);\n    }, 100);\n  }\n\n  // Divisão Entrega/Retirada nas formas de pagamento — liberado para todas as lojas\n  // nas abas Cardápio Online e Pedido Express (PDV não tem conceito de modalidade).\n  const showModalitySplit = channel === 'menu' || channel === 'express';\n\n  const [addDialog, setAddDialog] = useState(false);\n  const [editDialog, setEditDialog] = useState(false);\n  const [deleteDialog, setDeleteDialog] = useState(false);\n  const [editingMethod, setEditingMethod] = useState")}<PaymentMethod | null>(null);
+      const justCreated = paymentMethods.find((m) => (m as any).payment_type === 'crediario');
+      if (justCreated) openEditDialog(justCreated);
+      else setAddDialog(true);
+    }, 100);
+  }
+
+  // Divisão Entrega/Retirada nas formas de pagamento — liberado para todas as lojas
+  // nas abas Cardápio Online e Pedido Express (PDV não tem conceito de modalidade).
+  const showModalitySplit = channel === 'menu' || channel === 'express';
+
+  const [addDialog, setAddDialog] = useState(false);
+  const [editDialog, setEditDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [deletingMethodId, setDeletingMethodId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

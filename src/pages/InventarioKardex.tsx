@@ -21,6 +21,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useProducts } from '@/hooks/useProducts';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 function fmtQty(v: number) {
   return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
@@ -77,6 +78,7 @@ function today(): string {
 
 export default function InventarioKardex() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { enabled: mercadoEnabled, loading: mercadoLoading } = useMercadoEnabled(company?.id);
   const { products, loading: productsLoading } = useProducts({ companyId: company?.id });
 

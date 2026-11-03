@@ -924,7 +924,7 @@ export default function Products() {
         {isModuleEnabled('mercado') && (() => {
           const cardapioOn = cardapioEnabled;
           const chips = [
-            cardapioOn && { v: 'cardapioprofileText(' as const, label: `🍔 ${profileText("Cardápio")} (${products.filter((p) => { const t = (p as any).productType ?? ')cardapio'; return t === 'cardapio' || t === 'ambos'; }).length})` },
+            cardapioOn && { v: 'cardapio' as const, label: `🍔 ${profileText('Cardápio')} (${products.filter((p) => { const t = (p as any).productType ?? 'cardapio'; return t === 'cardapio' || t === 'ambos'; }).length})` },
             { v: 'mercado' as const, label: `🛒 Loja (${products.filter((p) => { const t = (p as any).productType; return t === 'mercado' || t === 'ambos'; }).length})` },
             cardapioOn && { v: 'ambos' as const, label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
           ].filter(Boolean) as Array<{ v: 'cardapio' | 'mercado' | 'ambos'; label: string }>;
