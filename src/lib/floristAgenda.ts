@@ -27,7 +27,8 @@ export function getOrderSchedule(order: Pick<Order, 'items' | 'createdAt'>): Flo
     .filter((d) => d.mode === 'delivery' && d.date)
     .sort((a, b) => `${a.date}${a.slot || ''}`.localeCompare(`${b.date}${b.slot || ''}`));
   if (deliveries.length) {
-    return { mode: 'delivery', date: deliveries[0].date!, slot: deliveries[0].slot || '' };
+    const first = deliveries[0];
+    if (first.date) return { mode: 'delivery', date: first.date, slot: first.slot || '' };
   }
   return { mode: 'pickup', date: toSPDate(new Date(order.createdAt)), slot: '' };
 }
@@ -45,8 +46,36 @@ function isCancelled(o: Order) {
 
 export interface FloristAgenda {
   received: Order[];
+  scheduled: Order[];
   deliveries: Order[];
   pickups: Order[];
+}
+
+export interface FloristAgendaFilters {
+  /** Empty means all dates. */
+  date: string;
+  /** Empty means all slots. */
+  slot: string;
+}
+
+export function normalizeFloristSlot(slot: string): string {
+  return slot.trim().replace(/\s+/g, '').replace(/[–—]/g, '-');
+}
+
+function slotStart(slot: string): number {
+  const match = slot.match(/(\d{1,2}):(\d{2})/);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : Number.MAX_SAFE_INTEGER;
+}
+
+export function getFloristAgendaSlots(orders: Order[], date = ''): string[] {
+  const slots = new Map<string, string>();
+  for (const order of orders) {
+    if (isCancelled(order) || order.status === 'delivered' || (!order.confirmedAt && order.status === 'pending')) continue;
+    const schedule = getOrderSchedule(order);
+    if ((date && schedule.date !== date) || !schedule.slot) continue;
+    slots.set(normalizeFloristSlot(schedule.slot), schedule.slot);
+  }
+  return [...slots.values()].sort((a, b) => slotStart(a) - slotStart(b));
 }
 
 /**
@@ -54,7 +83,7 @@ export interface FloristAgenda {
  * - Agendamentos: confirmados/prontos com agendamento para hoje (ou atrasados), ordenados por horário.
  * Entregues e cancelados não aparecem.
  */
-export function buildFloristAgenda(orders: Order[], today: string): FloristAgenda {
+export function buildFloristAgenda(orders: Order[], today: string, filters?: FloristAgendaFilters): FloristAgenda {
   const received: Order[] = [];
   const scheduled: { o: Order; s: FloristSchedule }[] = [];
   for (const o of orders) {
@@ -65,14 +94,19 @@ export function buildFloristAgenda(orders: Order[], today: string): FloristAgend
       continue;
     }
     const s = getOrderSchedule(o);
-    if (s.date <= today) scheduled.push({ o, s });
+    const matchesDate = filters ? !filters.date || s.date === filters.date : s.date <= today;
+    const matchesSlot = !filters?.slot || normalizeFloristSlot(s.slot) === normalizeFloristSlot(filters.slot);
+    if (matchesDate && matchesSlot) scheduled.push({ o, s });
   }
-  const sortKey = (x: { o: Order; s: FloristSchedule }) =>
-    `${x.s.date}${x.s.slot || '99:99'}${new Date(x.o.createdAt).toISOString()}`;
-  scheduled.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  scheduled.sort((a, b) =>
+    a.s.date.localeCompare(b.s.date) ||
+    slotStart(a.s.slot) - slotStart(b.s.slot) ||
+    new Date(a.o.createdAt).getTime() - new Date(b.o.createdAt).getTime()
+  );
   received.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   return {
     received,
+    scheduled: scheduled.map((x) => x.o),
     deliveries: scheduled.filter((x) => x.s.mode === 'delivery').map((x) => x.o),
     pickups: scheduled.filter((x) => x.s.mode === 'pickup').map((x) => x.o),
   };

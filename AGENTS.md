@@ -1,1 +1,2 @@
 Profile-specific visual identity and terminology must derive from `company_modules` through centralized profile helpers, so disabled or absent profiles preserve existing companies unchanged.
+Florist agenda filtering and chronological ordering belong in the centralized florist agenda helper; florist views reuse OrderCard actions so restaurant behavior and payment flows stay unchanged.
