@@ -1,7 +1,7 @@
 # Roadmap — Retomada ComandaTech
 
 ## Perfil Floricultura
-- [ ] Ajustar origens para Balcão e Catálogo Online e padronizar a terminologia de catálogo nas telas da floricultura, sem alterar restaurantes.
+- [x] Ajustar origens para Balcão e Catálogo Online e padronizar a terminologia de catálogo nas telas da floricultura, sem alterar restaurantes; testes de isolamento aprovados, sem publicação.
 - [x] Dashboard floral: títulos destacados, divisão das colunas, agenda única com tags, filtros data/turno e ordem por entrada no mesmo turno; 13 testes aprovados, sem publicação.
 - [x] Turnos de entrega por dia da semana em Configurações > Horários (tabela company_delivery_shifts, catálogo filtra por dia; sem turnos no dia = sem entrega; sem cadastro = grade padrão 2h); 7 testes aprovados.
 - [x] Aviso diário de agendamentos virou notificação no canto inferior direito, some em 5s (pausa com mouse em cima, botão ✕).
