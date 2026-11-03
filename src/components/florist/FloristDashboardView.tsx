@@ -4,8 +4,11 @@ import { StatsCard } from '@/components/StatsCard';
 import { OrderCard } from '@/components/OrderCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Order } from '@/types/order';
-import { buildFloristAgenda, countScheduledToday, toSPDate } from '@/lib/floristAgenda';
+import { buildFloristAgenda, countScheduledToday, toSPDate, getOrderSchedule, getFloristAgendaSlots, normalizeFloristSlot } from '@/lib/floristAgenda';
 import { useFloristRevenueToday } from '@/hooks/useFloristRevenueToday';
 import { formatPrice } from '@/lib/utils';
 
@@ -16,24 +19,33 @@ interface Props {
   storeName?: string;
 }
 
-function Column({ title, icon, orders, empty, paperSize, storeName }: {
-  title: string; icon: React.ReactNode; orders: Order[]; empty: string;
+function OrderList({ orders, empty, paperSize, storeName, scheduled = false }: {
+  orders: Order[]; empty: string; scheduled?: boolean;
   paperSize?: '58mm' | '80mm'; storeName?: string;
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        {icon}
-        <span>{title}</span>
-        <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{orders.length}</span>
-      </div>
       {orders.length === 0 ? (
         <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">{empty}</p>
       ) : (
         <div className="space-y-3">
-          {orders.map((o) => (
-            <OrderCard key={o.id} order={o} paperSize={paperSize} storeName={storeName} />
-          ))}
+          {orders.map((o) => {
+            const schedule = getOrderSchedule(o);
+            return <OrderCard key={o.id} order={o} paperSize={paperSize} storeName={storeName}
+              headerExtra={
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <Badge variant="secondary" className="gap-1">
+                    {schedule.mode === 'delivery' ? <Truck className="h-3 w-3" /> : <Store className="h-3 w-3" />}
+                    {schedule.mode === 'delivery' ? 'Entrega' : 'Retirada na loja'}
+                  </Badge>
+                  {scheduled && <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/10 font-bold text-primary">
+                    <Clock className="h-3 w-3" />
+                    {schedule.date.split('-').reverse().join('/')} · {schedule.slot || 'Sem turno'}
+                  </Badge>}
+                </span>
+              }
+            />;
+          })}
         </div>
       )}
     </div>
@@ -44,12 +56,16 @@ export function FloristDashboardView({ orders, companyId, paperSize, storeName }
   const today = toSPDate(new Date());
   const [showRevenue, setShowRevenue] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState<string | null>(null);
+  const [slotFilter, setSlotFilter] = useState('');
+  const selectedDate = dateFilter ?? today;
 
   const todayOrders = useMemo(
     () => orders.filter((o) => toSPDate(new Date(o.createdAt)) === today),
     [orders, today],
   );
-  const agenda = useMemo(() => buildFloristAgenda(orders, today), [orders, today]);
+  const agenda = useMemo(() => buildFloristAgenda(orders, today, { date: selectedDate, slot: slotFilter }), [orders, today, selectedDate, slotFilter]);
+  const slots = useMemo(() => getFloristAgendaSlots(orders), [orders]);
   const scheduled = useMemo(() => countScheduledToday(orders, today), [orders, today]);
   const revenue = useFloristRevenueToday(companyId, true, todayOrders);
 
@@ -86,47 +102,69 @@ export function FloristDashboardView({ orders, companyId, paperSize, storeName }
           color="muted"
           className="min-w-[220px] flex-[2]"
           action={
-            <button
+            <Button variant="ghost" size="icon"
               onClick={() => setShowRevenue((p) => !p)}
               className="p-1 rounded-md hover:bg-muted transition-colors"
               title={showRevenue ? 'Ocultar valor' : 'Mostrar valor'}
+              aria-label={showRevenue ? 'Ocultar valor' : 'Mostrar valor'}
             >
               {showRevenue ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
-            </button>
+            </Button>
           }
         />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-3">
-          <h2 className="text-lg font-bold">Pedidos recebidos do dia</h2>
-          <Column
-            title="Aguardando confirmação"
-            icon={<Inbox className="w-4 h-4 text-primary" />}
+      <div className="grid items-start gap-8 lg:grid-cols-2">
+        <section className="min-w-0 border-l-4 border-border bg-muted/20" aria-labelledby="florist-received-heading">
+          <header className="flex items-center gap-3 border-b border-border bg-muted px-4 py-4">
+            <Inbox className="h-6 w-6 shrink-0 text-primary" />
+            <h2 id="florist-received-heading" className="min-w-0 text-xl font-bold">Pedidos Recebidos do Dia</h2>
+            <Badge variant="secondary" className="ml-auto shrink-0 tabular-nums">{agenda.received.length}</Badge>
+          </header>
+          <div className="p-4">
+          <OrderList
             orders={agenda.received}
             empty="Nenhum pedido aguardando confirmação."
             paperSize={paperSize}
             storeName={storeName}
           />
+          </div>
         </section>
-        <section className="space-y-5">
-          <h2 className="text-lg font-bold">Agendamentos do dia</h2>
-          <Column
-            title="Entregas"
-            icon={<Truck className="w-4 h-4 text-primary" />}
-            orders={agenda.deliveries}
-            empty="Nenhuma entrega agendada para hoje."
+        <section className="min-w-0 border-l-4 border-primary bg-primary/5" aria-labelledby="florist-agenda-heading">
+          <header className="flex items-center gap-3 border-b border-primary/20 bg-primary/10 px-4 py-4">
+            <CalendarDays className="h-6 w-6 shrink-0 text-primary" />
+            <h2 id="florist-agenda-heading" className="min-w-0 text-xl font-bold text-primary">Agendamentos do Dia</h2>
+            <Badge className="ml-auto shrink-0 tabular-nums">{agenda.scheduled.length}</Badge>
+          </header>
+          <div className="flex flex-wrap items-end gap-3 border-b border-primary/20 p-4">
+            <div className="min-w-0 flex-1 basis-36 space-y-1.5">
+              <label htmlFor="florist-agenda-date" className="text-sm font-semibold">Data</label>
+              <Input id="florist-agenda-date" type="date" value={selectedDate} onChange={(e) => setDateFilter(e.target.value)} />
+            </div>
+            <div className="min-w-0 flex-1 basis-40 space-y-1.5">
+              <label id="florist-agenda-slot-label" className="text-sm font-semibold">Turno</label>
+              <Select value={slotFilter || 'all'} onValueChange={(value) => setSlotFilter(value === 'all' ? '' : value)}>
+                <SelectTrigger aria-labelledby="florist-agenda-slot-label"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os turnos</SelectItem>
+                  {slots.map((slot) => <SelectItem key={normalizeFloristSlot(slot)} value={normalizeFloristSlot(slot)}>{slot}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button variant={selectedDate === today ? 'default' : 'outline'} onClick={() => setDateFilter(null)}>Hoje</Button>
+              <Button variant={selectedDate === '' ? 'default' : 'outline'} onClick={() => setDateFilter('')}>Todas as datas</Button>
+            </div>
+          </div>
+          <div className="p-4">
+          <OrderList
+            orders={agenda.scheduled}
+            scheduled
+            empty="Nenhum agendamento para os filtros selecionados."
             paperSize={paperSize}
             storeName={storeName}
           />
-          <Column
-            title="Retiradas na loja"
-            icon={<Store className="w-4 h-4 text-primary" />}
-            orders={agenda.pickups}
-            empty="Nenhuma retirada agendada para hoje."
-            paperSize={paperSize}
-            storeName={storeName}
-          />
+          </div>
         </section>
       </div>
 
