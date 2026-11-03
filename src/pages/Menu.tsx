@@ -43,6 +43,7 @@ import { FloristGiftSection } from '@/components/menu/FloristGiftSection';
 import { FloristItemDestination } from '@/components/menu/FloristItemDestination';
 import { validateDestination, destinationKey, totalDeliveryFee, describeDestination, type FloristDestination } from '@/lib/floristDestination';
 import { validateGift, normalizePhone, GiftInput } from '@/lib/floristGift';
+import { DeliveryShift, fetchDeliveryShifts, getSlotsForDate } from '@/lib/floristShifts';
 const todaySP = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
@@ -179,6 +180,7 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [customerLoaded, setCustomerLoaded] = useState(false);
   const [itemDestination, setItemDestination] = useState<Partial<FloristDestination>>({});
+  const [deliveryShifts, setDeliveryShifts] = useState<DeliveryShift[]>([]);
   const [showNewCustomerPopup, setShowNewCustomerPopup] = useState(false);
   const [newCustomerPromptedFor, setNewCustomerPromptedFor] = useState<string | null>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
@@ -383,7 +385,14 @@ export default function Menu() {
   const allMandatoryComplete = completedMandatory.length === mandatoryGroups.length;
   // Floricultura: destino do item aparece depois dos adicionais, sem o assistente lateral.
   const useOptionalsWizard = !!settings.lateralScrollOptionals && !isFlorist;
+  // Turnos de entrega personalizados da floricultura (por dia da semana).
+  useEffect(() => {
+    if (!isFlorist || !company?.id) return;
+    fetchDeliveryShifts(company.id).then(setDeliveryShifts);
+  }, [isFlorist, company?.id]);
+
   const itemDestinationErrors = isFlorist && !comboFlow ? validateDestination(itemDestination, todaySP()) : [];
+  const itemSlots = isFlorist && itemDestination.date ? getSlotsForDate(deliveryShifts, itemDestination.date) : undefined;
   const floristNeighborhoods = useMemo(
     () => (isFlorist && settings.deliveryMode === 'neighborhood'
       ? getActiveNeighborhoods().map((n) => ({ name: n.neighborhoodName, fee: n.deliveryFee || 0 }))
@@ -2409,6 +2418,8 @@ export default function Menu() {
                           today={todaySP()}
                           neighborhoods={floristNeighborhoods}
                           pickupEnabled={settings.enablePickup !== false}
+                          slots={itemSlots}
+                          customShifts={deliveryShifts.length > 0}
                         />
                       )}
                       <div>
