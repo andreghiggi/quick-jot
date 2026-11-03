@@ -53,7 +53,7 @@ function OrderList({ orders, empty, paperSize, storeName, scheduled = false }: {
   );
 }
 
-export function FloristDashboardView({ orders, companyId, paperSize, storeName }: Props) {
+export function FloristDashboardView({ orders, companyId, paperSize, storeName, ordersLoaded = true }: Props) {
   const today = toSPDate(new Date());
   const [showRevenue, setShowRevenue] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
@@ -77,8 +77,11 @@ export function FloristDashboardView({ orders, companyId, paperSize, storeName }
   const totalCount = todayOrders.filter(notCancelled).length;
 
   // Aviso diário: uma vez por dia, por loja, neste navegador.
+  // A trava é limpa no logout (useAuth.signOut), então sair e entrar de novo
+  // no mesmo dia exibe a notificação novamente. Só dispara depois que os
+  // pedidos carregaram, para não mostrar contagem zerada por atraso de rede.
   useEffect(() => {
-    if (!companyId) return;
+    if (!companyId || !ordersLoaded) return;
     const key = `florist-daily-notice:${companyId}`;
     try {
       if (localStorage.getItem(key) === today) return;
@@ -86,7 +89,7 @@ export function FloristDashboardView({ orders, companyId, paperSize, storeName }
     } catch { /* noop */ }
     setNoticeOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, today]);
+  }, [companyId, today, ordersLoaded]);
 
   // Notificação some sozinha após 5s; passar o mouse em cima pausa o timer.
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
