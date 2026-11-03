@@ -16,6 +16,8 @@ interface Props {
   companyId?: string;
   paperSize?: '58mm' | '80mm';
   storeName?: string;
+  /** Só dispara a notificação diária depois que os pedidos terminaram de carregar. */
+  ordersLoaded?: boolean;
 }
 
 function OrderList({ orders, empty, paperSize, storeName, scheduled = false }: {

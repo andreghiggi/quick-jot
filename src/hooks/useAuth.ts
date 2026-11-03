@@ -286,6 +286,16 @@ export function useAuth() {
 
   async function signOut() {
     await supabase.auth.signOut();
+    // Limpa a trava diária da notificação de agendamentos (floricultura),
+    // para que ela suba novamente no próximo login.
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('florist-daily-notice:')) keysToRemove.push(k);
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch { /* noop */ }
     setUser(null);
     setSession(null);
     setProfile(null);
