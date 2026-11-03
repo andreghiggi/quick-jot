@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import React, { useState, useRef } from 'react';
 import { useSubcategories } from '@/hooks/useSubcategories';
 import { useCategories } from '@/hooks/useCategories';
@@ -19,6 +20,7 @@ import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 
 export default function Subcategories() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
   const { categories } = useCategories({ companyId: company?.id });
   const {
@@ -132,7 +134,7 @@ export default function Subcategories() {
           <Layers className="h-7 w-7 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Subcategorias</h1>
-            <p className="text-sm text-muted-foreground">Gerencie as subcategorias associadas às categorias do cardápio</p>
+            <p className="text-sm text-muted-foreground">{profileText('Gerencie as subcategorias associadas às categorias do cardápio')}</p>
           </div>
         </div>
 
@@ -256,7 +258,7 @@ export default function Subcategories() {
                               {sub.menuItem === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                             </Button>
                             <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                              {sub.menuItem === false ? 'Oculta no cardápio' : 'Visível no cardápio'}
+                              {sub.menuItem === false ? profileText('Oculta no cardápio') : profileText('Visível no cardápio')}
                             </span>
                           </div>
                           <div className="relative group">

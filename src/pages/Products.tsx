@@ -54,7 +54,7 @@ export default function Products() {
   // no perfil "só Mercado" só na página de Produtos.
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   const { enabled: pdvV2Enabled } = usePdvV2Enabled(company?.id);
-  const { terminology } = useCompanyProfile(company?.id);
+  const { terminology, profileText } = useCompanyProfile(company?.id);
   const { categories, addCategory, refetch: refetchCategories } = useCategories({ companyId: company?.id });
   const { subcategories, getSubcategoriesByCategoryId } = useSubcategories({ companyId: company?.id });
   const { taxRules, bulkAssignTaxRule } = useTaxRules({ companyId: company?.id });
@@ -796,7 +796,7 @@ export default function Products() {
                 checked={newProduct.menuItem}
                 onCheckedChange={(v) => setNewProduct({ ...newProduct, menuItem: v })}
               />
-              <Label>Item de Cardápio</Label>
+              <Label>{profileText('Item de Cardápio')}</Label>
             </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -924,7 +924,7 @@ export default function Products() {
         {isModuleEnabled('mercado') && (() => {
           const cardapioOn = cardapioEnabled;
           const chips = [
-            cardapioOn && { v: 'cardapio' as const, label: `🍔 Cardápio (${products.filter((p) => { const t = (p as any).productType ?? 'cardapio'; return t === 'cardapio' || t === 'ambos'; }).length})` },
+            cardapioOn && { v: 'cardapioprofileText(' as const, label: `🍔 ${profileText("Cardápio")} (${products.filter((p) => { const t = (p as any).productType ?? ')cardapio'; return t === 'cardapio' || t === 'ambos'; }).length})` },
             { v: 'mercado' as const, label: `🛒 Loja (${products.filter((p) => { const t = (p as any).productType; return t === 'mercado' || t === 'ambos'; }).length})` },
             cardapioOn && { v: 'ambos' as const, label: `🔄 Ambos (${products.filter((p) => (p as any).productType === 'ambos').length})` },
           ].filter(Boolean) as Array<{ v: 'cardapio' | 'mercado' | 'ambos'; label: string }>;
@@ -1027,7 +1027,7 @@ export default function Products() {
                             const t = (product as any).productType ?? 'cardapio';
                             if (t === 'mercado') return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs" variant="outline">🛒 Loja</Badge>;
                             if (t === 'ambos') return <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs" variant="outline">🔄 Ambos</Badge>;
-                            return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs" variant="outline">🍔 Cardápio</Badge>;
+                            return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs" variant="outline">{profileText('🍔 Cardápio')}</Badge>;
                           })()}
                         </div>
                         {product.description && (
@@ -1447,7 +1447,7 @@ export default function Products() {
                   checked={editingProduct.menuItem !== false}
                   onCheckedChange={(v) => setEditingProduct({ ...editingProduct, menuItem: v })}
                 />
-                <Label>Item de Cardápio</Label>
+                <Label>{profileText('Item de Cardápio')}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch

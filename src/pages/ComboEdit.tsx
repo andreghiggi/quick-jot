@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -31,6 +32,7 @@ export default function ComboEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { combos, loading, saveCombo } = useCombos({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
@@ -282,7 +284,7 @@ export default function ComboEdit() {
         </Section>
 
         {/* CATEGORIAS */}
-        <Section title="Categorias" description="Onde o combo aparece no cardápio.">
+        <Section title="Categorias" description={profileText('Onde o combo aparece no cardápio.')}>
           {categories.length === 0 ? (
             <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-md">
               Nenhuma categoria cadastrada.
@@ -324,8 +326,8 @@ export default function ComboEdit() {
               onCheckedChange={setActive}
             />
             <ToggleRow
-              label="Cardápio digital"
-              description="Exibe no cardápio online para clientes."
+              label={profileText('Cardápio digital')}
+              description={profileText('Exibe no cardápio online para clientes.')}
               checked={menuItem}
               onCheckedChange={setMenuItem}
             />
@@ -337,7 +339,7 @@ export default function ComboEdit() {
             />
             <ToggleRow
               label="Garçom / Mesas"
-              description="Disponível no app do garçom e no cardápio de mesa."
+              description={profileText('Disponível no app do garçom e no cardápio de mesa.')}
               checked={waiterItem}
               onCheckedChange={setWaiterItem}
             />

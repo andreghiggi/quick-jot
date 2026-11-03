@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useState, useRef, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -28,6 +29,7 @@ interface ExtractedGroup {
 
 export default function OptionalGroups() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const { groups, loading, addGroup, updateGroup, duplicateGroup, deleteGroup, addItem, addItemsBulk, updateItem, deleteItem, setCategoryLinks, setProductLinks, moveGroup, moveSection } = useOptionalGroups({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
@@ -459,10 +461,7 @@ export default function OptionalGroups() {
                     <Label htmlFor="import-with-sections" className="cursor-pointer font-medium">
                       Criar grupo com seções
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      A IA identificou seções (ex: FRUTAS, CREMES, COBERTURAS) dentro dos grupos.
-                      Ative para preservar essa subdivisão no cardápio. Desative para importar como lista única.
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{profileText('A IA identificou seções (ex: FRUTAS, CREMES, COBERTURAS) dentro dos grupos.\n                      Ative para preservar essa subdivisão no cardápio. Desative para importar como lista única.')}</p>
                   </div>
                 </div>
               )}
@@ -1099,10 +1098,10 @@ export default function OptionalGroups() {
               <div className="flex items-center gap-2">
                 <Switch checked={editingGroup.waiterOnly ?? false} onCheckedChange={(v) => setEditingGroup({ ...editingGroup, waiterOnly: v })} />
                 <Label>Somente garçom</Label>
-                <p className="text-xs text-muted-foreground">Este grupo não aparecerá no cardápio online nem no pedido express</p>
+                <p className="text-xs text-muted-foreground">{profileText('Este grupo não aparecerá no cardápio online nem no pedido express')}</p>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Layout no cardápio</Label>
+                <Label className="text-sm font-medium">{profileText('Layout no cardápio')}</Label>
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -1286,7 +1285,7 @@ export default function OptionalGroups() {
                   value={editingItem.description}
                   onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
                 />
-                <p className="text-xs text-muted-foreground mt-1">Aparece como subtítulo do item no cardápio.</p>
+                <p className="text-xs text-muted-foreground mt-1">{profileText('Aparece como subtítulo do item no cardápio.')}</p>
               </div>
               <div>
                 <Label>Seção (opcional)</Label>

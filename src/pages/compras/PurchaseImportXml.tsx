@@ -1,3 +1,4 @@
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -155,6 +156,7 @@ function findProductBySupplierHistory(
 
 export default function PurchaseImportXml() {
   const { company } = useAuthContext();
+  const { profileText } = useCompanyProfile(company?.id);
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const documentoId = params.get('documentoId');
@@ -925,7 +927,7 @@ export default function PurchaseImportXml() {
                           <SelectTrigger className="h-9"><SelectValue placeholder="Tipo do produto" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="mercado">Mercado</SelectItem>
-                            <SelectItem value="cardapio">Cardápio</SelectItem>
+                            <SelectItem value="cardapio">{profileText('Cardápio')}</SelectItem>
                             <SelectItem value="ambos">Ambos</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1140,7 +1142,7 @@ export default function PurchaseImportXml() {
                               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="mercado">Mercado</SelectItem>
-                                <SelectItem value="cardapio">Cardápio</SelectItem>
+                                <SelectItem value="cardapio">{profileText('Cardápio')}</SelectItem>
                                 <SelectItem value="ambos">Ambos</SelectItem>
                               </SelectContent>
                             </Select>
@@ -1152,9 +1154,7 @@ export default function PurchaseImportXml() {
                             Visível na Frente de Caixa
                           </label>
                           <label className="flex items-center gap-2">
-                            <Switch checked={it.menu_item} onCheckedChange={(v) => updateItem(idx, { menu_item: v })} />
-                            Visível no Cardápio
-                          </label>
+                            <Switch checked={it.menu_item} onCheckedChange={(v) => updateItem(idx, { menu_item: v })} />{profileText('Visível no Cardápio')}</label>
                           <label className="flex items-center gap-2">
                             <Switch checked={it.waiter_item} onCheckedChange={(v) => updateItem(idx, { waiter_item: v })} />
                             Visível no Garçom
