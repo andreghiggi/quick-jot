@@ -12,6 +12,10 @@ interface Props {
   today: string;
   neighborhoods: { name: string; fee: number }[];
   pickupEnabled: boolean;
+  /** Turnos disponíveis para a data escolhida (padrão: grade fixa de 2h). */
+  slots?: string[];
+  /** true quando a loja cadastrou turnos próprios — dia sem turno bloqueia a entrega. */
+  customShifts?: boolean;
 }
 
 const Choice = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
@@ -27,10 +31,12 @@ const Choice = ({ active, onClick, children }: { active: boolean; onClick: () =>
   </button>
 );
 
-export function FloristItemDestination({ value, onChange, today, neighborhoods, pickupEnabled }: Props) {
+export function FloristItemDestination({ value, onChange, today, neighborhoods, pickupEnabled, slots, customShifts }: Props) {
   const set = (patch: Partial<FloristDestination>) => onChange({ ...value, ...patch });
   const isGift = value.forWhom === "gift";
   const msgLen = (value.cardMessage ?? "").length;
+  const availableSlots = slots ?? [...FLORIST_TIME_SLOTS];
+  const dayWithoutShifts = !!customShifts && !!value.date && availableSlots.length === 0;
 
   return (
     <div className="space-y-4 rounded-xl border border-primary/40 p-4">
@@ -72,13 +78,19 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
               <select
                 value={value.slot ?? ""}
                 onChange={(e) => set({ slot: e.target.value })}
-                className="flex h-10 w-full min-w-0 rounded-md border border-primary bg-background px-2 text-base md:text-sm"
+                disabled={dayWithoutShifts}
+                className="flex h-10 w-full min-w-0 rounded-md border border-primary bg-background px-2 text-base md:text-sm disabled:opacity-50"
               >
                 <option value="">Escolha o turno</option>
-                {FLORIST_TIME_SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
+                {availableSlots.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>
+          {dayWithoutShifts && (
+            <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-2 text-sm font-medium text-destructive">
+              Não fazemos entregas neste dia da semana. Escolha outra data.
+            </p>
+          )}
 
           {isGift && (
             <>
