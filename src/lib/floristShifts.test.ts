@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { DeliveryShift, getSlotsForDate, groupShiftsByDay, shiftLabel, slotStartMinutes } from './floristShifts';
 import { FLORIST_TIME_SLOTS } from './floristGift';
 
