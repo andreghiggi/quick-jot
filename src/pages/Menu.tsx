@@ -385,7 +385,14 @@ export default function Menu() {
   const allMandatoryComplete = completedMandatory.length === mandatoryGroups.length;
   // Floricultura: destino do item aparece depois dos adicionais, sem o assistente lateral.
   const useOptionalsWizard = !!settings.lateralScrollOptionals && !isFlorist;
+  // Turnos de entrega personalizados da floricultura (por dia da semana).
+  useEffect(() => {
+    if (!isFlorist || !company?.id) return;
+    fetchDeliveryShifts(company.id).then(setDeliveryShifts);
+  }, [isFlorist, company?.id]);
+
   const itemDestinationErrors = isFlorist && !comboFlow ? validateDestination(itemDestination, todaySP()) : [];
+  const itemSlots = isFlorist && itemDestination.date ? getSlotsForDate(deliveryShifts, itemDestination.date) : undefined;
   const floristNeighborhoods = useMemo(
     () => (isFlorist && settings.deliveryMode === 'neighborhood'
       ? getActiveNeighborhoods().map((n) => ({ name: n.neighborhoodName, fee: n.deliveryFee || 0 }))
@@ -2411,6 +2418,8 @@ export default function Menu() {
                           today={todaySP()}
                           neighborhoods={floristNeighborhoods}
                           pickupEnabled={settings.enablePickup !== false}
+                          slots={itemSlots}
+                          customShifts={deliveryShifts.length > 0}
                         />
                       )}
                       <div>
