@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Clock, CheckCircle, Truck, CalendarDays, TrendingUp, DollarSign, Eye, EyeOff, Store, Inbox } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Clock, CheckCircle, Truck, CalendarDays, TrendingUp, DollarSign, Eye, EyeOff, Store, Inbox, X } from 'lucide-react';
 import { StatsCard } from '@/components/StatsCard';
 import { OrderCard } from '@/components/OrderCard';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -87,6 +86,21 @@ export function FloristDashboardView({ orders, companyId, paperSize, storeName }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, today]);
 
+  // Notificação some sozinha após 5s; passar o mouse em cima pausa o timer.
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearNoticeTimer = () => {
+    if (noticeTimer.current) { clearTimeout(noticeTimer.current); noticeTimer.current = null; }
+  };
+  const startNoticeTimer = () => {
+    clearNoticeTimer();
+    noticeTimer.current = setTimeout(() => setNoticeOpen(false), 5000);
+  };
+  useEffect(() => {
+    if (noticeOpen) startNoticeTimer();
+    return clearNoticeTimer;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noticeOpen]);
+
   return (
     <div className="space-y-6">
       <section className="flex flex-nowrap gap-3 overflow-x-auto">
@@ -168,25 +182,36 @@ export function FloristDashboardView({ orders, companyId, paperSize, storeName }
         </section>
       </div>
 
-      <Dialog open={noticeOpen} onOpenChange={setNoticeOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      {noticeOpen && (
+        <div
+          role="status"
+          onMouseEnter={clearNoticeTimer}
+          onMouseLeave={startNoticeTimer}
+          className="fixed bottom-6 right-6 z-50 w-80 max-w-[calc(100vw-3rem)] rounded-xl border border-border bg-card p-4 shadow-lg animate-in slide-in-from-bottom-5 fade-in duration-300"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="flex items-center gap-2 font-bold">
               <CalendarDays className="w-5 h-5 text-primary" />
               Agenda de hoje
-            </DialogTitle>
-            <DialogDescription className="sr-only">Resumo dos pedidos agendados para hoje</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 text-base">
+            </p>
+            <button
+              type="button"
+              aria-label="Fechar aviso"
+              onClick={() => setNoticeOpen(false)}
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="mt-2 space-y-1 text-sm">
             <p className="font-semibold">
               Você tem {scheduled.total} {scheduled.total === 1 ? 'pedido agendado' : 'pedidos agendados'} para hoje
             </p>
             <p className="flex items-center gap-2"><Truck className="w-4 h-4 text-primary" /> {scheduled.delivery} para entrega</p>
             <p className="flex items-center gap-2"><Store className="w-4 h-4 text-primary" /> {scheduled.pickup} para retirada na loja</p>
           </div>
-          <Button onClick={() => setNoticeOpen(false)} className="w-full">Entendi</Button>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }
