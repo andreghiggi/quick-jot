@@ -80,7 +80,7 @@ export async function fetchDeliveryShifts(companyId: string): Promise<DeliverySh
   const hit = cache.get(companyId);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.shifts;
   const { data, error } = await supabase
-    .from('company_delivery_shifts' as never)
+    .from('company_delivery_shifts')
     .select('id, day_of_week, label, start_time, end_time, sort_order')
     .eq('company_id', companyId)
     .order('day_of_week')
@@ -98,7 +98,7 @@ export function invalidateDeliveryShiftsCache(companyId: string) {
 /** Substitui todos os turnos de um dia da semana (apagar tudo + inserir os novos). */
 export async function saveDayShifts(companyId: string, dayOfWeek: number, shifts: Omit<DeliveryShift, 'dayOfWeek'>[]): Promise<void> {
   const { error: delError } = await supabase
-    .from('company_delivery_shifts' as never)
+    .from('company_delivery_shifts')
     .delete()
     .eq('company_id', companyId)
     .eq('day_of_week', dayOfWeek);
@@ -112,7 +112,7 @@ export async function saveDayShifts(companyId: string, dayOfWeek: number, shifts
       end_time: s.endTime,
       sort_order: i,
     }));
-    const { error: insError } = await supabase.from('company_delivery_shifts' as never).insert(rows as never);
+    const { error: insError } = await supabase.from('company_delivery_shifts').insert(rows);
     if (insError) throw insError;
   }
   invalidateDeliveryShiftsCache(companyId);
