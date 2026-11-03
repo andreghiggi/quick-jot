@@ -1,7 +1,8 @@
 # Roadmap — Retomada ComandaTech
 
 ## Perfil Floricultura
-- [ ] Dashboard floral: títulos destacados, divisão das colunas, agenda única com tags, filtros data/turno e ordem por entrada no mesmo turno; validar sem publicar.
+- [x] Dashboard floral: títulos destacados, divisão das colunas, agenda única com tags, filtros data/turno e ordem por entrada no mesmo turno; 13 testes aprovados, sem publicação.
+- [ ] Validar os filtros na dashboard real da floricultura — Terra Viva não disponível entre as lojas da sessão autenticada do preview.
 - [x] Criar perfil adicional isolado por empresa, com identidade verde e linguagem de catálogo
 - [ ] Validar regressão em restaurante e piloto isolado antes de qualquer liberação geral
 
