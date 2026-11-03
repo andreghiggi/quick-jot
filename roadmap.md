@@ -2,6 +2,9 @@
 
 ## Perfil Floricultura
 - [x] Dashboard floral: títulos destacados, divisão das colunas, agenda única com tags, filtros data/turno e ordem por entrada no mesmo turno; 13 testes aprovados, sem publicação.
+- [x] Turnos de entrega por dia da semana em Configurações > Horários (tabela company_delivery_shifts, catálogo filtra por dia; sem turnos no dia = sem entrega; sem cadastro = grade padrão 2h); 7 testes aprovados.
+- [x] Aviso diário de agendamentos virou notificação no canto inferior direito, some em 5s (pausa com mouse em cima, botão ✕).
+- [ ] Espelhar migração company_delivery_shifts na VPS antes de publicar (produção está na VPS).
 - [ ] Validar os filtros na dashboard real da floricultura — Terra Viva não disponível entre as lojas da sessão autenticada do preview.
 - [x] Criar perfil adicional isolado por empresa, com identidade verde e linguagem de catálogo
 - [ ] Validar regressão em restaurante e piloto isolado antes de qualquer liberação geral
