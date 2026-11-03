@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ClipboardList, ChefHat, PackageCheck, Truck, Ban } from 'lucide-react';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 const allTabs: { value: OrderStatus | 'all' | 'cancelled'; label: string; icon: React.ElementType }[] = [
   { value: 'all', label: 'Todos', icon: ClipboardList },
@@ -25,9 +26,12 @@ export function OrderTabs({ filteredOrders, hideAllTab = false }: OrderTabsProps
   const { orders } = useOrderContext();
   const { company } = useAuthContext();
   const { settings } = useStoreSettings({ companyId: company?.id });
+  const { isFlorist } = useCompanyProfile(company?.id);
 
   const displayOrders = filteredOrders ?? orders;
-  const tabs = hideAllTab ? allTabs.filter(t => t.value !== 'all') : allTabs;
+  // Floricultura não tem etapa "em preparo": o fluxo é Confirmar → Pronto → Entregar.
+  const visibleTabs = isFlorist ? allTabs.filter(t => t.value !== 'preparing') : allTabs;
+  const tabs = hideAllTab ? visibleTabs.filter(t => t.value !== 'all') : visibleTabs;
   const defaultTab = hideAllTab ? 'pending' : 'all';
 
   // Cancelado pela situação do pedido OU pela marcação antiga nas observações.
