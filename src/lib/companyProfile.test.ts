@@ -1,8 +1,18 @@
 import assert from 'node:assert/strict';
 import { describe, it as test } from 'vitest';
-import { DEFAULT_PRIMARY_HEX, FLORIST_PRIMARY_HEX, getCompanyTerminology, getPublicMenuColor, getProductTagline, usesTableService } from './companyProfile.ts';
+import { DEFAULT_PRIMARY_HEX, FLORIST_PRIMARY_HEX, getCompanyTerminology, getPublicMenuColor, getProductTagline, usesTableService, getCompanyOrderOrigins, getCompanyProfileText } from './companyProfile.ts';
 
 describe('company profile isolation', () => {
+  test('florist origins are only online catalog and counter', () => {
+    assert.deepEqual(getCompanyOrderOrigins(true), ['cardapio', 'balcao']);
+  });
+  test('restaurant origins remain unchanged', () => {
+    assert.deepEqual(getCompanyOrderOrigins(false), ['cardapio', 'balcao', 'mesa', 'mesa_qr']);
+  });
+  test('profile terminology preserves internal route and template identifiers', () => {
+    assert.equal(getCompanyProfileText(true, 'Cardápio /cardapio {{link_cardapio}} CARDÁPIO cardápio'), 'Catálogo /cardapio {{link_cardapio}} CATÁLOGO catálogo');
+    assert.equal(getCompanyProfileText(false, 'Cardápio /cardapio {{link_cardapio}}'), 'Cardápio /cardapio {{link_cardapio}}');
+  });
   test('restaurant keeps Cardápio and the current red identity', () => {
     assert.equal(getCompanyTerminology(false).onlineMenu, 'Cardápio online');
     assert.equal(getPublicMenuColor(false, DEFAULT_PRIMARY_HEX), DEFAULT_PRIMARY_HEX);

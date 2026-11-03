@@ -30,6 +30,20 @@ export function getCompanyTerminology(isFlorist: boolean): CompanyTerminology {
       };
 }
 
+/** Presentation only: never changes routes, origin values or template variables. */
+export function getCompanyProfileText(isFlorist: boolean, text: string): string {
+  if (!isFlorist) return text;
+  return text.replace(/cardápio/gi, (word) =>
+    word === word.toUpperCase() ? 'CATÁLOGO' : word[0] === 'C' ? 'Catálogo' : 'catálogo',
+  );
+}
+
+export function getCompanyOrderOrigins(isFlorist: boolean) {
+  return isFlorist
+    ? (['cardapio', 'balcao'] as const)
+    : (['cardapio', 'balcao', 'mesa', 'mesa_qr'] as const);
+}
+
 export function getPublicMenuColor(isFlorist: boolean, savedColor?: string | null): string {
   const normalized = savedColor?.trim().toLowerCase();
   if (normalized && normalized !== DEFAULT_PRIMARY_HEX) return normalized;
