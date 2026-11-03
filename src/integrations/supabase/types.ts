@@ -1226,6 +1226,50 @@ export type Database = {
           },
         ]
       }
+      company_delivery_shifts: {
+        Row: {
+          company_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          label: string
+          sort_order: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          label: string
+          sort_order?: number
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_delivery_shifts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_modules: {
         Row: {
           company_id: string

@@ -29,6 +29,13 @@
       "when": 1791701640260,
       "tag": "0003_create_order_gift_details",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793680352779,
+      "tag": "0004_florist_delivery_shifts",
+      "breakpoints": true
     }
   ]
 }
