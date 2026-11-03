@@ -86,7 +86,7 @@ export default function PDVV2() {
   const { isModuleEnabled } = useCompanyModules({ companyId });
   const tablesEnabled = isModuleEnabled('mesas');
 
-  const { orders, updateOrderStatus, refetch: refetchOrders } = useOrderContext();
+  const { orders, updateOrderStatus, refetch: refetchOrders, loading: ordersLoading } = useOrderContext();
   const dashboardOrders = useMemo(
     () => {
       // Only show today's orders (America/Sao_Paulo)
@@ -1409,6 +1409,7 @@ export default function PDVV2() {
         companyId={companyId}
         paperSize={(settings.printerPaperSize as '58mm' | '80mm') || '80mm'}
         storeName={company?.name}
+        ordersLoaded={!ordersLoading}
       />
     </ScrollArea>
   );

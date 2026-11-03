@@ -101,6 +101,7 @@ const Index = () => {
             companyId={company?.id}
             paperSize={settings.printerPaperSize}
             storeName={settings.storeName}
+            ordersLoaded={!loading}
           />
         ) : (<>
         <section className="flex flex-nowrap gap-3 overflow-x-auto">
