@@ -1,5 +1,11 @@
 # Roadmap — Retomada ComandaTech
 
+## Correção aprovada — divisão de mesas
+- [ ] Repassar valor parcial e forma inicial sem tratá-los como pagamento aprovado.
+- [ ] Preservar itens adicionais ao abrir Dividir formas.
+- [ ] Impedir fechamento por itens enquanto houver itens ou saldo pendente.
+- [ ] Exigir duas cobranças no fluxo de divisão e proteger contra duplo clique; testar sem emitir notas ou vendas reais.
+
 ## Perfil Floricultura
 - [x] Ajustar origens para Balcão e Catálogo Online e padronizar a terminologia de catálogo nas telas da floricultura, sem alterar restaurantes; testes de isolamento aprovados, sem publicação.
 - [x] Dashboard floral: títulos destacados, divisão das colunas, agenda única com tags, filtros data/turno e ordem por entrada no mesmo turno; 13 testes aprovados, sem publicação.

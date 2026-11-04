@@ -19,6 +19,7 @@ import {
 } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
 import { openCashDrawer } from '@/utils/cashDrawer';
+import { splitChargeAllowed, splitSettlementComplete, type InitialTabPayment, type SplitTabPaymentDraft } from '@/utils/tabPaymentRules';
 
 /**
  * Multi-pagamento sequencial v1.7 (beta).
@@ -48,6 +49,10 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   companyId?: string;
   total: number;
+  initialPayment?: InitialTabPayment;
+  minimumPayments?: number;
+  contextData?: SplitTabPaymentDraft;
+  onRestoreContext?: (draft: SplitTabPaymentDraft) => void;
   channel?: PaymentChannel;
   title?: string;
   processingStatus?: string;
@@ -102,6 +107,10 @@ export function PDVV2SequentialPaymentDialog({
   onOpenChange,
   companyId,
   total,
+  initialPayment,
+  minimumPayments = 1,
+  contextData,
+  onRestoreContext,
   channel = 'pdv',
   title = 'Dividir formas de pagamento',
   processingStatus,
@@ -147,13 +156,15 @@ export function PDVV2SequentialPaymentDialog({
   const [documentMode, setDocumentMode] = useState<'sale_only' | 'sale_with_nfce'>('sale_only');
 
   const hydratedRef = useRef(false);
+  const chargeGuardRef = useRef(false);
+  const finishGuardRef = useRef(false);
 
   const paid = useMemo(
     () => resolved.reduce((s, l) => s + l.amount, 0),
     [resolved],
   );
   const remaining = Math.max(0, Math.round((total - paid) * 100) / 100);
-  const exact = remaining < 0.005;
+  const exact = splitSettlementComplete(total, resolved.map(line => line.amount), minimumPayments);
   const hasApproved = resolved.length > 0;
   const hasTefApproved = resolved.some((l) => l.integration && l.tef);
 
@@ -171,8 +182,8 @@ export function PDVV2SequentialPaymentDialog({
     hydratedRef.current = true;
 
     // Reset UI
-    setPaymentMethodId(methods[0]?.id || '');
-    setAmountText('');
+    setPaymentMethodId(initialPayment?.paymentMethodId || methods[0]?.id || '');
+    setAmountText(initialPayment?.amount ? maskCurrencyInput(initialPayment.amount.toFixed(2)) : '');
     setTefModality('avista');
     setTefInstallments('2');
     setTefInstallmentType('adm');
@@ -194,7 +205,7 @@ export function PDVV2SequentialPaymentDialog({
       try {
         const { data, error } = await (supabase as any)
           .from('pdv_v2_open_charges')
-          .select('id, paid_lines, paid_amount, total')
+          .select('id, paid_lines, paid_amount, total, context_ref')
           .eq('company_id', companyId)
           .eq('cash_register_id', cashRegisterId)
           .eq('status', 'open')
@@ -204,6 +215,8 @@ export function PDVV2SequentialPaymentDialog({
         if (error) throw error;
         const row = data?.[0];
         if (row && Array.isArray(row.paid_lines)) {
+          setAmountText('');
+          if (row.context_ref?.checkout_draft) onRestoreContext?.(row.context_ref.checkout_draft);
           setResolved(row.paid_lines as MultiPaymentResolvedLine[]);
           setOpenChargeId(row.id);
           toast.info(`Cobrança em aberto retomada — pago R$ ${Number(row.paid_amount).toFixed(2).replace('.', ',')}`);
@@ -244,7 +257,7 @@ export function PDVV2SequentialPaymentDialog({
             company_id: companyId,
             cash_register_id: cashRegisterId,
             context: contextTypeFromKey(contextKey),
-            context_ref: { context_key: contextKey, label: contextLabel },
+            context_ref: { context_key: contextKey, label: contextLabel, checkout_draft: contextData },
             total,
             paid_amount: nextPaid,
             paid_lines: nextLines,
@@ -293,7 +306,7 @@ export function PDVV2SequentialPaymentDialog({
 
   // -------- Ação: cobrar próxima --------
   async function handleChargeNext() {
-    if (!companyId) return;
+    if (!companyId || chargeGuardRef.current || finishGuardRef.current || processing) return;
     const method = methods.find((m) => m.id === paymentMethodId);
     if (!method) {
       toast.error('Selecione uma forma de pagamento.');
@@ -308,7 +321,12 @@ export function PDVV2SequentialPaymentDialog({
       toast.error('Valor maior que o restante da venda.');
       return;
     }
+    if (!splitChargeAllowed(total, resolved.map(line => line.amount), amount, minimumPayments)) {
+      toast.error('Dividir formas exige pelo menos duas cobranças. Informe um valor menor que o restante na primeira cobrança.');
+      return;
+    }
 
+    chargeGuardRef.current = true;
     setCharging(true);
     setTefStatus('');
     try {
@@ -342,6 +360,7 @@ export function PDVV2SequentialPaymentDialog({
         };
         const next = [...resolved, newLine];
         setResolved(next);
+        setAmountText('');
         await persistAfterCharge(next);
       } else {
         // Dinheiro / PIX manual / outros — apenas registra.
@@ -353,9 +372,11 @@ export function PDVV2SequentialPaymentDialog({
         };
         const next = [...resolved, newLine];
         setResolved(next);
+        setAmountText('');
         await persistAfterCharge(next);
       }
     } finally {
+      chargeGuardRef.current = false;
       setCharging(false);
       setTefStatus('');
     }
@@ -363,7 +384,8 @@ export function PDVV2SequentialPaymentDialog({
 
   // -------- Ação: finalizar (chama onConfirm do caller) --------
   async function handleFinish() {
-    if (!exact || finalizing) return;
+    if (!exact || finalizing || finishGuardRef.current || chargeGuardRef.current) return;
+    finishGuardRef.current = true;
     setFinalizing(true);
     try {
       // Envia linhas já resolvidas no formato esperado pelo caller (passthrough).
@@ -398,6 +420,7 @@ export function PDVV2SequentialPaymentDialog({
       // Não marca como completed — modal continua travado e o operador
       // pode tentar finalizar de novo (ou cancelar com estorno).
     } finally {
+      finishGuardRef.current = false;
       setFinalizing(false);
     }
   }
@@ -664,7 +687,7 @@ export function PDVV2SequentialPaymentDialog({
                   type="button"
                   className="w-full"
                   onClick={handleChargeNext}
-                  disabled={busy || parseCurrencyInput(amountText) <= 0}
+                  disabled={busy || !splitChargeAllowed(total, resolved.map(line => line.amount), parseCurrencyInput(amountText), minimumPayments)}
                 >
                   {charging ? (
                     <>

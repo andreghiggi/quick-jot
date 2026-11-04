@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ComandaNumberInput } from '@/components/comanda/ComandaNumberInput';
 import { formatComandaNumber } from '@/utils/comandaCode';
 import { COMANDA_ALLOWED_FRACTION_DENS } from '@/utils/comandaIndividualAllowList';
+import type { SplitTabPaymentDraft } from '@/utils/tabPaymentRules';
 
 type CheckoutItem = { name: string; quantity: number; unit_price: number; notes?: string | null; id?: string; paid?: boolean; paidQty?: number };
 
@@ -127,7 +128,9 @@ interface PDVV2PaymentDialogProps {
    * NÃO aparece quando o I9 está em modo split-por-pessoas ou split-por-itens
    * (TEF v1.1 congelado) para evitar conflito de fluxos.
    */
-  onSplitPayments?: () => void;
+  onSplitPayments?: (draft: SplitTabPaymentDraft) => void;
+  /** Keep checkout state mounted while its split-payment dialog is visible. */
+  splitPaymentsOpen?: boolean;
   /**
    * Quando true (e for I9), o TEF é executado AQUI — antes dos pop-ups de
    * CPF/Imprimir. Se a cobrança não for aprovada, nada é confirmado e o
@@ -202,6 +205,7 @@ export function PDVV2PaymentDialog({
   transferLog,
   comandaInfo,
   onSplitPayments,
+  splitPaymentsOpen = false,
   printLayout,
   currentTabId,
   onImportedFractionsChange,
@@ -568,11 +572,24 @@ export function PDVV2PaymentDialog({
   // o campo é só de troco; pagamento parcial deve ir para "Dividir formas".
   const cashPartialBlocked = isCash && receivedValue > 0 && receivedValue < finalTotal - 0.005;
 
+  const splitTransitionRef = useRef(false);
+  useEffect(() => { if (!splitPaymentsOpen) splitTransitionRef.current = false; }, [splitPaymentsOpen]);
+  function openSplitPayments() {
+    if (!onSplitPayments || submitting || chargingTef || splitTransitionRef.current || importFractions.length > 0) return;
+    splitTransitionRef.current = true;
+    onSplitPayments({
+      extraItems: extraItems.map(item => ({ ...item })),
+      discount: discountValue,
+      initialPayment: { paymentMethodId, amount: cashPartialBlocked ? receivedValue : undefined },
+    });
+  }
+
   async function finalizeConfirm(
     docMode: DocumentMode,
     printDocument?: boolean,
     prechargedOverride?: { tefData?: NFCeTefData; notesFragment?: string },
   ) {
+    if (cashPartialBlocked || splitTransitionRef.current || finalTotal <= 0) return;
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
     if (!method) return;
     const effectivePrecharged =
@@ -654,6 +671,7 @@ export function PDVV2PaymentDialog({
   }
 
   async function handleConfirm() {
+    if (cashPartialBlocked || splitTransitionRef.current || finalTotal <= 0 || submitting || chargingTef) return;
     const method = activePaymentMethods.find((m) => m.id === paymentMethodId);
     if (!method) return;
     // ===== I9 + Pedido Express: cobrar TEF ANTES dos pop-ups =====
@@ -745,7 +763,7 @@ export function PDVV2PaymentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!submitting && !chargingTef) onOpenChange(o); }}>
+    <Dialog open={open && !splitPaymentsOpen} onOpenChange={(o) => { if (!submitting && !chargingTef && !splitPaymentsOpen) onOpenChange(o); }}>
       <DialogContent
         className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden"
         onInteractOutside={(e) => { if (submitting || chargingTef) e.preventDefault(); }}
@@ -1445,8 +1463,8 @@ export function PDVV2PaymentDialog({
                   size="sm"
                   variant="outline"
                   className="gap-1 border-primary text-primary"
-                  onClick={onSplitPayments}
-                  disabled={submitting || chargingTef}
+                  onClick={openSplitPayments}
+                  disabled={submitting || chargingTef || importFractions.length > 0}
                 >
                   <Split className="w-4 h-4" />
                   Dividir formas
@@ -1503,8 +1521,8 @@ export function PDVV2PaymentDialog({
                       type="button"
                       size="sm"
                       className="w-full gap-1"
-                      onClick={onSplitPayments}
-                      disabled={submitting || chargingTef}
+                      onClick={openSplitPayments}
+                      disabled={submitting || chargingTef || importFractions.length > 0}
                     >
                       <Split className="w-4 h-4" />
                       Pagar {formatPrice(receivedValue)} em dinheiro e o restante em outra forma
@@ -1681,6 +1699,7 @@ export function PDVV2PaymentDialog({
               activePaymentMethods.length === 0 ||
               splitItemEditingIdx !== null ||
               cashPartialBlocked ||
+              finalTotal <= 0 ||
               (advancedComandaCharge && i9Mode === 'split' && !activeSplit && splitPeople < 2)
             }
             title={
