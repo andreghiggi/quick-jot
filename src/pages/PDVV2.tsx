@@ -67,6 +67,7 @@ import { runMultiPayment, buildPagamentosSplit, type MultiPaymentInputLine } fro
 import { recordSalePayments } from '@/utils/recordSalePayments';
 import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 import { cn } from '@/lib/utils';
+import { canCloseItemPayment, paymentCents, splitSettlementComplete, type SplitTabPaymentDraft } from '@/utils/tabPaymentRules';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -214,6 +215,12 @@ export default function PDVV2() {
   const [multiPayProcessing, setMultiPayProcessing] = useState(false);
   const [multiPayStatus, setMultiPayStatus] = useState('');
   const [multiPayTab, setMultiPayTab] = useState<OccupiedTab | null>(null);
+  const [multiPayDraft, setMultiPayDraft] = useState<SplitTabPaymentDraft | null>(null);
+  const multiPayGuardRef = useRef(false);
+  const multiPaySaleRef = useRef<string | null>(null);
+  const multiPayTotal = multiPayTab
+    ? Math.max(0, multiPayTab.total + (multiPayDraft?.extraItems || []).reduce((sum, item) => sum + item.quantity * item.unit_price, 0) - (multiPayDraft?.discount || 0))
+    : 0;
   // Divisão por pessoas em andamento, persistida por comanda (sobrevive a
   // fechar o diálogo, NFC-e por cima e F5). Só é removida quando a última
   // pessoa é cobrada.
@@ -710,15 +717,23 @@ export default function PDVV2() {
     lines: MultiPaymentInputLine[],
     opts: { wantsNfce: boolean },
   ) {
+    if (multiPayGuardRef.current) throw new Error('Cobrança já em andamento.');
     if (!multiPayTab || !user || !currentRegister || !companyId) {
-      toast.error('Caixa precisa estar aberto.');
-      return;
+      throw new Error('Caixa precisa estar aberto.');
     }
     const fullTab = openTabs.find((t) => t.id === multiPayTab.id);
     if (!fullTab?.items?.length) {
-      toast.error('Comanda sem itens.');
-      return;
+      throw new Error('Comanda sem itens.');
     }
+    if (!splitSettlementComplete(multiPayTotal, lines.map(line => line.amount), 2)) {
+      throw new Error('Há saldo pendente ou falta a segunda cobrança. A mesa permanece aberta.');
+    }
+    const currentPending = fullTab.items.filter(item => !item.paid);
+    const currentTotal = currentPending.reduce((sum, item) => sum + Number(item.total_price), 0);
+    if (paymentCents(currentTotal) !== paymentCents(multiPayTab.total)) {
+      throw new Error('Os itens da mesa mudaram durante a cobrança. A mesa permanece aberta; confira o saldo antes de concluir.');
+    }
+    multiPayGuardRef.current = true;
     setMultiPayProcessing(true);
     setMultiPayStatus('Iniciando cobranças…');
     try {
@@ -734,30 +749,32 @@ export default function PDVV2() {
       if (!mp.ok || !mp.primary || !mp.lines) {
         const extra = mp.rolledBackCount ? ` (${mp.rolledBackCount} cobrança(s) estornada(s))` : '';
         toast.error((mp.errorMessage || 'Cobrança recusada') + extra);
-        return;
+        throw new Error((mp.errorMessage || 'Cobrança recusada') + extra);
       }
 
-      const saleItems = fullTab.items.map((i) => ({
+      const saleItems = [...currentPending.map((i) => ({
         product_id: i.product_id,
         product_name: i.product_name,
         quantity: i.quantity,
         unit_price: i.unit_price,
-      }));
-      const saleId = await addSale(
+      })), ...(multiPayDraft?.extraItems || []).map(({ product_id, product_name, quantity, unit_price }) => ({ product_id, product_name, quantity, unit_price }))];
+      const existingSaleId = multiPaySaleRef.current;
+      const saleId = existingSaleId || await addSale(
         saleItems,
         mp.primary.payment_method_id,
         user.id,
-        0,
+        multiPayDraft?.discount || 0,
         customer,
         `Comanda #${fullTab.tab_number}[MULTI] | Pagamento: ${mp.primary.payment_name}${mp.combinedNotesFragment ? ` | ${mp.combinedNotesFragment}` : ''}`,
       );
-      if (!saleId) return;
+      if (!saleId) throw new Error('Não foi possível registrar a venda. A mesa permanece aberta.');
+      multiPaySaleRef.current = saleId;
       // Registra o split de formas para o relatório de fechamento.
-      await recordSalePayments(saleId, companyId, mp.lines);
+      if (!existingSaleId) await recordSalePayments(saleId, companyId, mp.lines);
 
       // NFC-e com pagamentos_split — só quando solicitado pelo dialog
       // (hasTef OU usuário escolheu "Venda com NFC-e").
-      if (opts.wantsNfce) {
+      if (opts.wantsNfce && !existingSaleId) {
         try {
           setIsEmittingNfce(true);
           setMultiPayStatus('Emitindo NFC-e…');
@@ -779,7 +796,7 @@ export default function PDVV2() {
           await emitirNFCe(companyId, saleId, {
             external_id: externalId,
             itens: nfceItems,
-            valor_desconto: 0,
+            valor_desconto: multiPayDraft?.discount || 0,
             valor_frete: 0,
             observacoes: fullTab.customer_name ? `Cliente: ${fullTab.customer_name}` : undefined,
             pagamentos_split: buildPagamentosSplit(mp.lines),
@@ -803,14 +820,19 @@ export default function PDVV2() {
         }
       }
 
-      await closeTab(fullTab.id);
+      const closed = await closeTab(fullTab.id);
+      if (!closed) throw new Error('Venda registrada, mas a mesa não foi fechada. Tente finalizar novamente, sem cobrar de novo.');
       toast.success('Comanda cobrada (multi-pagamento) e fechada!');
       setMultiPayOpen(false);
       setMultiPayTab(null);
+      setMultiPayDraft(null);
+      setImportingTab(null);
     } catch (err: any) {
       console.error('[PDVV2][TAB-MULTI] error:', err);
       toast.error(err?.message || 'Erro na cobrança em várias formas.');
+      throw err;
     } finally {
+      multiPayGuardRef.current = false;
       setMultiPayProcessing(false);
       setMultiPayStatus('');
     }
@@ -1243,9 +1265,16 @@ export default function PDVV2() {
           const paidQty = selectedExtraItemsInfo.find((i) => i.id === ex.id)?.paidQty || 0;
           return paidQty < ex.quantity;
         });
-        const allPaid = fullTab.items.every((i) =>
-          (i as any).paid || fullyPaidIds.has(i.id)
-        ) && !hasUnpaidExtraRemainder;
+        // Confirm persisted state, not the stale checkout snapshot: new items and
+        // failed updates must never release the table after a partial payment.
+        const { data: persistedTab, error: persistedTabError } = await supabase
+          .from('tabs')
+          .select('id, items:tab_items(paid, quantity, unit_price, total_price)')
+          .eq('id', fullTab.id)
+          .eq('company_id', companyId)
+          .single();
+        const allPaid = !persistedTabError && !!persistedTab &&
+          canCloseItemPayment(persistedTab.items || []) && !hasUnpaidExtraRemainder;
         if (allPaid) {
           await closeTab(fullTab.id);
           toast.success('Todos os itens pagos — comanda fechada!');
@@ -1710,6 +1739,7 @@ export default function PDVV2() {
 
       <PDVV2PaymentDialog
         open={!!importingTab}
+        splitPaymentsOpen={multiPayOpen}
         onOpenChange={(o) => {
           if (!o) {
             setImportingTab(null);
@@ -1742,12 +1772,13 @@ export default function PDVV2() {
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
         onConfirm={advancedComandaCharge ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
-        onSplitPayments={() => {
+        onSplitPayments={(draft) => {
           // Fecha o checkout single-payment e abre o multi-pagamento
           // mantendo a comanda selecionada. NÃO toca em TEF v1.1 / split I9.
           if (importingTab) {
             setMultiPayTab(importingTab);
-            setImportingTab(null);
+            setMultiPayDraft(draft);
+            multiPaySaleRef.current = null;
             setMultiPayOpen(true);
           }
         }}
@@ -1794,10 +1825,14 @@ export default function PDVV2() {
         open={multiPayOpen}
         onOpenChange={(o) => {
           setMultiPayOpen(o);
-          if (!o && !multiPayProcessing) setMultiPayTab(null);
+          if (!o && !multiPayProcessing) { setMultiPayTab(null); setMultiPayDraft(null); }
         }}
         companyId={companyId}
-        total={multiPayTab?.total || 0}
+        total={multiPayTotal}
+        minimumPayments={2}
+        initialPayment={multiPayDraft?.initialPayment}
+        contextData={multiPayDraft || undefined}
+        onRestoreContext={(draft) => setMultiPayDraft(draft)}
         fiscalEnabled={fiscalEnabled}
         cashRegisterId={currentRegister?.id}
         contextKey={multiPayTab ? `tab:${multiPayTab.id}` : undefined}

@@ -19,7 +19,7 @@ import {
 } from '@/utils/pdvV2MultiPayment';
 import { supabase } from '@/integrations/supabase/client';
 import { openCashDrawer } from '@/utils/cashDrawer';
-import { splitChargeAllowed, splitSettlementComplete, type InitialTabPayment } from '@/utils/tabPaymentRules';
+import { splitChargeAllowed, splitSettlementComplete, type InitialTabPayment, type SplitTabPaymentDraft } from '@/utils/tabPaymentRules';
 
 /**
  * Multi-pagamento sequencial v1.7 (beta).
@@ -51,6 +51,8 @@ interface Props {
   total: number;
   initialPayment?: InitialTabPayment;
   minimumPayments?: number;
+  contextData?: SplitTabPaymentDraft;
+  onRestoreContext?: (draft: SplitTabPaymentDraft) => void;
   channel?: PaymentChannel;
   title?: string;
   processingStatus?: string;
@@ -107,6 +109,8 @@ export function PDVV2SequentialPaymentDialog({
   total,
   initialPayment,
   minimumPayments = 1,
+  contextData,
+  onRestoreContext,
   channel = 'pdv',
   title = 'Dividir formas de pagamento',
   processingStatus,
@@ -201,7 +205,7 @@ export function PDVV2SequentialPaymentDialog({
       try {
         const { data, error } = await (supabase as any)
           .from('pdv_v2_open_charges')
-          .select('id, paid_lines, paid_amount, total')
+          .select('id, paid_lines, paid_amount, total, context_ref')
           .eq('company_id', companyId)
           .eq('cash_register_id', cashRegisterId)
           .eq('status', 'open')
@@ -212,6 +216,7 @@ export function PDVV2SequentialPaymentDialog({
         const row = data?.[0];
         if (row && Array.isArray(row.paid_lines)) {
           setAmountText('');
+          if (row.context_ref?.checkout_draft) onRestoreContext?.(row.context_ref.checkout_draft);
           setResolved(row.paid_lines as MultiPaymentResolvedLine[]);
           setOpenChargeId(row.id);
           toast.info(`Cobrança em aberto retomada — pago R$ ${Number(row.paid_amount).toFixed(2).replace('.', ',')}`);
@@ -252,7 +257,7 @@ export function PDVV2SequentialPaymentDialog({
             company_id: companyId,
             cash_register_id: cashRegisterId,
             context: contextTypeFromKey(contextKey),
-            context_ref: { context_key: contextKey, label: contextLabel },
+            context_ref: { context_key: contextKey, label: contextLabel, checkout_draft: contextData },
             total,
             paid_amount: nextPaid,
             paid_lines: nextLines,
