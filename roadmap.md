@@ -1,10 +1,11 @@
 # Roadmap — Retomada ComandaTech
 
 ## Correção aprovada — divisão de mesas
-- [ ] Repassar valor parcial e forma inicial sem tratá-los como pagamento aprovado.
-- [ ] Preservar itens adicionais ao abrir Dividir formas.
-- [ ] Impedir fechamento por itens enquanto houver itens ou saldo pendente.
-- [ ] Exigir duas cobranças no fluxo de divisão e proteger contra duplo clique; testar sem emitir notas ou vendas reais.
+- [x] Repassar valor parcial e forma inicial sem tratá-los como pagamento aprovado.
+- [x] Preservar itens adicionais ao abrir Dividir formas e ao retomar cobrança persistida.
+- [x] Impedir fechamento por itens enquanto houver itens ou saldo pendente, conferindo o estado persistido.
+- [x] Exigir duas cobranças no fluxo de divisão e proteger contra duplo clique; 28 testes passaram e fluxo visual simulado R$ 50 + R$ 52 finalizou uma vez, sem venda ou nota real.
+- [ ] Validar cobrança real dinheiro + TEF na Bon Appétit após deploy autorizado — bloqueado: sessão disponível é de revendedor e não dá acesso ao caixa da loja; PinPad físico não disponível.
 
 ## Perfil Floricultura
 - [x] Ajustar origens para Balcão e Catálogo Online e padronizar a terminologia de catálogo nas telas da floricultura, sem alterar restaurantes; testes de isolamento aprovados, sem publicação.
