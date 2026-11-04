@@ -17,6 +17,12 @@ const changelog: ChangelogEntry[] = [
   {
     date: '03/11/2026',
     version: '1.76.0-beta',
+    type: 'fix',
+    description: 'Cobrança de mesas: Dividir formas preserva os itens adicionados e o valor parcial em dinheiro como preenchimento inicial, sem registrar pagamento antes da confirmação. A divisão exige pelo menos duas cobranças e quitação exata, com proteção contra cliques repetidos. Na cobrança por itens, o fechamento confere os itens e o saldo persistidos. Opções de cartão e integração TEF mantidas.',
+  },
+  {
+    date: '03/11/2026',
+    version: '1.76.0-beta',
     type: 'improvement',
     description: 'Perfil Floricultura: filtro de origens somente com Balcão e Catálogo Online; linguagem de catálogo padronizada nas telas de pedidos, produtos, categorias, adicionais, cupons, configurações e pagamentos. Restaurantes mantêm seus nomes e origens anteriores.',
   },

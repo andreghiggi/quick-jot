@@ -158,6 +158,7 @@ export function PDVV2SequentialPaymentDialog({
   const hydratedRef = useRef(false);
   const chargeGuardRef = useRef(false);
   const finishGuardRef = useRef(false);
+  const [hydrationReady, setHydrationReady] = useState(false);
 
   const paid = useMemo(
     () => resolved.reduce((s, l) => s + l.amount, 0),
@@ -176,10 +177,15 @@ export function PDVV2SequentialPaymentDialog({
   useEffect(() => {
     if (!open) {
       hydratedRef.current = false;
+      setHydrationReady(false);
       return;
     }
     if (hydratedRef.current) return;
     hydratedRef.current = true;
+    let canceled = false;
+    setHydrationReady(false);
+    setResolved([]);
+    setOpenChargeId(null);
 
     // Reset UI
     setPaymentMethodId(initialPayment?.paymentMethodId || methods[0]?.id || '');
@@ -200,6 +206,7 @@ export function PDVV2SequentialPaymentDialog({
       if (!companyId || !cashRegisterId || !contextKey) {
         setResolved([]);
         setOpenChargeId(null);
+        setHydrationReady(true);
         return;
       }
       try {
@@ -213,6 +220,7 @@ export function PDVV2SequentialPaymentDialog({
           .order('created_at', { ascending: false })
           .limit(1);
         if (error) throw error;
+        if (canceled) return;
         const row = data?.[0];
         if (row && Array.isArray(row.paid_lines)) {
           setAmountText('');
@@ -224,19 +232,18 @@ export function PDVV2SequentialPaymentDialog({
           setResolved([]);
           setOpenChargeId(null);
         }
+        setHydrationReady(true);
       } catch (e) {
+        if (canceled) return;
         console.error('[PDVV2Sequential] hydrate error', e);
-        setResolved([]);
-        setOpenChargeId(null);
+        toast.error('Não foi possível conferir cobranças anteriores. Feche e reabra a divisão antes de cobrar.');
       }
     })();
+    return () => { canceled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // O campo "Valor" começa sempre vazio. O operador escolhe a forma e digita
-  // o valor da linha. Para fechar a última, há o botão "Usar restante".
-  // (Auto-fill foi removido porque induzia o operador a cobrar o total
-  // inteiro na 1ª forma sem perceber.)
+  // Only an explicit partial-payment draft is prefilled; it is never a paid line.
 
   // Default da forma quando lista carrega.
   useEffect(() => {
@@ -306,7 +313,7 @@ export function PDVV2SequentialPaymentDialog({
 
   // -------- Ação: cobrar próxima --------
   async function handleChargeNext() {
-    if (!companyId || chargeGuardRef.current || finishGuardRef.current || processing) return;
+    if (!companyId || !hydrationReady || chargeGuardRef.current || finishGuardRef.current || processing) return;
     const method = methods.find((m) => m.id === paymentMethodId);
     if (!method) {
       toast.error('Selecione uma forma de pagamento.');
@@ -384,7 +391,7 @@ export function PDVV2SequentialPaymentDialog({
 
   // -------- Ação: finalizar (chama onConfirm do caller) --------
   async function handleFinish() {
-    if (!exact || finalizing || finishGuardRef.current || chargeGuardRef.current) return;
+    if (!exact || !hydrationReady || finalizing || finishGuardRef.current || chargeGuardRef.current) return;
     finishGuardRef.current = true;
     setFinalizing(true);
     try {
@@ -431,7 +438,7 @@ export function PDVV2SequentialPaymentDialog({
   // o cenário "TEF aprovado no PinPad mas venda nunca registrada" se o
   // operador fechar a tela / o sistema cair antes do clique manual.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !hydrationReady) return;
     if (!exact || !hasApproved) return;
     if (autoFinishedRef.current) return;
     if (charging || finalizing || rolling || processing) return;
@@ -439,7 +446,7 @@ export function PDVV2SequentialPaymentDialog({
     autoFinishedRef.current = true;
     void handleFinish();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, exact, hasApproved, charging, finalizing, rolling, processing, completed]);
+  }, [open, hydrationReady, exact, hasApproved, charging, finalizing, rolling, processing, completed]);
 
   // -------- Ação: cancelar com estorno --------
   async function handleCancelAndRefund() {
@@ -472,11 +479,11 @@ export function PDVV2SequentialPaymentDialog({
   // rodar com sucesso — antes disso, fechar o modal deixaria PinPad
   // aprovado sem venda registrada.
   const locked = hasApproved && (!exact || !completed);
-  const busy = charging || finalizing || rolling || processing;
+  const busy = charging || finalizing || rolling || processing || !hydrationReady;
 
   function handleOpenChangeGuarded(o: boolean) {
     if (o) return;
-    if (busy) return;
+    if (charging || finalizing || rolling || processing) return;
     // Se nada foi aprovado ainda, sair é livre.
     if (!hasApproved) {
       onOpenChange(false);
