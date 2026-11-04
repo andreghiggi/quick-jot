@@ -721,7 +721,14 @@ export default function PDVV2() {
     if (!multiPayTab || !user || !currentRegister || !companyId) {
       throw new Error('Caixa precisa estar aberto.');
     }
-    const fullTab = openTabs.find((t) => t.id === multiPayTab.id);
+    const { data: fullTab, error: tabReadError } = await supabase
+      .from('tabs')
+      .select('*, table:tables(number), items:tab_items(*)')
+      .eq('id', multiPayTab.id)
+      .eq('company_id', companyId)
+      .eq('status', 'open')
+      .single();
+    if (tabReadError) throw new Error('Não foi possível conferir o saldo atual da mesa. Nenhuma nova cobrança foi realizada.');
     if (!fullTab?.items?.length) {
       throw new Error('Comanda sem itens.');
     }
@@ -1260,7 +1267,6 @@ export default function PDVV2() {
 
         // Check if all items are now paid
         // Only consider fully-paid items (not partial qty) as done
-        const fullyPaidIds = new Set(fullPayIds);
         const hasUnpaidExtraRemainder = (params.extraItems || []).some((ex: any) => {
           const paidQty = selectedExtraItemsInfo.find((i) => i.id === ex.id)?.paidQty || 0;
           return paidQty < ex.quantity;
@@ -1276,7 +1282,8 @@ export default function PDVV2() {
         const allPaid = !persistedTabError && !!persistedTab &&
           canCloseItemPayment(persistedTab.items || []) && !hasUnpaidExtraRemainder;
         if (allPaid) {
-          await closeTab(fullTab.id);
+          const closed = await closeTab(fullTab.id);
+          if (!closed) { toast.error('Pagamento registrado, mas a mesa permanece aberta. Não cobre novamente.'); return; }
           toast.success('Todos os itens pagos — comanda fechada!');
           setImportingTab(null);
         } else {
