@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { resolveCepNeighborhood } from '@/lib/addressFormRules';
 
 interface CepAddress { address: string; neighborhood: string; city: string; state: string }
-export function AddressCepInput({ onFound }: { onFound: (address: CepAddress) => void }) {
+export function AddressCepInput({ onFound, neighborhoodNames = [] }: { onFound: (address: CepAddress) => void; neighborhoodNames?: string[] }) {
   const [cep, setCep] = useState('');
   const [status, setStatus] = useState('');
+  const latest = useRef({ onFound, neighborhoodNames });
+  latest.current = { onFound, neighborhoodNames };
   useEffect(() => {
     const digits = cep.replace(/\D/g, '');
     if (digits.length !== 8) { setStatus(''); return; }
@@ -18,8 +21,9 @@ export function AddressCepInput({ onFound }: { onFound: (address: CepAddress) =>
         const data = await response.json();
         if (controller.signal.aborted) return;
         if (data.erro) { setStatus('CEP não encontrado.'); return; }
-        onFound({ address: data.logradouro ?? '', neighborhood: data.bairro ?? '', city: data.localidade ?? '', state: data.uf ?? '' });
-        setStatus('');
+        const resolved = resolveCepNeighborhood(data.bairro, latest.current.neighborhoodNames);
+        latest.current.onFound({ address: data.logradouro ?? '', neighborhood: resolved.neighborhood, city: data.localidade ?? '', state: data.uf ?? '' });
+        setStatus(resolved.specific ? `CEP encontrado: ${resolved.neighborhood}.` : latest.current.neighborhoodNames.length ? 'CEP geral encontrado. Selecione o bairro.' : 'CEP geral encontrado. Informe o bairro.');
       } catch { if (!controller.signal.aborted) setStatus('Não foi possível buscar o CEP.'); }
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
