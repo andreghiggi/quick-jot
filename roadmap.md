@@ -1,6 +1,8 @@
 # Roadmap — Retomada ComandaTech
 
 ## Endereços — pacote aprovado
+- [x] Ajustar CEP específico/geral no campo Bairro, feedback da busca e sugestões exclusivas Casa/Trabalho; ocultar Cidade/UF nos três formulários. 21 testes aprovados; formulário floral verificado no computador/celular com CEP simulado, sem pedido real.
+- [ ] Realizar deploy dos ajustes de endereço na VPS conforme pedido atual — bloqueado: arquivos novos ainda ausentes no repositório GitHub (consulta confirmou 404); acesso direto à VPS não disponível nesta sessão. Não disparar deploy de versão anterior.
 - [x] Isolar dados ao trocar telefone, cancelar respostas antigas e carregar o novo cadastro.
 - [x] Novo, edição, apelidos, padrão, exclusão confirmada e prevenção de duplicados no catálogo e destinatário floral.
 - [x] CEP opcional nos dois formulários; 21 testes aprovados e formulário floral verificado com dados simulados em desktop/celular, sem pedido/venda real.
