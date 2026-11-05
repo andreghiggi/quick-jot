@@ -1,5 +1,10 @@
 # Roadmap — Retomada ComandaTech
 
+## Endereços — pacote aprovado
+- [ ] Isolar dados ao trocar telefone, cancelar respostas antigas e carregar o novo cadastro.
+- [ ] Novo, edição, apelidos, padrão, exclusão confirmada e prevenção de duplicados no catálogo e destinatário floral.
+- [ ] CEP opcional nos dois formulários; verificar testes e fluxo sem pedido/venda real.
+
 ## Correção aprovada — divisão de mesas
 - [x] Repassar valor parcial e forma inicial sem tratá-los como pagamento aprovado.
 - [x] Preservar itens adicionais ao abrir Dividir formas e ao retomar cobrança persistida.

@@ -1,3 +1,4 @@
 Profile-specific visual identity, presentation text and available order-origin options must derive from `company_modules` through centralized profile helpers; retain persisted identifiers, URLs and template variables so disabled or absent profiles preserve existing companies unchanged.
 Florist agenda filtering and chronological ordering belong in the centralized florist agenda helper; florist views reuse OrderCard actions so restaurant behavior and payment flows stay unchanged.
 Table split payments retain the originating checkout until settlement; draft payment amounts are not approved payments, and centralized cent-based rules guard settlement and unpaid-item closure to avoid premature table release.
+Catalog and florist recipient addresses share tenant/customer-scoped persistence and normalized deduplication; phone changes invalidate outstanding lookups so stale customer data cannot cross identities.
