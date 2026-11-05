@@ -39,6 +39,9 @@ import { detectDomainContext, COMANDATECH_ROOT, LEGACY_HOST } from '@/utils/doma
 import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
 import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
 import { AddressCepInput } from '@/components/menu/AddressCepInput';
+import { AddressLabelInput } from '@/components/menu/AddressLabelInput';
+import { AddressNeighborhoodInput } from '@/components/menu/AddressNeighborhoodInput';
+import { normalizeNeighborhood } from '@/lib/addressFormRules';
 import { customerPhoneKey, validCustomerPhone, saveCustomerAddress } from '@/lib/customerAddress';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
 import { FloristGiftSection } from '@/components/menu/FloristGiftSection';
@@ -420,12 +423,20 @@ export default function Menu() {
   const itemDestinationErrors = isFlorist && !comboFlow ? validateDestination(itemDestination, todaySP()) : [];
   const itemSlots = isFlorist && itemDestination.date ? getSlotsForDate(deliveryShifts, itemDestination.date) : undefined;
   const floristNeighborhoods = useMemo(
-    () => (isFlorist && settings.deliveryMode === 'neighborhood'
+    () => (isFlorist
       ? getActiveNeighborhoods().map((n) => ({ name: n.neighborhoodName, fee: n.deliveryFee || 0 }))
       : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isFlorist, settings.deliveryMode, neighborhoods],
   );
+
+  const addressNeighborhoodNames = getActiveNeighborhoods().map(n => n.neighborhoodName);
+  const changeAddressNeighborhood = (name: string) => {
+    setDeliveryNeighborhood(name);
+    const match = getActiveNeighborhoods().find(n => normalizeNeighborhood(n.neighborhoodName) === normalizeNeighborhood(name));
+    setSelectedNeighborhood(match?.id ?? '');
+    setFieldErrors(prev => { const next = new Set(prev); next.delete('deliveryNeighborhood'); if (match) next.delete('selectedNeighborhood'); return next; });
+  };
 
   // Reorder from localStorage (I9 only)
   const lastOrderKey = `lastOrder_${slug}`;
@@ -2644,9 +2655,10 @@ export default function Menu() {
                     onDelete={async id => { await removeCustomerAddress(id); if (selectedAddressId === id) { clearDeliveryAddress(); setNewAddressMode(true); } }}
                     onSetDefault={setCustomerAddressDefault}
                     onUpdate={updateCustomerAddress}
+                    neighborhoodNames={addressNeighborhoodNames}
                   />
-                  <AddressCepInput key={`cep:${customerPhoneKey(customerPhone)}:${selectedAddressId}:${newAddressMode}`} onFound={a => { setDeliveryAddress(a.address); setDeliveryNeighborhood(a.neighborhood); setDeliveryCity(a.city); setDeliveryState(a.state); }} />
-                  <div><Label>Apelido do endereço (opcional)</Label><Input value={addressLabel} maxLength={100} onChange={e => setAddressLabel(e.target.value)} placeholder="Casa, Trabalho…" /></div>
+                  <AddressCepInput key={`cep:${customerPhoneKey(customerPhone)}:${selectedAddressId}:${newAddressMode}`} neighborhoodNames={addressNeighborhoodNames} onFound={a => { if (a.address) setDeliveryAddress(a.address); changeAddressNeighborhood(a.neighborhood); }} />
+                  <AddressLabelInput value={addressLabel} onChange={setAddressLabel} />
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
                     <div className="min-w-0">
                       <Label className="block leading-snug whitespace-normal break-words font-bold">Logradouro (rua, avenida, travessa) *</Label>
@@ -2679,10 +2691,10 @@ export default function Menu() {
                   </div>
                   <div>
                     <Label className="font-bold">Bairro *</Label>
-                    <Input
+                    <AddressNeighborhoodInput
                       value={deliveryNeighborhood}
-                      onChange={(e) => { setDeliveryNeighborhood(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('deliveryNeighborhood'); return n; }); }}
-                      placeholder="Nome do bairro"
+                      onChange={changeAddressNeighborhood}
+                      names={addressNeighborhoodNames}
                       className={cn('border-primary', fieldErrors.has('deliveryNeighborhood') && 'border-destructive')}
                     />
                   </div>
@@ -2737,7 +2749,7 @@ export default function Menu() {
                             <Label htmlFor="neighborhood" className="cursor-pointer">Entrega por bairro</Label>
                           </div>
                           {deliveryType === 'neighborhood' && (
-                            <Select value={selectedNeighborhood} onValueChange={setSelectedNeighborhood}>
+                            <Select value={selectedNeighborhood} onValueChange={id => { setSelectedNeighborhood(id); const match = getActiveNeighborhoods().find(n => n.id === id); if (match) setDeliveryNeighborhood(match.neighborhoodName); }}>
                               <SelectTrigger className="mt-2 border-primary focus:ring-primary">
                                 <SelectValue placeholder="Selecione o bairro" />
                               </SelectTrigger>

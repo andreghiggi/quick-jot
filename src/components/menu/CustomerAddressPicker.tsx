@@ -14,6 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AddressCepInput } from './AddressCepInput';
+import { AddressLabelInput } from './AddressLabelInput';
+import { AddressNeighborhoodInput } from './AddressNeighborhoodInput';
 import { toast } from 'sonner';
 
 interface CustomerAddressPickerProps {
@@ -24,6 +26,7 @@ interface CustomerAddressPickerProps {
   onDelete: (id: string) => Promise<void> | void;
   onSetDefault: (id: string) => Promise<void> | void;
   onUpdate?: (id: string, input: NewAddressInput) => Promise<CustomerAddress | void>;
+  neighborhoodNames?: string[];
 }
 
 function formatAddress(a: CustomerAddress): string {
@@ -44,6 +47,7 @@ export function CustomerAddressPicker({
   onDelete,
   onSetDefault,
   onUpdate,
+  neighborhoodNames = [],
 }: CustomerAddressPickerProps) {
   const [manageOpen, setManageOpen] = useState(false);
 
@@ -168,8 +172,10 @@ export function CustomerAddressPicker({
           </div>
           {deleteId && <div className="space-y-2 border-t pt-3"><p className="text-sm">Excluir este endereço salvo?</p><div className="flex gap-2"><Button variant="destructive" disabled={busy} onClick={() => perform(async () => { await onDelete(deleteId); setDeleteId(null); })}>Excluir</Button><Button variant="outline" disabled={busy} onClick={() => setDeleteId(null)}>Cancelar</Button></div></div>}
           {editing && <div className="space-y-3 border-t pt-3">
-            <AddressCepInput key={editing.id} onFound={a => setEditing(current => current ? { ...current, ...a } : null)} />
-            {([['label', 'Apelido'], ['address', 'Rua'], ['number', 'Número'], ['complement', 'Complemento'], ['neighborhood', 'Bairro'], ['city', 'Cidade'], ['state', 'UF']] as const).map(([field, label]) => <div key={field}><Label>{label}</Label><Input aria-label={label} className="text-base md:text-sm" value={editing[field] ?? ''} onChange={e => setEditing({ ...editing, [field]: e.target.value })} /></div>)}
+            <AddressCepInput key={editing.id} neighborhoodNames={neighborhoodNames} onFound={a => setEditing(current => current ? { ...current, ...(a.address ? { address: a.address } : {}), neighborhood: a.neighborhood } : null)} />
+            <AddressLabelInput value={editing.label ?? ''} onChange={label => setEditing({ ...editing, label })} />
+            {([['address', 'Rua'], ['number', 'Número'], ['complement', 'Complemento']] as const).map(([field, label]) => <div key={field}><Label>{label}</Label><Input aria-label={label} className="text-base md:text-sm" value={editing[field] ?? ''} onChange={e => setEditing({ ...editing, [field]: e.target.value })} /></div>)}
+            <div><Label>Bairro *</Label><AddressNeighborhoodInput names={neighborhoodNames} value={editing.neighborhood ?? ''} onChange={neighborhood => setEditing({ ...editing, neighborhood })} /></div>
             <div><Label>Referência</Label><Textarea aria-label="Referência" value={editing.reference ?? ''} onChange={e => setEditing({ ...editing, reference: e.target.value })} /></div>
             <div className="flex gap-2"><Button disabled={busy || !editing.address?.trim() || !editing.number?.trim() || !editing.neighborhood?.trim()} onClick={() => perform(async () => { if (!onUpdate) return; const { id, customer_id, company_id, created_at, updated_at, ...input } = editing; const saved = await onUpdate(id, input); if (saved && selectedId === id) onSelect(saved); setEditing(null); })}>Salvar endereço</Button><Button variant="outline" disabled={busy} onClick={() => setEditing(null)}>Cancelar</Button></div>
           </div>}
