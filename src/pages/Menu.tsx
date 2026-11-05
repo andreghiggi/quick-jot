@@ -423,7 +423,7 @@ export default function Menu() {
   const itemDestinationErrors = isFlorist && !comboFlow ? validateDestination(itemDestination, todaySP()) : [];
   const itemSlots = isFlorist && itemDestination.date ? getSlotsForDate(deliveryShifts, itemDestination.date) : undefined;
   const floristNeighborhoods = useMemo(
-    () => (isFlorist
+    () => (isFlorist && settings.deliveryMode === 'neighborhood'
       ? getActiveNeighborhoods().map((n) => ({ name: n.neighborhoodName, fee: n.deliveryFee || 0 }))
       : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2433,6 +2433,7 @@ export default function Menu() {
                           onChange={setItemDestination}
                           today={todaySP()}
                           neighborhoods={floristNeighborhoods}
+                          neighborhoodNames={addressNeighborhoodNames}
                           pickupEnabled={settings.enablePickup !== false}
                           slots={itemSlots}
                           customShifts={deliveryShifts.length > 0}

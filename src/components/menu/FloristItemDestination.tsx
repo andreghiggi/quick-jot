@@ -22,6 +22,7 @@ interface Props {
   onChange: (v: Partial<FloristDestination>) => void;
   today: string;
   neighborhoods: { name: string; fee: number }[];
+  neighborhoodNames?: string[];
   pickupEnabled: boolean;
   /** Turnos disponíveis para a data escolhida (padrão: grade fixa de 2h). */
   slots?: string[];
@@ -42,7 +43,8 @@ const Choice = ({ active, onClick, children }: { active: boolean; onClick: () =>
   </Button>
 );
 
-export function FloristItemDestination({ value, onChange, today, neighborhoods, pickupEnabled, slots, customShifts, companyId, buyerPhone }: Props) {
+export function FloristItemDestination({ value, onChange, today, neighborhoods, neighborhoodNames, pickupEnabled, slots, customShifts, companyId, buyerPhone }: Props) {
+  const names = neighborhoodNames ?? neighborhoods.map(n => n.name);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState(false);
   const currentValue = useRef(value);
@@ -161,8 +163,8 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
           <CustomerAddressPicker key={identity} addresses={addressBook.addresses} selectedId={value.savedAddressId ?? null} onSelect={applyAddress}
             onNew={() => { setNewAddress(true); set(addressFields); }}
             onDelete={async id => { await addressBook.remove(id); if (value.savedAddressId === id) { setNewAddress(true); set(addressFields); } }}
-            onSetDefault={addressBook.setDefault} onUpdate={addressBook.update} neighborhoodNames={neighborhoods.map(n => n.name)} />
-          <AddressCepInput key={`${identity}:${value.savedAddressId}:${newAddress}`} neighborhoodNames={neighborhoods.map(n => n.name)} onFound={a => onChange({ ...currentValue.current, ...(a.address ? { street: a.address } : {}), neighborhood: a.neighborhood })} />
+            onSetDefault={addressBook.setDefault} onUpdate={addressBook.update} neighborhoodNames={names} />
+          <AddressCepInput key={`${identity}:${value.savedAddressId}:${newAddress}`} neighborhoodNames={names} onFound={a => onChange({ ...currentValue.current, ...(a.address ? { street: a.address } : {}), neighborhood: a.neighborhood })} />
           <AddressLabelInput value={value.addressLabel ?? ''} onChange={addressLabel => set({ addressLabel })} />
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
@@ -180,7 +182,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
           </div>
           <div>
             <Label>Bairro *</Label>
-            <AddressNeighborhoodInput names={neighborhoods.map(n => n.name)} value={value.neighborhood ?? ''} onChange={neighborhood => set({ neighborhood })} className="border-primary" />
+            <AddressNeighborhoodInput names={names} value={value.neighborhood ?? ''} onChange={neighborhood => set({ neighborhood })} className="border-primary" />
           </div>
           <div>
             <Label>Ponto de referência *</Label>
