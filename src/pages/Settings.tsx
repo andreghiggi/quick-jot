@@ -74,6 +74,7 @@ export default function Settings() {
     address_complement: '',
     address_neighborhood: '',
     address_reference: '',
+    address_cep: '',
     slug: '',
     subdomain: '',
   });
@@ -123,6 +124,7 @@ export default function Settings() {
         address_complement: (company as any).address_complement || '',
         address_neighborhood: (company as any).address_neighborhood || '',
         address_reference: (company as any).address_reference || '',
+        address_cep: (company as any).address_cep || '',
         slug: company.slug || '',
         subdomain: (company as any).subdomain || '',
       });
@@ -193,6 +195,10 @@ export default function Settings() {
           address_complement: formData.address_complement,
           address_neighborhood: formData.address_neighborhood,
           address_reference: formData.address_reference,
+          address_cep: formData.address_cep.replace(/\D/g, '') || null,
+          ...(presetForCep(formData.address_cep)
+            ? { address_city: presetForCep(formData.address_cep)!.city, address_state: presetForCep(formData.address_cep)!.state }
+            : {}),
           slug: formData.slug,
           subdomain: formData.subdomain || null,
         } as any)
@@ -551,6 +557,23 @@ if errorlevel 1 (
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="address_cep">CEP da loja</Label>
+                <Input
+                  id="address_cep"
+                  inputMode="numeric"
+                  maxLength={9}
+                  value={formData.address_cep.replace(/\D/g, '').replace(/^(\d{5})(\d)/, '$1-$2')}
+                  onChange={(e) => setFormData({ ...formData, address_cep: e.target.value.replace(/\D/g, '').slice(0, 8) })}
+                  placeholder="Ex: 99200-000"
+                />
+                {presetForCep(formData.address_cep) && (
+                  <p className="text-xs text-muted-foreground">
+                    Bairros de {presetForCep(formData.address_cep)!.city}/{presetForCep(formData.address_cep)!.state} disponíveis no catálogo quando a loja não tiver bairros cadastrados.
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="address_street">Endereço (rua, avenida, travessa...) *</Label>
                 <Input

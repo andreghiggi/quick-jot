@@ -1,3 +1,4 @@
+import { resolveStoreNeighborhoodNames } from '@/lib/cityNeighborhoodPresets';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { z } from 'zod';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
@@ -92,7 +93,7 @@ export default function Menu() {
       try {
         const { data, error } = await supabase
           .from('companies')
-          .select('id, name, slug, phone, address, subdomain')
+          .select('id, name, slug, phone, address, subdomain, address_cep')
           .eq(lookupBy, lookupValue)
           .eq('active', true)
           .single();
@@ -430,7 +431,7 @@ export default function Menu() {
     [isFlorist, settings.deliveryMode, neighborhoods],
   );
 
-  const addressNeighborhoodNames = getActiveNeighborhoods().map(n => n.neighborhoodName);
+  const addressNeighborhoodNames = resolveStoreNeighborhoodNames(getActiveNeighborhoods().map(n => n.neighborhoodName), (company as any)?.address_cep);
   const changeAddressNeighborhood = (name: string) => {
     setDeliveryNeighborhood(name);
     const match = getActiveNeighborhoods().find(n => normalizeNeighborhood(n.neighborhoodName) === normalizeNeighborhood(name));
