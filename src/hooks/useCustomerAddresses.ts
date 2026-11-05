@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { saveCustomerAddress } from '@/lib/customerAddress';
 
 export interface CustomerAddress {
   id: string;
@@ -28,12 +29,19 @@ export type NewAddressInput = Omit<
  * Aditivo — não interfere no fluxo atual de `customers.address`.
  */
 export function useCustomerAddresses(customerId: string | null, companyId: string | null) {
-  const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
+  const [result, setResult] = useState<{ key: string; addresses: CustomerAddress[] }>({ key: '', addresses: [] });
+  const key = `${companyId ?? ''}:${customerId ?? ''}`;
+  const activeKey = useRef(key);
+  activeKey.current = key;
+  const request = useRef(0);
+  const addresses = result.key === key ? result.addresses : [];
   const [loading, setLoading] = useState(false);
 
   const refetch = useCallback(async () => {
-    if (!customerId) {
-      setAddresses([]);
+    const version = ++request.current;
+    if (!customerId || !companyId) {
+      setResult({ key, addresses: [] });
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -42,50 +50,28 @@ export function useCustomerAddresses(customerId: string | null, companyId: strin
         .from('customer_addresses')
         .select('*')
         .eq('customer_id', customerId)
+        .eq('company_id', companyId)
         .order('is_default', { ascending: false })
         .order('updated_at', { ascending: false });
       if (error) throw error;
-      setAddresses((data ?? []) as CustomerAddress[]);
+      if (activeKey.current === key && version === request.current) setResult({ key, addresses: (data ?? []) as CustomerAddress[] });
     } catch (err) {
       console.error('useCustomerAddresses.refetch', err);
     } finally {
-      setLoading(false);
+      if (activeKey.current === key && version === request.current) setLoading(false);
     }
-  }, [customerId]);
+  }, [customerId, companyId, key]);
 
   useEffect(() => {
-    refetch();
+    void refetch();
+    return () => { request.current++; };
   }, [refetch]);
 
   const create = useCallback(
     async (input: NewAddressInput): Promise<CustomerAddress | null> => {
       if (!customerId || !companyId) return null;
       try {
-        // Se este vier como padrão, desmarca os outros antes
-        if (input.is_default) {
-          await supabase
-            .from('customer_addresses')
-            .update({ is_default: false })
-            .eq('customer_id', customerId);
-        }
-        const { data, error } = await supabase
-          .from('customer_addresses')
-          .insert({
-            customer_id: customerId,
-            company_id: companyId,
-            label: input.label ?? null,
-            address: input.address ?? null,
-            number: input.number ?? null,
-            complement: input.complement ?? null,
-            neighborhood: input.neighborhood ?? null,
-            reference: input.reference ?? null,
-            city: input.city ?? null,
-            state: input.state ?? null,
-            is_default: input.is_default ?? false,
-          })
-          .select('*')
-          .single();
-        if (error) throw error;
+        const data = await saveCustomerAddress(customerId, companyId, input);
         await refetch();
         return data as CustomerAddress;
       } catch (err) {
@@ -98,39 +84,39 @@ export function useCustomerAddresses(customerId: string | null, companyId: strin
 
   const setDefault = useCallback(
     async (id: string) => {
-      if (!customerId) return;
-      try {
-        await supabase
+      if (!customerId || !companyId) return;
+      const { error } = await supabase.from('customer_addresses').update({ is_default: true })
+        .eq('id', id).eq('customer_id', customerId).eq('company_id', companyId);
+      if (error) throw error;
+      const { error: clearError } = await supabase
           .from('customer_addresses')
           .update({ is_default: false })
-          .eq('customer_id', customerId);
-        await supabase
-          .from('customer_addresses')
-          .update({ is_default: true })
-          .eq('id', id);
-        await refetch();
-      } catch (err) {
-        console.error('useCustomerAddresses.setDefault', err);
-      }
+          .eq('customer_id', customerId).eq('company_id', companyId).neq('id', id);
+      if (clearError) throw clearError;
+      await refetch();
     },
-    [customerId, refetch],
+    [customerId, companyId, refetch],
   );
+
+  const update = useCallback(async (id: string, input: NewAddressInput) => {
+    if (!customerId || !companyId) return;
+    const saved = await saveCustomerAddress(customerId, companyId, input, id);
+    await refetch();
+    return saved;
+  }, [customerId, companyId, refetch]);
 
   const remove = useCallback(
     async (id: string) => {
-      try {
+      if (!customerId || !companyId) return;
         const { error } = await supabase
           .from('customer_addresses')
           .delete()
-          .eq('id', id);
+          .eq('id', id).eq('customer_id', customerId).eq('company_id', companyId);
         if (error) throw error;
         await refetch();
-      } catch (err) {
-        console.error('useCustomerAddresses.remove', err);
-      }
     },
-    [refetch],
+    [customerId, companyId, refetch],
   );
 
-  return { addresses, loading, refetch, create, setDefault, remove };
+  return { addresses, loading, refetch, create, update, setDefault, remove };
 }

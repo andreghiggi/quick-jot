@@ -38,6 +38,8 @@ import { LateralOptionalsWizard } from '@/components/menu/LateralOptionalsWizard
 import { detectDomainContext, COMANDATECH_ROOT, LEGACY_HOST } from '@/utils/domainRouting';
 import { useCustomerAddresses, CustomerAddress } from '@/hooks/useCustomerAddresses';
 import { CustomerAddressPicker } from '@/components/menu/CustomerAddressPicker';
+import { AddressCepInput } from '@/components/menu/AddressCepInput';
+import { customerPhoneKey, validCustomerPhone, saveCustomerAddress } from '@/lib/customerAddress';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
 import { FloristGiftSection } from '@/components/menu/FloristGiftSection';
 import { FloristItemDestination } from '@/components/menu/FloristItemDestination';
@@ -178,7 +180,10 @@ export default function Menu() {
   const [orderSent] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [customerLoaded, setCustomerLoaded] = useState(false);
+  const customerLookupGeneration = useRef(0);
+  const customerPhoneRef = useRef('');
+  const [addressLabel, setAddressLabel] = useState('');
+  const [newAddressMode, setNewAddressMode] = useState(false);
   const [itemDestination, setItemDestination] = useState<Partial<FloristDestination>>({});
   const [deliveryShifts, setDeliveryShifts] = useState<DeliveryShift[]>([]);
   const [showNewCustomerPopup, setShowNewCustomerPopup] = useState(false);
@@ -205,16 +210,37 @@ export default function Menu() {
     addresses: customerAddresses,
     setDefault: setCustomerAddressDefault,
     remove: removeCustomerAddress,
+    update: updateCustomerAddress,
   } = useCustomerAddresses(customerId, company?.id ?? null);
 
-  // Auto-seleciona o endereço padrão na primeira carga (não força mudança nos campos).
+  const applyCustomerAddress = useCallback((a: CustomerAddress) => {
+    setNewAddressMode(false);
+    setSelectedAddressId(a.id);
+    setAddressLabel(a.label ?? '');
+    setDeliveryAddress(a.address ?? ''); setDeliveryNumber(a.number ?? '');
+    setDeliveryComplement(a.complement ?? ''); setDeliveryNeighborhood(a.neighborhood ?? '');
+    setDeliveryReference(a.reference ?? ''); setDeliveryCity(a.city ?? ''); setDeliveryState(a.state ?? '');
+  }, []);
+  const clearDeliveryAddress = () => {
+    setSelectedAddressId(null); setAddressLabel(''); setDeliveryAddress(''); setDeliveryNumber('');
+    setDeliveryComplement(''); setDeliveryNeighborhood(''); setDeliveryReference('');
+    setDeliveryCity(''); setDeliveryState(''); setSelectedNeighborhood('');
+  };
+  const handleCustomerPhoneChange = (phone: string) => {
+    if (customerPhoneKey(phone) !== customerPhoneKey(customerPhone)) {
+      customerLookupGeneration.current++;
+      setCustomerId(null); setCustomerName(''); setCustomerCpf(''); setCustomerBirthDate('');
+      clearDeliveryAddress(); setNewAddressMode(false);
+      setShowNewCustomerPopup(false); setNewCustomerPromptedFor(null);
+    }
+    customerPhoneRef.current = customerPhoneKey(phone);
+    setCustomerPhone(phone);
+  };
   useEffect(() => {
-    if (selectedAddressId) return;
-    if (customerAddresses.length === 0) return;
-    const def = customerAddresses.find((a) => a.is_default) ?? customerAddresses[0];
-    if (def) setSelectedAddressId(def.id);
-  }, [customerAddresses, selectedAddressId]);
-  
+    if (selectedAddressId || newAddressMode || !customerAddresses.length) return;
+    applyCustomerAddress(customerAddresses.find(a => a.is_default) ?? customerAddresses[0]);
+  }, [customerAddresses, selectedAddressId, newAddressMode, applyCustomerAddress]);
+
   // Optional group selections state
   
   const isMenuI9 = true;
@@ -580,16 +606,18 @@ export default function Menu() {
   ]);
 
   useEffect(() => {
-    if (!customerPhone || customerPhone.length < 10 || !company?.id || customerLoaded) return;
+    if (!validCustomerPhone(customerPhone) || !company?.id) return;
     
     const cleanPhone = customerPhone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) return;
+    customerPhoneRef.current = cleanPhone;
+    const generation = ++customerLookupGeneration.current;
 
     const timer = setTimeout(async () => {
       try {
         const { data: res, error } = await supabase.functions.invoke('public-customer', {
           body: { action: 'lookup', company_id: company.id, phone: cleanPhone },
         });
+        if (generation !== customerLookupGeneration.current || customerPhoneRef.current !== cleanPhone) return;
         const data = (res as any)?.customer as any;
 
         if (data && !error) {
@@ -643,7 +671,7 @@ export default function Menu() {
             setDeliveryAddress(data.address);
           }
 
-          setCustomerLoaded(true);
+
           toast.success('Dados carregados automaticamente!', { duration: 2000 });
         } else if (!error && isFlorist && newCustomerPromptedFor !== cleanPhone) {
           // Primeira compra na loja: popup de boas-vindas (somente floricultura)
@@ -655,16 +683,8 @@ export default function Menu() {
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); customerLookupGeneration.current++; };
   }, [customerPhone, company?.id]);
-
-  // Reset customerLoaded when phone changes significantly
-  useEffect(() => {
-    const cleanPhone = customerPhone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      setCustomerLoaded(false);
-    }
-  }, [customerPhone]);
 
   const baseMenuProducts = getMenuProducts();
   const newProducts = getNewProducts();
@@ -1481,57 +1501,40 @@ export default function Menu() {
               ? { id: (upsertRes as any).customer_id as string }
               : null;
 
-            // Múltiplos endereços (aditivo, best-effort, não bloqueia o fluxo).
             const resolvedCustomerId = upsertedCustomer?.id ?? customerId;
             if (resolvedCustomerId && deliveryType !== 'pickup' && deliveryType !== '' && deliveryAddress.trim()) {
-              try {
-                if (selectedAddressId) {
-                  // Atualiza o endereço selecionado e marca como padrão
-                  await supabase
-                    .from('customer_addresses')
-                    .update({ is_default: false })
-                    .eq('customer_id', resolvedCustomerId);
-                  await supabase
-                    .from('customer_addresses')
-                    .update({
-                      address: deliveryAddress || null,
-                      number: deliveryNumber || null,
-                      complement: deliveryComplement || null,
-                      neighborhood: deliveryNeighborhood || null,
-                      reference: deliveryReference || null,
-                      city: deliveryCity || null,
-                      state: deliveryState || null,
-                      is_default: true,
-                    })
-                    .eq('id', selectedAddressId);
-                } else {
-                  // Insere novo endereço como padrão
-                  await supabase
-                    .from('customer_addresses')
-                    .update({ is_default: false })
-                    .eq('customer_id', resolvedCustomerId);
-                  await supabase
-                    .from('customer_addresses')
-                    .insert({
-                      customer_id: resolvedCustomerId,
-                      company_id: company.id,
-                      address: deliveryAddress || null,
-                      number: deliveryNumber || null,
-                      complement: deliveryComplement || null,
-                      neighborhood: deliveryNeighborhood || null,
-                      reference: deliveryReference || null,
-                      city: deliveryCity || null,
-                      state: deliveryState || null,
-                      is_default: true,
-                    });
-                }
-              } catch (addrErr) {
-                console.error('Error saving customer address (multi):', addrErr);
-              }
+              await saveCustomerAddress(resolvedCustomerId, company.id, {
+                label: addressLabel || null, address: deliveryAddress, number: deliveryNumber,
+                complement: deliveryComplement, neighborhood: deliveryNeighborhood, reference: deliveryReference,
+                city: deliveryCity, state: deliveryState,
+              }, selectedAddressId);
             }
           } catch (customerError) {
             console.error('Error saving customer data:', customerError);
           }
+        }
+      }
+
+      if (isFlorist && company?.id) {
+        const savedDestinations = new Set<string>();
+        for (const item of cart) {
+          const d = item.floristDestination;
+          if (!d || d.mode !== 'delivery' || d.forWhom !== 'gift' || !validCustomerPhone(d.recipientPhone ?? '')) continue;
+          const phone = customerPhoneKey(d.recipientPhone ?? '');
+          const key = `${phone}:${destinationKey(d)}`;
+          if (savedDestinations.has(key)) continue;
+          savedDestinations.add(key);
+          try {
+            const { data: found, error: lookupError } = await supabase.functions.invoke('public-customer', { body: { action: 'lookup', company_id: company.id, phone } });
+            if (lookupError) throw lookupError;
+            let recipientId = found?.customer?.id;
+            if (!recipientId) {
+              const { data: created, error: createError } = await supabase.functions.invoke('public-customer', { body: { action: 'upsert', company_id: company.id, phone, name: d.recipientName?.trim(), address: `${d.street}, ${d.number}${d.complement ? ` - ${d.complement}` : ''} - ${d.neighborhood} | Ref: ${d.reference}`, city: d.city || null, state: d.state || null } });
+              if (createError) throw createError;
+              recipientId = created?.customer_id;
+            }
+            if (recipientId) await saveCustomerAddress(recipientId, company.id, { label: d.addressLabel ?? null, address: d.street ?? '', number: d.number ?? '', complement: d.complement ?? '', neighborhood: d.neighborhood ?? '', reference: d.reference ?? '', city: d.city ?? '', state: d.state ?? '' }, d.savedAddressId);
+          } catch (error) { console.error('Error saving recipient address:', error); }
         }
       }
 
@@ -2413,6 +2416,8 @@ export default function Menu() {
 
                       {isFlorist && !comboFlow && (
                         <FloristItemDestination
+                          companyId={company?.id ?? null}
+                          buyerPhone={customerPhone}
                           value={itemDestination}
                           onChange={setItemDestination}
                           today={todaySP()}
@@ -2584,7 +2589,7 @@ export default function Menu() {
                     <Label className="font-bold">Telefone *</Label>
                     <Input
                       value={customerPhone}
-                      onChange={(e) => { setCustomerPhone(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerPhone'); return n; }); }}
+                      onChange={(e) => { handleCustomerPhoneChange(e.target.value); setFieldErrors(prev => { const n = new Set(prev); n.delete('customerPhone'); return n; }); }}
                       placeholder="(00) 00000-0000"
                       className={cn('border-primary', fieldErrors.has('customerPhone') && 'border-destructive')}
                     />
@@ -2631,39 +2636,17 @@ export default function Menu() {
                       className={cn('border-primary', fieldErrors.has('customerBirthDate') && 'border-destructive')}
                     />
                   </div>
-                  {customerAddresses.length > 0 && (
-                    <CustomerAddressPicker
-                      addresses={customerAddresses}
-                      selectedId={selectedAddressId}
-                      onSelect={(a: CustomerAddress) => {
-                        setSelectedAddressId(a.id);
-                        setDeliveryAddress(a.address ?? '');
-                        setDeliveryNumber(a.number ?? '');
-                        setDeliveryComplement(a.complement ?? '');
-                        setDeliveryNeighborhood(a.neighborhood ?? '');
-                        setDeliveryReference(a.reference ?? '');
-                        if (a.city) setDeliveryCity(a.city);
-                        if (a.state) setDeliveryState(a.state);
-                      }}
-                      onNew={() => {
-                        setSelectedAddressId(null);
-                        setDeliveryAddress('');
-                        setDeliveryNumber('');
-                        setDeliveryComplement('');
-                        setDeliveryNeighborhood('');
-                        setDeliveryReference('');
-                      }}
-                      onDelete={async (id) => {
-                        await removeCustomerAddress(id);
-                        if (selectedAddressId === id) {
-                          setSelectedAddressId(null);
-                        }
-                      }}
-                      onSetDefault={async (id) => {
-                        await setCustomerAddressDefault(id);
-                      }}
-                    />
-                  )}
+                  <CustomerAddressPicker
+                    key={`${company?.id}:${customerId}:${customerPhoneKey(customerPhone)}`}
+                    addresses={customerAddresses} selectedId={selectedAddressId}
+                    onSelect={applyCustomerAddress}
+                    onNew={() => { clearDeliveryAddress(); setNewAddressMode(true); }}
+                    onDelete={async id => { await removeCustomerAddress(id); if (selectedAddressId === id) { clearDeliveryAddress(); setNewAddressMode(true); } }}
+                    onSetDefault={setCustomerAddressDefault}
+                    onUpdate={updateCustomerAddress}
+                  />
+                  <AddressCepInput key={`cep:${customerPhoneKey(customerPhone)}:${selectedAddressId}:${newAddressMode}`} onFound={a => { setDeliveryAddress(a.address); setDeliveryNeighborhood(a.neighborhood); setDeliveryCity(a.city); setDeliveryState(a.state); }} />
+                  <div><Label>Apelido do endereço (opcional)</Label><Input value={addressLabel} maxLength={100} onChange={e => setAddressLabel(e.target.value)} placeholder="Casa, Trabalho…" /></div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-end">
                     <div className="min-w-0">
                       <Label className="block leading-snug whitespace-normal break-words font-bold">Logradouro (rua, avenida, travessa) *</Label>

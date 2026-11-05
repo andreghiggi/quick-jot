@@ -8,8 +8,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Trash2, Plus, Settings, Star } from 'lucide-react';
-import { CustomerAddress } from '@/hooks/useCustomerAddresses';
+import { Trash2, Plus, Settings, Star, Pencil } from 'lucide-react';
+import { CustomerAddress, NewAddressInput } from '@/hooks/useCustomerAddresses';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { AddressCepInput } from './AddressCepInput';
+import { toast } from 'sonner';
 
 interface CustomerAddressPickerProps {
   addresses: CustomerAddress[];
@@ -18,6 +23,7 @@ interface CustomerAddressPickerProps {
   onNew: () => void;
   onDelete: (id: string) => Promise<void> | void;
   onSetDefault: (id: string) => Promise<void> | void;
+  onUpdate?: (id: string, input: NewAddressInput) => Promise<CustomerAddress | void>;
 }
 
 function formatAddress(a: CustomerAddress): string {
@@ -37,10 +43,18 @@ export function CustomerAddressPicker({
   onNew,
   onDelete,
   onSetDefault,
+  onUpdate,
 }: CustomerAddressPickerProps) {
   const [manageOpen, setManageOpen] = useState(false);
 
-  if (addresses.length === 0) return null;
+  const [editing, setEditing] = useState<CustomerAddress | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const perform = async (action: () => Promise<void> | void) => {
+    setBusy(true);
+    try { await action(); } catch { toast.error('Não foi possível salvar a alteração do endereço.'); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 p-3">
@@ -55,13 +69,13 @@ export function CustomerAddressPicker({
             if (found) onSelect(found);
           }}
         >
-          <SelectTrigger className="h-9 flex-1 min-w-[220px]">
+          <SelectTrigger className="h-9 flex-1 min-w-0 w-full">
             <SelectValue placeholder="Selecionar endereço salvo" />
           </SelectTrigger>
           <SelectContent>
             {addresses.map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                {formatAddress(a)}
+                {a.is_default ? '★ ' : ''}{formatAddress(a)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -87,7 +101,7 @@ export function CustomerAddressPicker({
       </div>
 
       <Dialog open={manageOpen} onOpenChange={setManageOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[85dvh] overflow-y-auto" onOpenAutoFocus={e => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Gerenciar endereços</DialogTitle>
           </DialogHeader>
@@ -103,7 +117,7 @@ export function CustomerAddressPicker({
                       {a.label || 'Endereço'}
                     </p>
                     {a.is_default && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary">
                         <Star className="w-3 h-3 fill-current" /> Padrão
                       </span>
                     )}
@@ -125,17 +139,20 @@ export function CustomerAddressPicker({
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => onSetDefault(a.id)}
+                      disabled={busy} onClick={() => perform(() => onSetDefault(a.id))}
                       className="h-7 px-2 text-xs"
                     >
                       Tornar padrão
                     </Button>
                   )}
+                  {onUpdate && <Button type="button" size="icon" variant="ghost" aria-label="Editar endereço" title="Editar endereço" disabled={busy} onClick={() => setEditing({ ...a })}><Pencil className="w-3.5 h-3.5" /></Button>}
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
-                    onClick={() => onDelete(a.id)}
+                    aria-label="Excluir endereço" title="Excluir endereço"
+                    disabled={busy}
+                    onClick={() => setDeleteId(a.id)}
                     className="h-7 px-2 text-xs text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -149,6 +166,13 @@ export function CustomerAddressPicker({
               </p>
             )}
           </div>
+          {deleteId && <div className="space-y-2 border-t pt-3"><p className="text-sm">Excluir este endereço salvo?</p><div className="flex gap-2"><Button variant="destructive" disabled={busy} onClick={() => perform(async () => { await onDelete(deleteId); setDeleteId(null); })}>Excluir</Button><Button variant="outline" disabled={busy} onClick={() => setDeleteId(null)}>Cancelar</Button></div></div>}
+          {editing && <div className="space-y-3 border-t pt-3">
+            <AddressCepInput key={editing.id} onFound={a => setEditing(current => current ? { ...current, ...a } : null)} />
+            {([['label', 'Apelido'], ['address', 'Rua'], ['number', 'Número'], ['complement', 'Complemento'], ['neighborhood', 'Bairro'], ['city', 'Cidade'], ['state', 'UF']] as const).map(([field, label]) => <div key={field}><Label>{label}</Label><Input aria-label={label} className="text-base md:text-sm" value={editing[field] ?? ''} onChange={e => setEditing({ ...editing, [field]: e.target.value })} /></div>)}
+            <div><Label>Referência</Label><Textarea aria-label="Referência" value={editing.reference ?? ''} onChange={e => setEditing({ ...editing, reference: e.target.value })} /></div>
+            <div className="flex gap-2"><Button disabled={busy || !editing.address?.trim() || !editing.number?.trim() || !editing.neighborhood?.trim()} onClick={() => perform(async () => { if (!onUpdate) return; const { id, customer_id, company_id, created_at, updated_at, ...input } = editing; const saved = await onUpdate(id, input); if (saved && selectedId === id) onSelect(saved); setEditing(null); })}>Salvar endereço</Button><Button variant="outline" disabled={busy} onClick={() => setEditing(null)}>Cancelar</Button></div>
+          </div>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setManageOpen(false)}>
               Fechar

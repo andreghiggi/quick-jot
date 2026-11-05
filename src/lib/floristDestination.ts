@@ -14,6 +14,10 @@ export interface FloristDestination {
   complement?: string;
   neighborhood?: string;
   reference?: string;
+  city?: string;
+  state?: string;
+  addressLabel?: string;
+  savedAddressId?: string;
   cardMessage?: string;
   /** Taxa de entrega deste destino (calculada ao adicionar). */
   fee?: number;
