@@ -5,8 +5,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { FLORIST_TIME_SLOTS, GIFT_CARD_MAX_CHARS } from "@/lib/floristGift";
 import type { FloristDestination } from "@/lib/floristDestination";
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useCustomerAddresses, type CustomerAddress } from '@/hooks/useCustomerAddresses';
+import { customerPhoneKey, validCustomerPhone, parseCustomerAddress } from '@/lib/customerAddress';
+import { CustomerAddressPicker } from './CustomerAddressPicker';
+import { AddressCepInput } from './AddressCepInput';
+import { Button } from '@/components/ui/button';
 
 interface Props {
+  companyId: string | null;
+  buyerPhone?: string;
   value: Partial<FloristDestination>;
   onChange: (v: Partial<FloristDestination>) => void;
   today: string;
@@ -19,7 +28,7 @@ interface Props {
 }
 
 const Choice = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
-  <button
+  <Button variant="outline"
     type="button"
     onClick={onClick}
     className={cn(
@@ -28,10 +37,45 @@ const Choice = ({ active, onClick, children }: { active: boolean; onClick: () =>
     )}
   >
     {children}
-  </button>
+  </Button>
 );
 
-export function FloristItemDestination({ value, onChange, today, neighborhoods, pickupEnabled, slots, customShifts }: Props) {
+export function FloristItemDestination({ value, onChange, today, neighborhoods, pickupEnabled, slots, customShifts, companyId, buyerPhone }: Props) {
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [newAddress, setNewAddress] = useState(false);
+  const currentValue = useRef(value);
+  currentValue.current = value;
+  const generation = useRef(0);
+  const lookupPhone = customerPhoneKey(value.forWhom === 'gift' ? value.recipientPhone ?? '' : buyerPhone ?? '');
+  const identity = `${companyId}:${value.forWhom}:${lookupPhone}`;
+  const activeIdentity = useRef(identity);
+  activeIdentity.current = identity;
+  const addressBook = useCustomerAddresses(customerId, companyId);
+  const addressFields = { street: '', number: '', complement: '', neighborhood: '', reference: '', city: '', state: '', addressLabel: '', savedAddressId: undefined };
+  const applyAddress = (a: CustomerAddress) => {
+    setNewAddress(false);
+    onChange({ ...currentValue.current, street: a.address ?? '', number: a.number ?? '', complement: a.complement ?? '', neighborhood: a.neighborhood ?? '', reference: a.reference ?? '', city: a.city ?? '', state: a.state ?? '', addressLabel: a.label ?? '', savedAddressId: a.id });
+  };
+  useEffect(() => {
+    setCustomerId(null);
+    setNewAddress(false);
+    const version = ++generation.current;
+    if (!companyId || !validCustomerPhone(lookupPhone) || value.mode !== 'delivery') return;
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase.functions.invoke('public-customer', { body: { action: 'lookup', company_id: companyId, phone: lookupPhone } });
+      if (error || version !== generation.current || identity !== activeIdentity.current) return;
+      const customer = data?.customer;
+      if (!customer) return;
+      setCustomerId(customer.id);
+      const parsed = parseCustomerAddress(customer.address);
+      onChange({ ...currentValue.current, ...(value.forWhom === 'gift' ? { recipientName: customer.name ?? '' } : {}), street: parsed.address ?? '', number: parsed.number ?? '', complement: parsed.complement ?? '', neighborhood: parsed.neighborhood ?? '', reference: parsed.reference ?? '', city: customer.city ?? '', state: customer.state ?? '' });
+    }, 500);
+    return () => { clearTimeout(timer); generation.current++; };
+  }, [identity, value.mode]);
+  useEffect(() => {
+    if (newAddress || value.savedAddressId || !addressBook.addresses.length) return;
+    applyAddress(addressBook.addresses.find(a => a.is_default) ?? addressBook.addresses[0]);
+  }, [addressBook.addresses, value.savedAddressId, newAddress]);
   const set = (patch: Partial<FloristDestination>) => onChange({ ...value, ...patch });
   const isGift = value.forWhom === "gift";
   const msgLen = (value.cardMessage ?? "").length;
@@ -100,12 +144,24 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
               </div>
               <div>
                 <Label className="font-bold">WhatsApp de quem recebe *</Label>
-                <Input inputMode="tel" value={value.recipientPhone ?? ""} onChange={(e) => set({ recipientPhone: e.target.value })} placeholder="(51) 99999-9999" className="border-primary" />
+                <Input aria-label="WhatsApp de quem recebe" inputMode="tel" value={value.recipientPhone ?? ""} onChange={(e) => {
+                  const phone = e.target.value;
+                  if (customerPhoneKey(phone) !== customerPhoneKey(value.recipientPhone ?? '')) {
+                    generation.current++; setCustomerId(null); setNewAddress(false);
+                    set({ ...addressFields, recipientName: '', recipientPhone: phone });
+                  } else set({ recipientPhone: phone });
+                }} placeholder="(51) 99999-9999" className="border-primary" />
               </div>
             </>
           )}
 
           <p className="text-sm font-bold">{isGift ? "Endereço de quem recebe" : "Endereço de entrega"}</p>
+          <CustomerAddressPicker key={identity} addresses={addressBook.addresses} selectedId={value.savedAddressId ?? null} onSelect={applyAddress}
+            onNew={() => { setNewAddress(true); set(addressFields); }}
+            onDelete={async id => { await addressBook.remove(id); if (value.savedAddressId === id) { setNewAddress(true); set(addressFields); } }}
+            onSetDefault={addressBook.setDefault} onUpdate={addressBook.update} />
+          <AddressCepInput key={`${identity}:${value.savedAddressId}:${newAddress}`} onFound={a => onChange({ ...currentValue.current, street: a.address, neighborhood: a.neighborhood, city: a.city, state: a.state })} />
+          <div><Label>Apelido do endereço (opcional)</Label><Input value={value.addressLabel ?? ''} maxLength={100} placeholder="Casa, Trabalho…" onChange={e => set({ addressLabel: e.target.value })} /></div>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
               <Label>Rua *</Label>
