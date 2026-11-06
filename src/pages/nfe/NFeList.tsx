@@ -41,6 +41,7 @@ export default function NFeList() {
       .from('nfe_records')
       .select('*')
       .eq('company_id', company.id)
+      .neq('status', 'rascunho_transmitido')
       .order('created_at', { ascending: false })
       .limit(200);
     setItems((data as any) || []);
@@ -107,6 +108,9 @@ export default function NFeList() {
                         <td className="px-3 py-2 text-xs uppercase">{n.ambiente || '—'}</td>
                         <td className="px-3 py-2">
                           <Badge variant={statusVariant[n.status] || 'secondary'}>{n.status}</Badge>
+                          {n.status === 'rascunho' && (
+                            <Link to={`/nfe/nova?rascunho=${n.id}`} className="ml-2 text-xs text-primary underline">Continuar</Link>
+                          )}
                           {n.motivo_rejeicao && (
                             <div className="text-xs text-destructive mt-1 max-w-xs truncate" title={n.motivo_rejeicao}>
                               {n.motivo_rejeicao}
