@@ -136,6 +136,13 @@ Deno.serve(async (req) => {
               cst_cofins: fixCst(String(it.cst_cofins || '49'), Number(it.aliquota_cofins) || 0),
               aliquota_pis: Number(it.aliquota_pis) || 0,
               aliquota_cofins: Number(it.aliquota_cofins) || 0,
+              // ICMS (Simples Nacional via CSOSN) e IPI -- obrigatórios no
+              // grupo de imposto do XML da NF-e, ausentes antes desta correção.
+              csosn: String(it.csosn || '102'),
+              icms_origin: String(it.icms_origin ?? '0'),
+              icms_aliquot: Number(it.icms_aliquot) || 0,
+              ipi_cst: String(it.ipi_cst || '99'),
+              ipi_aliquot: Number(it.ipi_aliquot) || 0,
             }
           })
           const subtotal = emitPayload.itens.reduce(

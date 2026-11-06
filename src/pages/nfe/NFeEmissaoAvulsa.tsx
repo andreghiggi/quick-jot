@@ -21,10 +21,18 @@ type Item = {
   unidade: string;
   quantidade: number;
   valor_unitario: number;
+  // ICMS (Simples Nacional: CSOSN + origem da mercadoria)
+  csosn?: string;
+  icms_origin?: string;
+  icms_aliquot?: number;
   cst_pis?: string;
   cst_cofins?: string;
   aliquota_pis?: number;
   aliquota_cofins?: number;
+  // IPI (grupo opcional no XML quando o item não é tributado — mandamos
+  // sempre com CST '99' de fallback pra deixar explícito "não tributado")
+  ipi_cst?: string;
+  ipi_aliquot?: number;
 };
 
 export default function NFeEmissaoAvulsa() {
@@ -38,8 +46,11 @@ export default function NFeEmissaoAvulsa() {
   const [naturezaOperacao, setNaturezaOperacao] = useState('Venda');
   const [finalidade, setFinalidade] = useState<number>(1);
 
-  // Destinatário (PJ obrigatório na Fase 1)
+  // Destinatário — PJ (CNPJ) ou PF (CPF), conforme o DANFe padrão nacional
+  // (o quadro de destinatário aceita os dois tipos de documento).
+  const [destTipo, setDestTipo] = useState<'pj' | 'pf'>('pj');
   const [destCnpj, setDestCnpj] = useState('');
+  const [destCpf, setDestCpf] = useState('');
   const [destRazao, setDestRazao] = useState('');
   const [destIE, setDestIE] = useState('');
   const [destLogradouro, setDestLogradouro] = useState('');
@@ -48,6 +59,7 @@ export default function NFeEmissaoAvulsa() {
   const [destCidade, setDestCidade] = useState('');
   const [destUF, setDestUF] = useState('RS');
   const [destCep, setDestCep] = useState('');
+  const [destFone, setDestFone] = useState('');
 
   // Itens
   const [items, setItems] = useState<Item[]>([]);
@@ -69,31 +81,52 @@ export default function NFeEmissaoAvulsa() {
   useEffect(() => {
     if (!company?.id || productSearch.trim().length < 2) { setProductResults([]); return; }
     const t = setTimeout(async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select('id, name, ncm, cfop, cest, cst_pis, cst_cofins, aliquota_pis, aliquota_cofins, sale_price, unit')
+        .select('id, name, ncm, cfop, cest, icms_origin, tax_rule_id, sale_price, unit')
         .eq('company_id', company.id)
         .ilike('name', `%${productSearch}%`)
         .limit(10);
+      if (error) console.error('[NFe] busca de produto falhou:', error);
       setProductResults((data as any) || []);
     }, 250);
     return () => clearTimeout(t);
   }, [productSearch, company?.id]);
 
-  function addProduct(p: any) {
+  // Regra tributária (tax_rules) vinculada ao produto -- é de lá que vêm
+  // CSOSN, alíquota de ICMS, PIS/COFINS e IPI. Sem isso a nota sai sem o
+  // grupo de imposto, que é obrigatório no XML da NF-e.
+  async function fetchTaxRule(taxRuleId?: string | null) {
+    if (!taxRuleId) return null;
+    const { data, error } = await supabase
+      .from('tax_rules')
+      .select('cfop, ncm, cest, csosn, icms_aliquot, pis_cst, pis_aliquot, cofins_cst, cofins_aliquot, ipi_cst, ipi_aliquot')
+      .eq('id', taxRuleId)
+      .maybeSingle();
+    if (error) console.error('[NFe] busca de regra tributária falhou:', error);
+    return data;
+  }
+
+  async function addProduct(p: any) {
+    const taxRule = await fetchTaxRule(p.tax_rule_id);
     setItems(prev => [...prev, {
       product_id: p.id,
       descricao: p.name,
-      ncm: p.ncm || '',
-      cfop: p.cfop || '5102',
-      cest: p.cest || undefined,
+      ncm: p.ncm || taxRule?.ncm || '00000000',
+      cfop: taxRule?.cfop || p.cfop || '5102',
+      cest: p.cest || taxRule?.cest || undefined,
       unidade: p.unit || 'UN',
       quantidade: 1,
       valor_unitario: Number(p.sale_price) || 0,
-      cst_pis: p.cst_pis || '49',
-      cst_cofins: p.cst_cofins || '49',
-      aliquota_pis: Number(p.aliquota_pis) || 0,
-      aliquota_cofins: Number(p.aliquota_cofins) || 0,
+      csosn: taxRule?.csosn || '102',
+      icms_origin: p.icms_origin || '0',
+      icms_aliquot: Number(taxRule?.icms_aliquot) || 0,
+      cst_pis: taxRule?.pis_cst || '49',
+      cst_cofins: taxRule?.cofins_cst || '49',
+      aliquota_pis: Number(taxRule?.pis_aliquot) || 0,
+      aliquota_cofins: Number(taxRule?.cofins_aliquot) || 0,
+      ipi_cst: taxRule?.ipi_cst || '99',
+      ipi_aliquot: Number(taxRule?.ipi_aliquot) || 0,
     }]);
     setProductSearch('');
     setProductResults([]);
@@ -108,8 +141,15 @@ export default function NFeEmissaoAvulsa() {
       unidade: 'UN',
       quantidade: 1,
       valor_unitario: 0,
+      csosn: '102',
+      icms_origin: '0',
+      icms_aliquot: 0,
       cst_pis: '49',
       cst_cofins: '49',
+      aliquota_pis: 0,
+      aliquota_cofins: 0,
+      ipi_cst: '99',
+      ipi_aliquot: 0,
     }]);
   }
 
@@ -127,9 +167,14 @@ export default function NFeEmissaoAvulsa() {
   );
 
   function validate(): string | null {
-    if (!destCnpj.replace(/\D/g, '')) return 'CNPJ do destinatário é obrigatório.';
-    if (destCnpj.replace(/\D/g, '').length !== 14) return 'CNPJ inválido.';
-    if (!destRazao.trim()) return 'Razão social do destinatário é obrigatória.';
+    if (destTipo === 'pj') {
+      if (!destCnpj.replace(/\D/g, '')) return 'CNPJ do destinatário é obrigatório.';
+      if (destCnpj.replace(/\D/g, '').length !== 14) return 'CNPJ inválido.';
+    } else {
+      if (!destCpf.replace(/\D/g, '')) return 'CPF do destinatário é obrigatório.';
+      if (destCpf.replace(/\D/g, '').length !== 11) return 'CPF inválido.';
+    }
+    if (!destRazao.trim()) return destTipo === 'pj' ? 'Razão social do destinatário é obrigatória.' : 'Nome do destinatário é obrigatório.';
     if (!destLogradouro.trim() || !destCidade.trim() || !destUF.trim()) return 'Endereço do destinatário incompleto.';
     if (items.length === 0) return 'Adicione pelo menos 1 item.';
     for (const it of items) {
@@ -154,9 +199,12 @@ export default function NFeEmissaoAvulsa() {
         natureza_operacao: naturezaOperacao,
         finalidade,
         destinatario: {
-          cnpj: destCnpj.replace(/\D/g, ''),
+          ...(destTipo === 'pj'
+            ? { cnpj: destCnpj.replace(/\D/g, '') }
+            : { cpf: destCpf.replace(/\D/g, '') }),
           razao_social: destRazao,
-          inscricao_estadual: destIE || undefined,
+          inscricao_estadual: destTipo === 'pj' ? (destIE || undefined) : undefined,
+          telefone: destFone.replace(/\D/g, '') || undefined,
           endereco: {
             logradouro: destLogradouro,
             numero: destNumero,
@@ -165,7 +213,8 @@ export default function NFeEmissaoAvulsa() {
             uf: destUF,
             cep: destCep.replace(/\D/g, ''),
           },
-          indIEDest: destIE ? '1' : '9',
+          // PF nunca é contribuinte de ICMS (9 = não contribuinte).
+          indIEDest: destTipo === 'pf' ? '9' : (destIE ? '1' : '9'),
         },
         itens: items,
         valor_total: valorTotal,
@@ -218,22 +267,53 @@ export default function NFeEmissaoAvulsa() {
               <Label>Natureza da Operação</Label>
               <Input value={naturezaOperacao} onChange={e => setNaturezaOperacao(e.target.value)} />
             </div>
+            <div>
+              <Label>Finalidade</Label>
+              <Select value={String(finalidade)} onValueChange={(v) => setFinalidade(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 — Normal</SelectItem>
+                  <SelectItem value="2">2 — Complementar</SelectItem>
+                  <SelectItem value="3">3 — Ajuste</SelectItem>
+                  <SelectItem value="4">4 — Devolução</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
         {/* Destinatário */}
         <Card>
-          <CardHeader><CardTitle className="text-base">Destinatário (PJ)</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Destinatário</CardTitle>
+            <Select value={destTipo} onValueChange={(v: any) => setDestTipo(v)}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pj">Pessoa Jurídica</SelectItem>
+                <SelectItem value="pf">Pessoa Física</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="md:col-span-1"><Label>CNPJ *</Label><Input value={destCnpj} onChange={e => setDestCnpj(e.target.value)} /></div>
-            <div className="md:col-span-2"><Label>Razão social *</Label><Input value={destRazao} onChange={e => setDestRazao(e.target.value)} /></div>
-            <div><Label>Inscrição Estadual</Label><Input value={destIE} onChange={e => setDestIE(e.target.value)} placeholder="ou ISENTO" /></div>
+            {destTipo === 'pj' ? (
+              <>
+                <div className="md:col-span-1"><Label>CNPJ *</Label><Input value={destCnpj} onChange={e => setDestCnpj(e.target.value)} /></div>
+                <div className="md:col-span-2"><Label>Razão social *</Label><Input value={destRazao} onChange={e => setDestRazao(e.target.value)} /></div>
+                <div><Label>Inscrição Estadual</Label><Input value={destIE} onChange={e => setDestIE(e.target.value)} placeholder="ou ISENTO" /></div>
+              </>
+            ) : (
+              <>
+                <div className="md:col-span-1"><Label>CPF *</Label><Input value={destCpf} onChange={e => setDestCpf(e.target.value)} /></div>
+                <div className="md:col-span-3"><Label>Nome *</Label><Input value={destRazao} onChange={e => setDestRazao(e.target.value)} /></div>
+              </>
+            )}
             <div className="md:col-span-2"><Label>Logradouro *</Label><Input value={destLogradouro} onChange={e => setDestLogradouro(e.target.value)} /></div>
             <div><Label>Número</Label><Input value={destNumero} onChange={e => setDestNumero(e.target.value)} /></div>
             <div><Label>Bairro</Label><Input value={destBairro} onChange={e => setDestBairro(e.target.value)} /></div>
             <div className="md:col-span-2"><Label>Município *</Label><Input value={destCidade} onChange={e => setDestCidade(e.target.value)} /></div>
             <div><Label>UF *</Label><Input value={destUF} maxLength={2} onChange={e => setDestUF(e.target.value.toUpperCase())} /></div>
             <div><Label>CEP</Label><Input value={destCep} onChange={e => setDestCep(e.target.value)} /></div>
+            <div><Label>Telefone</Label><Input value={destFone} onChange={e => setDestFone(e.target.value)} /></div>
           </CardContent>
         </Card>
 
@@ -285,6 +365,11 @@ export default function NFeEmissaoAvulsa() {
                       <th className="px-2 py-1 w-24">Qtd</th>
                       <th className="px-2 py-1 w-32">Vlr Unit.</th>
                       <th className="px-2 py-1 w-28">Total</th>
+                      <th className="px-2 py-1 w-20">CSOSN</th>
+                      <th className="px-2 py-1 w-16">Orig. ICMS</th>
+                      <th className="px-2 py-1 w-20">% ICMS</th>
+                      <th className="px-2 py-1 w-20">CST IPI</th>
+                      <th className="px-2 py-1 w-20">% IPI</th>
                       <th className="px-2 py-1 w-10"></th>
                     </tr>
                   </thead>
@@ -302,6 +387,11 @@ export default function NFeEmissaoAvulsa() {
                         <td className="px-2 py-1 text-right font-medium">
                           R$ {((it.quantidade || 0) * (it.valor_unitario || 0)).toFixed(2).replace('.', ',')}
                         </td>
+                        <td className="px-2 py-1"><Input value={it.csosn || ''} onChange={e => updateItem(idx, { csosn: e.target.value })} /></td>
+                        <td className="px-2 py-1"><Input value={it.icms_origin || ''} onChange={e => updateItem(idx, { icms_origin: e.target.value })} /></td>
+                        <td className="px-2 py-1"><Input type="number" value={it.icms_aliquot ?? 0} onChange={e => updateItem(idx, { icms_aliquot: Number(e.target.value) })} /></td>
+                        <td className="px-2 py-1"><Input value={it.ipi_cst || ''} onChange={e => updateItem(idx, { ipi_cst: e.target.value })} /></td>
+                        <td className="px-2 py-1"><Input type="number" value={it.ipi_aliquot ?? 0} onChange={e => updateItem(idx, { ipi_aliquot: Number(e.target.value) })} /></td>
                         <td className="px-2 py-1">
                           <Button variant="ghost" size="icon" onClick={() => removeItem(idx)}>
                             <Trash2 className="w-4 h-4 text-destructive" />
@@ -314,7 +404,7 @@ export default function NFeEmissaoAvulsa() {
                     <tr className="border-t bg-muted/30">
                       <td className="px-2 py-2 font-medium" colSpan={6}>Total</td>
                       <td className="px-2 py-2 text-right font-bold">R$ {valorTotal.toFixed(2).replace('.', ',')}</td>
-                      <td />
+                      <td colSpan={6} />
                     </tr>
                   </tfoot>
                 </table>
