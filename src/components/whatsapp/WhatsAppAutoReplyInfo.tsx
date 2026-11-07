@@ -12,6 +12,7 @@ interface WhatsAppAutoReplyInfoProps {
 const GREETING_EXAMPLES = [
   'oi', 'olá', 'oie', 'bom dia', 'boa tarde', 'boa noite',
   'opa', 'salve', 'eae', 'fala', 'quero pedir', 'tem cardápio?',
+  'pedir', 'pedido', 'cardápio', 'catálogo',
 ];
 
 export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoReplyInfoProps) {

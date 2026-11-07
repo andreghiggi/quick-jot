@@ -11,6 +11,9 @@ const GREETING_PATTERNS = [
   /^(oi+e?|olá|ola|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|hello|hi|opa|ou|ow|ei|hei|alô|alo|boa|bão|buenas)\b/i,
   /^(quero|queria|gostaria).*(pedir|cardapio|cardápio|menu)/i,
   /^(tem|qual).*(cardapio|cardápio|menu)/i,
+  // Palavras-chave diretas: pedir, pedido, cardápio, catálogo (isoladas ou em frases)
+  /\b(pedir|pedido|fazer pedido)\b/i,
+  /\b(cardapio|cardápio|catalogo|catálogo)\b/i,
 ];
 
 // Production URL - NEVER use Lovable preview URLs
