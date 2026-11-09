@@ -123,6 +123,7 @@ export function PDVV2Sidebar() {
   const people = [
     { title: 'Clientes', icon: Users, href: '/clientes' },
     { title: 'Fornecedores', icon: Truck, href: '/fornecedores' },
+    { title: 'Transportadores', icon: Truck, href: '/transportadores' },
   ];
 
   const salesActions = [

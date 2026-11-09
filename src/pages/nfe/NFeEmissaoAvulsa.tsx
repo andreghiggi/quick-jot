@@ -19,6 +19,8 @@ import {
   buildInstallments, changeAllowed, paymentDifferenceCents, validAccessKey, validTaxDocument,
   type NFeInstallment, type NFePayment,
 } from '@/lib/nfeForm';
+import { IND_IE_OPTIONS, formatCep, lookupCep, onlyDigits } from '@/lib/fiscalPerson';
+import { DanfePreviewDialog } from '@/components/nfe/DanfePreviewDialog';
 
 type Item = {
   product_id: string | null;
@@ -84,6 +86,13 @@ export default function NFeEmissaoAvulsa() {
   const [destUF, setDestUF] = useState('RS');
   const [destCep, setDestCep] = useState('');
   const [destFone, setDestFone] = useState('');
+  const [destComplemento, setDestComplemento] = useState('');
+  const [destIbge, setDestIbge] = useState('');
+  const [destIndIE, setDestIndIE] = useState('9');
+  const [productFocused, setProductFocused] = useState(false);
+  const [carrierResults, setCarrierResults] = useState<any[]>([]);
+  const [carrierFocused, setCarrierFocused] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [savingCustomer, setSavingCustomer] = useState(false);
@@ -142,6 +151,7 @@ export default function NFeEmissaoAvulsa() {
         setDestTipo(d.tipo); setDestCnpj(d.cnpj); setDestCpf(d.cpf); setDestRazao(d.razao); setDestIE(d.ie);
         setDestLogradouro(d.logradouro); setDestNumero(d.numero); setDestBairro(d.bairro); setDestCidade(d.cidade);
         setDestUF(d.uf); setDestCep(d.cep); setDestFone(d.fone);
+        setDestComplemento(d.complemento || ''); setDestIbge(d.ibge || ''); setDestIndIE(d.indIE || (d.ie ? '1' : '9'));
         setItems(f.items || []); setPayments(f.payments || []); setTroco(f.troco || 0); setTerms(f.terms || '');
         setInstallments(f.installments || []); setModFrete(f.modFrete); setValorFrete(f.valorFrete || 0);
         setTransp(f.transp); setVeiculo(f.veiculo); setVol(f.vol);
@@ -151,21 +161,68 @@ export default function NFeEmissaoAvulsa() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
+  // Lista produtos ao focar o campo (mesmo vazio); a digitação filtra.
   useEffect(() => {
-    if (!company?.id || productSearch.trim().length < 2) { setProductResults([]); return; }
+    if (!company?.id || !productFocused) { setProductResults([]); return; }
     const t = setTimeout(async () => {
       const q = productSearch.trim().replace(/[%,()]/g, '');
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('id, name, code, gtin, ncm, cfop, cest, icms_origin, tax_rule_id, sale_price, unit')
         .eq('company_id', company.id)
-        .or(`name.ilike.%${q}%,code.ilike.%${q}%`)
-        .limit(10);
+        .eq('active', true)
+        .order('name')
+        .limit(q ? 20 : 30);
+      if (q) query = query.or(`name.ilike.%${q}%,code.ilike.%${q}%,gtin.ilike.%${q}%`);
+      const { data, error } = await query;
       if (error) console.error('[NFe] busca de produto falhou:', error);
       setProductResults((data as any) || []);
-    }, 250);
+    }, productSearch.trim() ? 200 : 0);
     return () => clearTimeout(t);
-  }, [productSearch, company?.id]);
+  }, [productSearch, productFocused, company?.id]);
+
+  // Transportadores cadastrados (autocomplete na aba Transporte)
+  useEffect(() => {
+    if (!company?.id || !carrierFocused) { setCarrierResults([]); return; }
+    const t = setTimeout(async () => {
+      const q = transp.razao_social.trim().replace(/[%,()]/g, '');
+      const d = transp.documento.replace(/\D/g, '');
+      let query = (supabase as any).from('carriers').select('*').eq('company_id', company.id).eq('active', true).order('name').limit(15);
+      if (d.length >= 3) query = query.ilike('document', `%${d}%`);
+      else if (q) query = query.ilike('name', `%${q}%`);
+      const { data } = await query;
+      setCarrierResults(data || []);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [transp.razao_social, transp.documento, carrierFocused, company?.id]);
+
+  function selectCarrier(c: any) {
+    setTransp({
+      documento: (c.document || '').replace(/\D/g, ''), razao_social: c.name || '', ie: c.state_registration || '',
+      endereco: [c.address, c.number, c.neighborhood].filter(Boolean).join(', '), municipio: c.city || '', uf: c.state || '',
+    });
+    if (c.vehicle_plate) setVeiculo({ placa: c.vehicle_plate, uf: c.vehicle_state || '', rntc: c.rntc || '' });
+    setCarrierFocused(false); setCarrierResults([]);
+  }
+
+  // Grava/atualiza automaticamente a transportadora preenchida em Transportadores.
+  async function persistCarrier() {
+    if (!company?.id || modFrete === '9' || !transp.razao_social.trim()) return;
+    const doc = transp.documento.replace(/\D/g, '');
+    const row: any = {
+      company_id: company.id, name: transp.razao_social.trim(), document: doc || null,
+      state_registration: transp.ie || null, address: transp.endereco || null, city: transp.municipio || null,
+      state: transp.uf || null, vehicle_plate: veiculo.placa || null, vehicle_state: veiculo.uf || null, rntc: veiculo.rntc || null,
+    };
+    try {
+      let q = (supabase as any).from('carriers').select('id').eq('company_id', company.id).limit(1);
+      q = doc ? q.eq('document', doc) : q.ilike('name', transp.razao_social.trim());
+      const { data } = await q;
+      const existing = data?.[0];
+      if (existing) await (supabase as any).from('carriers').update(row).eq('id', existing.id);
+      else await (supabase as any).from('carriers').insert(row);
+    } catch (e) { console.warn('[NFe] não foi possível salvar transportador', e); }
+  }
 
   useEffect(() => {
     if (!company?.id || customerSearch.trim().length < 2) { setCustomerResults([]); return; }
@@ -175,7 +232,7 @@ export default function NFeEmissaoAvulsa() {
       const filters = [`name.ilike.%${q}%`];
       if (digits.length >= 3) filters.push(`cpf.ilike.%${digits}%`, `phone.ilike.%${digits}%`);
       const { data } = await supabase.from('customers')
-        .select('id, name, cpf, phone, address, number, neighborhood, city, state')
+        .select('*')
         .eq('company_id', company.id).or(filters.join(',')).limit(10);
       setCustomerResults(data || []);
     }, 250);
@@ -184,10 +241,15 @@ export default function NFeEmissaoAvulsa() {
 
   function selectCustomer(c: any) {
     const doc = (c.cpf || '').replace(/\D/g, '');
-    if (doc.length === 14) { setDestTipo('pj'); setDestCnpj(doc); } else { setDestTipo('pf'); setDestCpf(doc); }
+    const isPJ = doc.length === 14 || c.person_type === 'PJ';
+    if (isPJ) { setDestTipo('pj'); setDestCnpj(doc); setDestCpf(''); } else { setDestTipo('pf'); setDestCpf(doc); setDestCnpj(''); }
     setDestRazao(c.name || ''); setDestFone(c.phone || '');
+    setDestIndIE(c.ind_ie_dest || (c.ie && c.ie !== 'ISENTO' ? '1' : '9'));
+    setDestIE(c.ie || '');
     setDestLogradouro(c.address || ''); setDestNumero(c.number || ''); setDestBairro(c.neighborhood || '');
+    setDestComplemento(c.complement || ''); setDestCep(c.cep || ''); setDestIbge(c.ibge_code || '');
     setDestCidade(c.city || ''); setDestUF((c.state || destUF).toUpperCase());
+    if (!doc) toast.warning('Este cliente não tem CPF/CNPJ no cadastro.');
     setCustomerSearch(''); setCustomerResults([]);
   }
 
@@ -201,7 +263,9 @@ export default function NFeEmissaoAvulsa() {
       cpf: (destTipo === 'pj' ? destCnpj : destCpf).replace(/\D/g, '') || null,
       address: destLogradouro || null, number: destNumero || null, neighborhood: destBairro || null,
       city: destCidade || null, state: destUF || null,
-    }, { onConflict: 'company_id,phone' });
+      complement: destComplemento || null, cep: destCep || null, ibge_code: destIbge || null,
+      person_type: destTipo === 'pj' ? 'PJ' : 'PF', ie: destIE || null, ind_ie_dest: destIndIE,
+    } as any, { onConflict: 'company_id,phone' });
     setSavingCustomer(false);
     if (error) toast.error('Não foi possível cadastrar o cliente.'); else toast.success('Cliente cadastrado.');
   }
@@ -278,6 +342,7 @@ export default function NFeEmissaoAvulsa() {
     } else if (destCpf.replace(/\D/g, '').length !== 11) return g('CPF do destinatário inválido.');
     if (!destRazao.trim()) return g(destTipo === 'pj' ? 'Razão social do destinatário é obrigatória.' : 'Nome do destinatário é obrigatório.');
     if (!destLogradouro.trim() || !destCidade.trim() || !destUF.trim()) return g('Endereço do destinatário incompleto.');
+    if (destIndIE === '1' && !destIE.trim()) return g('Informe a inscrição estadual do destinatário contribuinte.');
     if (!naturezaOperacao.trim()) return g('Natureza da operação é obrigatória.');
     if (items.length === 0) return g('Adicione pelo menos 1 item.');
     for (const it of items) {
@@ -308,13 +373,15 @@ export default function NFeEmissaoAvulsa() {
       destinatario: {
         ...(destTipo === 'pj' ? { cnpj: destCnpj.replace(/\D/g, '') } : { cpf: destCpf.replace(/\D/g, '') }),
         razao_social: destRazao,
-        inscricao_estadual: destTipo === 'pj' ? (destIE || undefined) : undefined,
+        inscricao_estadual: destIndIE === '1' ? (destIE || undefined) : undefined,
         telefone: destFone.replace(/\D/g, '') || undefined,
         endereco: {
           logradouro: destLogradouro, numero: destNumero, bairro: destBairro,
+          complemento: destComplemento || undefined,
           municipio: destCidade, uf: destUF, cep: destCep.replace(/\D/g, ''),
+          codigo_municipio: destIbge.replace(/\D/g, '') || undefined,
         },
-        indIEDest: destTipo === 'pf' ? '9' : (destIE ? '1' : '9'),
+        indIEDest: destIndIE,
       },
       itens: items,
       valor_frete: hasTransport ? valorFrete : 0,
@@ -344,7 +411,8 @@ export default function NFeEmissaoAvulsa() {
     return {
       serie, ambiente, naturezaOperacao, finalidade, dhEmi, dhSaiEnt, indPres, indFinal,
       dest: { tipo: destTipo, cnpj: destCnpj, cpf: destCpf, razao: destRazao, ie: destIE, logradouro: destLogradouro,
-        numero: destNumero, bairro: destBairro, cidade: destCidade, uf: destUF, cep: destCep, fone: destFone },
+        numero: destNumero, bairro: destBairro, cidade: destCidade, uf: destUF, cep: destCep, fone: destFone,
+        complemento: destComplemento, ibge: destIbge, indIE: destIndIE },
       items, payments, troco, terms, installments, modFrete, valorFrete, transp, veiculo, vol,
       xPed, infCpl, infAdFisco, autXml, refs,
     };
@@ -354,6 +422,7 @@ export default function NFeEmissaoAvulsa() {
   async function salvarRascunho(silent = false): Promise<boolean> {
     if (!company?.id) return false;
     setSaving(true);
+    await persistCarrier();
     const row: any = {
       company_id: company.id, status: 'rascunho', serie, ambiente,
       natureza_operacao: naturezaOperacao, finalidade, valor_total: valorTotal,
@@ -378,6 +447,7 @@ export default function NFeEmissaoAvulsa() {
     if (!window.confirm(`Transmitir NF-e de ${money(valorTotal)} para a SEFAZ em ${ambiente === 'producao' ? 'PRODUÇÃO' : 'homologação'}?`)) return;
     transmitting.current = true;
     setLoading(true);
+    await persistCarrier();
     try {
       const { data, error } = await supabase.functions.invoke('nfe-proxy', {
         body: { action: 'emitir', companyId: company.id, payload: buildPayload() },
@@ -506,7 +576,7 @@ export default function NFeEmissaoAvulsa() {
                     <>
                       <div><Label>CNPJ *</Label><Input value={destCnpj} onChange={e => setDestCnpj(e.target.value)} /></div>
                       <div className="md:col-span-2"><Label>Razão social *</Label><Input value={destRazao} onChange={e => setDestRazao(e.target.value)} /></div>
-                      <div><Label>Inscrição Estadual</Label><Input value={destIE} onChange={e => setDestIE(e.target.value)} placeholder="ou ISENTO" /></div>
+                      <div />
                     </>
                   ) : (
                     <>
@@ -514,12 +584,28 @@ export default function NFeEmissaoAvulsa() {
                       <div className="md:col-span-3"><Label>Nome *</Label><Input value={destRazao} onChange={e => setDestRazao(e.target.value)} /></div>
                     </>
                   )}
+                  <div className="md:col-span-2">
+                    <Label>Indicador de inscrição estadual</Label>
+                    <Select value={destIndIE} onValueChange={setDestIndIE}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{IND_IE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2"><Label>Inscrição Estadual{destIndIE === '1' ? ' *' : ''}</Label><Input value={destIE} disabled={destIndIE !== '1'} onChange={e => setDestIE(e.target.value)} /></div>
+                  <div><Label>CEP</Label><Input value={destCep} onChange={async e => {
+                    const v = formatCep(e.target.value); setDestCep(v);
+                    if (onlyDigits(v).length === 8) {
+                      const r = await lookupCep(v);
+                      if (r) { if (r.logradouro) setDestLogradouro(r.logradouro); if (r.bairro) setDestBairro(r.bairro); setDestCidade(r.cidade); setDestUF(r.uf); setDestIbge(r.ibge); }
+                    }
+                  }} /></div>
                   <div className="md:col-span-2"><Label>Logradouro *</Label><Input value={destLogradouro} onChange={e => setDestLogradouro(e.target.value)} /></div>
                   <div><Label>Número</Label><Input value={destNumero} onChange={e => setDestNumero(e.target.value)} /></div>
+                  <div><Label>Complemento</Label><Input value={destComplemento} onChange={e => setDestComplemento(e.target.value)} /></div>
                   <div><Label>Bairro</Label><Input value={destBairro} onChange={e => setDestBairro(e.target.value)} /></div>
-                  <div className="md:col-span-2"><Label>Município *</Label><Input value={destCidade} onChange={e => setDestCidade(e.target.value)} /></div>
+                  <div><Label>Município *</Label><Input value={destCidade} onChange={e => setDestCidade(e.target.value)} /></div>
                   <div><Label>UF *</Label><Input value={destUF} maxLength={2} onChange={e => setDestUF(e.target.value.toUpperCase())} /></div>
-                  <div><Label>CEP</Label><Input value={destCep} onChange={e => setDestCep(e.target.value)} /></div>
+                  <div><Label>Código IBGE</Label><Input value={destIbge} maxLength={7} onChange={e => setDestIbge(e.target.value)} /></div>
                   <div><Label>Telefone</Label><Input value={destFone} onChange={e => setDestFone(e.target.value)} /></div>
                 </div>
               </CardContent>
@@ -534,13 +620,19 @@ export default function NFeEmissaoAvulsa() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <div className="relative md:col-span-2">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input className="pl-9" placeholder="Buscar produto pelo nome ou código…" value={productSearch} onChange={e => setProductSearch(e.target.value)} />
+                    <Input className="pl-9" placeholder="Buscar produto pelo nome ou código…" value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                      onFocus={() => setProductFocused(true)} onBlur={() => setTimeout(() => setProductFocused(false), 200)} />
+                    {productFocused && productResults.length === 0 && (
+                      <div className="absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md px-3 py-2 text-sm text-muted-foreground">Nenhum produto encontrado.</div>
+                    )}
                     {productResults.length > 0 && (
                       <div className="absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md max-h-60 overflow-auto">
                         {productResults.map(p => (
                           <button key={p.id} type="button" className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm" onClick={() => addProduct(p)}>
                             <span className="font-medium">{p.name}</span>
+                            {p.code && <span className="text-muted-foreground ml-2">#{p.code}</span>}
                             <span className="text-muted-foreground ml-2">{money(p.sale_price)}</span>
+                            {!p.ncm && <span className="text-destructive ml-2 text-xs">sem NCM</span>}
                           </button>
                         ))}
                       </div>
@@ -678,8 +770,22 @@ export default function NFeEmissaoAvulsa() {
                 <Card>
                   <CardHeader><CardTitle className="text-base">Transportadora</CardTitle></CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div><Label>CNPJ/CPF</Label><Input value={transp.documento} onChange={e => setTransp({ ...transp, documento: e.target.value })} /></div>
-                    <div className="md:col-span-2"><Label>Razão social</Label><Input value={transp.razao_social} onChange={e => setTransp({ ...transp, razao_social: e.target.value })} /></div>
+                    <div><Label>CNPJ/CPF</Label><Input value={transp.documento} onChange={e => setTransp({ ...transp, documento: e.target.value })}
+                      onFocus={() => setCarrierFocused(true)} onBlur={() => setTimeout(() => setCarrierFocused(false), 200)} /></div>
+                    <div className="md:col-span-2 relative"><Label>Razão social</Label>
+                      <Input value={transp.razao_social} placeholder="Digite ou escolha um transportador cadastrado" onChange={e => setTransp({ ...transp, razao_social: e.target.value })}
+                        onFocus={() => setCarrierFocused(true)} onBlur={() => setTimeout(() => setCarrierFocused(false), 200)} />
+                      {carrierFocused && carrierResults.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md max-h-60 overflow-auto">
+                          {carrierResults.map(c => (
+                            <button key={c.id} type="button" className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm" onMouseDown={e => e.preventDefault()} onClick={() => selectCarrier(c)}>
+                              <span className="font-medium">{c.name}</span>
+                              <span className="text-muted-foreground ml-2">{c.document || ''} {c.city ? `· ${c.city}/${c.state || ''}` : ''}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div><Label>Inscrição Estadual</Label><Input value={transp.ie} onChange={e => setTransp({ ...transp, ie: e.target.value })} /></div>
                     <div className="md:col-span-2"><Label>Endereço</Label><Input value={transp.endereco} onChange={e => setTransp({ ...transp, endereco: e.target.value })} /></div>
                     <div><Label>Município</Label><Input value={transp.municipio} onChange={e => setTransp({ ...transp, municipio: e.target.value })} /></div>
@@ -790,12 +896,15 @@ export default function NFeEmissaoAvulsa() {
           <Button variant="secondary" onClick={() => salvarRascunho()} disabled={saving || loading}>
             {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar
           </Button>
+          <Button variant="outline" onClick={() => setPreviewOpen(true)}>Pré-visualizar DANFE</Button>
           <Button onClick={transmitir} disabled={loading || saving}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar e Transmitir
           </Button>
           <Button variant="outline" disabled={tabIdx === TABS.length - 1} onClick={() => setTab(TABS[tabIdx + 1])}>Próximo</Button>
         </div>
       </div>
+      <DanfePreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} company={company}
+        data={{ payload: buildPayload(), valorProdutos, destTipo }} />
     </AppLayout>
   );
 }

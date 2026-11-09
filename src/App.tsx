@@ -546,6 +546,12 @@ function AppRoutes() {
           <P.Suppliers />
         </ProtectedRoute>
       } />
+
+      <Route path="/transportadores" element={
+        <ProtectedRoute requireCompany>
+          <P.Carriers />
+        </ProtectedRoute>
+      } />
       
       <Route path="/relatorios/curva-abc" element={
         <ProtectedRoute requireCompany>

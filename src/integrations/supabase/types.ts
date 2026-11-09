@@ -610,6 +610,83 @@ export type Database = {
         }
         Relationships: []
       }
+      carriers: {
+        Row: {
+          active: boolean
+          address: string | null
+          city: string | null
+          company_id: string
+          created_at: string
+          document: string | null
+          ibge_code: string | null
+          id: string
+          name: string
+          neighborhood: string | null
+          notes: string | null
+          number: string | null
+          phone: string | null
+          rntc: string | null
+          state: string | null
+          state_registration: string | null
+          updated_at: string
+          vehicle_plate: string | null
+          vehicle_state: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string
+          document?: string | null
+          ibge_code?: string | null
+          id?: string
+          name: string
+          neighborhood?: string | null
+          notes?: string | null
+          number?: string | null
+          phone?: string | null
+          rntc?: string | null
+          state?: string | null
+          state_registration?: string | null
+          updated_at?: string
+          vehicle_plate?: string | null
+          vehicle_state?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          document?: string | null
+          ibge_code?: string | null
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          notes?: string | null
+          number?: string | null
+          phone?: string | null
+          rntc?: string | null
+          state?: string | null
+          state_registration?: string | null
+          updated_at?: string
+          vehicle_plate?: string | null
+          vehicle_state?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carriers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -1504,15 +1581,21 @@ export type Database = {
         Row: {
           address: string | null
           birth_date: string | null
+          cep: string | null
           city: string | null
           company_id: string | null
           complement: string | null
           cpf: string | null
           created_at: string
+          email: string | null
+          ibge_code: string | null
           id: string
+          ie: string | null
+          ind_ie_dest: string
           name: string
           neighborhood: string | null
           number: string | null
+          person_type: string
           phone: string
           state: string | null
           updated_at: string
@@ -1520,15 +1603,21 @@ export type Database = {
         Insert: {
           address?: string | null
           birth_date?: string | null
+          cep?: string | null
           city?: string | null
           company_id?: string | null
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          email?: string | null
+          ibge_code?: string | null
           id?: string
+          ie?: string | null
+          ind_ie_dest?: string
           name: string
           neighborhood?: string | null
           number?: string | null
+          person_type?: string
           phone: string
           state?: string | null
           updated_at?: string
@@ -1536,15 +1625,21 @@ export type Database = {
         Update: {
           address?: string | null
           birth_date?: string | null
+          cep?: string | null
           city?: string | null
           company_id?: string | null
           complement?: string | null
           cpf?: string | null
           created_at?: string
+          email?: string | null
+          ibge_code?: string | null
           id?: string
+          ie?: string | null
+          ind_ie_dest?: string
           name?: string
           neighborhood?: string | null
           number?: string | null
+          person_type?: string
           phone?: string
           state?: string | null
           updated_at?: string

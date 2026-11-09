@@ -167,6 +167,7 @@ function OperationalSidebar() {
   const cadastrosPessoasItems = [
     { title: 'Clientes', icon: Users, href: '/clientes' },
     { title: 'Fornecedores', icon: Truck, href: '/fornecedores' },
+    { title: 'Transportadores', icon: Truck, href: '/transportadores' },
   ];
 
   // Cadastros - bloco Configurações (visível só para admin da empresa)
