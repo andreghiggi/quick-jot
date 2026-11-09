@@ -317,13 +317,6 @@ export default function NFeEmissaoAvulsa() {
     setBarcode('');
   }
 
-  function addManualItem() {
-    setItems(prev => [...prev, {
-      product_id: null, descricao: '', ncm: '', cfop: '5102', unidade: 'UN', quantidade: 1, valor_unitario: 0,
-      csosn: '102', icms_origin: '0', icms_aliquot: 0, cst_pis: '49', cst_cofins: '49',
-      aliquota_pis: 0, aliquota_cofins: 0, ipi_cst: '99', ipi_aliquot: 0,
-    }]);
-  }
   const updateItem = (idx: number, patch: Partial<Item>) =>
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it));
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
@@ -613,7 +606,6 @@ export default function NFeEmissaoAvulsa() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Produtos</CardTitle>
-                <Button variant="outline" size="sm" onClick={addManualItem}><Plus className="w-4 h-4 mr-1" /> Item manual</Button>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
