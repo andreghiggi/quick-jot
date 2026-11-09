@@ -168,6 +168,19 @@ serve(async (req) => {
       });
     }
 
+    // Skip stale messages (delivered late after a reconnect / history catch-up)
+    const rawTs = Number(messageData.messageTimestamp ?? 0);
+    if (rawTs > 0) {
+      const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
+      const ageMs = Date.now() - tsMs;
+      if (ageMs > 2 * 60 * 1000) {
+        console.log('Skipping stale message, age(s):', Math.round(ageMs / 1000));
+        return new Response(JSON.stringify({ ok: true, skipped: 'stale_message' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Skip group messages — auto-reply must only run in 1:1 chats
     const remoteJid = messageData.key?.remoteJid || '';
     if (remoteJid.endsWith('@g.us') || remoteJid.endsWith('@broadcast') || remoteJid.endsWith('@newsletter')) {

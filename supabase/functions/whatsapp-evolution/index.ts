@@ -62,7 +62,7 @@ serve(async (req) => {
           integration: 'WHATSAPP-BAILEYS',
           qrcode: true,
           rejectCall: false,
-          alwaysOnline: false,
+          alwaysOnline: true,
           readMessages: false,
           readStatus: false,
           webhook: {
@@ -95,7 +95,7 @@ serve(async (req) => {
             integration: 'WHATSAPP-BAILEYS',
             qrcode: true,
             rejectCall: false,
-            alwaysOnline: false,
+            alwaysOnline: true,
             readMessages: false, // Don't mark as read - preserves native notifications
             readStatus: false,
             webhook: {
@@ -629,7 +629,7 @@ serve(async (req) => {
             integration: 'WHATSAPP-BAILEYS',
             qrcode: true,
             rejectCall: false,
-            alwaysOnline: false,
+            alwaysOnline: true,
             readMessages: false,
             readStatus: false,
             webhook: {
