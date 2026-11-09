@@ -601,12 +601,11 @@ export default function NFeEmissaoAvulsa() {
                   }} /></div>
                   <div className="md:col-span-2"><Label>Logradouro *</Label><Input value={destLogradouro} onChange={e => setDestLogradouro(e.target.value)} /></div>
                   <div><Label>Número</Label><Input value={destNumero} onChange={e => setDestNumero(e.target.value)} /></div>
-                  <div><Label>Complemento</Label><Input value={destComplemento} onChange={e => setDestComplemento(e.target.value)} /></div>
-                  <div><Label>Bairro</Label><Input value={destBairro} onChange={e => setDestBairro(e.target.value)} /></div>
+                  <div className="md:col-span-2"><Label>Complemento</Label><Input value={destComplemento} onChange={e => setDestComplemento(e.target.value)} /></div>
+                  <div className="md:col-span-2"><Label>Bairro</Label><Input value={destBairro} onChange={e => setDestBairro(e.target.value)} /></div>
                   <div><Label>Município *</Label><Input value={destCidade} onChange={e => setDestCidade(e.target.value)} /></div>
                   <div><Label>UF *</Label><Input value={destUF} maxLength={2} onChange={e => setDestUF(e.target.value.toUpperCase())} /></div>
-                  <div><Label>Código IBGE</Label><Input value={destIbge} maxLength={7} onChange={e => setDestIbge(e.target.value)} /></div>
-                  <div><Label>Telefone</Label><Input value={destFone} onChange={e => setDestFone(e.target.value)} /></div>
+                  <div className="md:col-span-2"><Label>Telefone</Label><Input value={destFone} onChange={e => setDestFone(e.target.value)} /></div>
                 </div>
               </CardContent>
             </Card>

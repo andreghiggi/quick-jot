@@ -269,9 +269,8 @@ export default function Customers() {
             {field('number', 'Número')}
             {field('complement', 'Complemento', 'sm:col-span-2')}
             {field('neighborhood', 'Bairro', 'sm:col-span-2')}
-            {field('city', 'Cidade', 'sm:col-span-2')}
+            {field('city', 'Cidade', 'sm:col-span-3')}
             <div><Label>UF</Label><Input maxLength={2} value={form.state} onChange={e => set('state', e.target.value.toUpperCase())} /></div>
-            {field('ibge_code', 'Código IBGE', '', { maxLength: 7 })}
           </div>
 
           <DialogFooter>

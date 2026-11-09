@@ -162,7 +162,6 @@ export default function Carriers() {
             {field('neighborhood', 'Bairro', 'sm:col-span-2')}
             {field('city', 'Município')}
             <div><Label>UF</Label><Input maxLength={2} value={form.state} onChange={e => set('state', e.target.value.toUpperCase())} /></div>
-            {field('ibge_code', 'Código IBGE', '', { maxLength: 7 })}
             <div><Label>Placa</Label><Input value={form.vehicle_plate} onChange={e => set('vehicle_plate', e.target.value.toUpperCase())} /></div>
             <div><Label>UF da placa</Label><Input maxLength={2} value={form.vehicle_state} onChange={e => set('vehicle_state', e.target.value.toUpperCase())} /></div>
             {field('rntc', 'RNTC')}
