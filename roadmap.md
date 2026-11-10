@@ -1,5 +1,10 @@
 # Roadmap — Retomada ComandaTech
 
+## Cupom NFC-e — Cozinha da Ruiva
+- [x] Exibir pagamentos do XML com fallback ao payload e troco, somente no piloto Cozinha da Ruiva; sem alterar emissão, TEF ou XML.
+- [x] Validar testes e layout digital: 8 testes aprovados e HTML real conferido no navegador com valores simulados R$ 10 dinheiro + R$ 5 PIX, sem emissão.
+- [ ] Validar cupom de venda real e impressão física na Cozinha da Ruiva — depende de publicação autorizada e teste na impressora da loja; portal SEFAZ não foi alterado.
+
 ## Endereços — pacote aprovado
 - [x] Ajustar CEP específico/geral no campo Bairro, feedback da busca e sugestões exclusivas Casa/Trabalho; ocultar Cidade/UF nos três formulários. 21 testes aprovados; formulário floral verificado no computador/celular com CEP simulado, sem pedido real.
 - [ ] Realizar deploy dos ajustes de endereço na VPS conforme pedido atual — bloqueado: arquivos novos ainda ausentes no repositório GitHub (consulta confirmou 404); acesso direto à VPS não disponível nesta sessão. Não disparar deploy de versão anterior.

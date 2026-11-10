@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import QRCode from 'qrcode';
+import { formatReceiptCents, getNfceReceiptPayments, hasNfcePaymentReceipt } from '@/lib/nfceReceiptPayments';
 
 /**
  * Opções extras de renderização do DANFE — todas opcionais.
@@ -105,6 +106,7 @@ export interface NFCeRecord {
   updated_at: string;
   contingencia_offline?: boolean;
   contingencia_efetivada?: boolean;
+  xml_retorno?: string | null;
 }
 
 async function callNFCeProxy(body: Record<string, any>) {
@@ -280,6 +282,17 @@ export async function generateDanfeHtml(
     c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;'
   ));
 
+  let paymentsHtml = '';
+  if (hasNfcePaymentReceipt(record.company_id)) {
+    const receipt = getNfceReceiptPayments(record.xml_retorno, record.request_payload);
+    if (receipt.payments.length) {
+      paymentsHtml = `<table class="small">
+        <thead><tr><th style="text-align:left;padding:2px 4px;">FORMA DE PAGAMENTO</th><th style="text-align:right;padding:2px 4px;">VALOR PAGO</th></tr></thead>
+        <tbody>${receipt.payments.map(payment => `<tr><td style="text-align:left;padding:2px 4px;">${esc(payment.label)}</td><td style="text-align:right;padding:2px 4px;white-space:nowrap;">R$ ${formatReceiptCents(payment.amountCents)}</td></tr>`).join('')}</tbody>
+      </table>${receipt.changeCents > 0 ? `<div class="small bold" style="display:flex;justify-content:space-between;padding:2px 4px;"><span>TROCO</span><span>R$ ${formatReceiptCents(receipt.changeCents)}</span></div>` : ''}<div class="separator"></div>`;
+    }
+  }
+
   const itemsHtml = items.map((item: any, i: number) => {
     const serial = show.serial && (item.serial || item.numero_serie || item.codigo)
       ? `<div style="font-size:9px;color:#333;">Cod/Série: ${esc(item.serial || item.numero_serie || item.codigo)}</div>`
@@ -403,6 +416,7 @@ export async function generateDanfeHtml(
   </div>
   <div class="separator"></div>
 
+  ${paymentsHtml}
   ${saleNotesHtml}
 
   <div class="qrcode">
