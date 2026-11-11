@@ -455,13 +455,13 @@ export default function NFeEmissaoAvulsa() {
         await supabase.from('nfe_records').update({ status: 'rascunho_transmitido' }).eq('id', draftId).eq('company_id', company.id);
       }
       if (!data?.ok) {
-        toast.error(nfeFailureMessage(data) || 'Falha na emissão de NF-e.');
+        toast.error(nfeFailureMessage(data) || 'Falha na emissão de NF-e.', { duration: 20000 });
         return;
       }
       toast.success('NF-e emitida com sucesso!');
       navigate('/nfe');
     } catch (e: any) {
-      toast.error(await readNfeInvokeError(e));
+      toast.error(await readNfeInvokeError(e), { duration: 20000 });
     } finally {
       transmitting.current = false;
       setLoading(false);
