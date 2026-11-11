@@ -18,6 +18,7 @@ import {
   type MultiPaymentResolvedLine,
 } from '@/utils/pdvV2MultiPayment';
 import { FrenteCaixaCustomerDialog } from './FrenteCaixaCustomerDialog';
+import { requiresFrenteCaixaNfce, resolveFrenteCaixaFiscalMode } from '@/lib/frenteCaixaFiscalRules';
 
 /**
  * "Finalizando venda" — tela de checkout da Frente de Caixa (módulo mercado).
@@ -198,6 +199,10 @@ export function FrenteCaixaCheckoutDialog({
     ? parseCurrencyInput(lines[creditMethod.id]?.text || '')
     : 0;
   const isCreditSale = !!creditMethod && creditLineAmount > 0;
+  const hasTefAllocated = requiresFrenteCaixaNfce(activePaymentMethods.map((method) => ({
+    amount: parseCurrencyInput(lines[method.id]?.text || ''),
+    integration: method.integration_type,
+  })));
 
   // Ao entrar em modo crediário, pré-preenche parcelas e 1ª data de
   // vencimento a partir da configuração da forma "Crediário".
@@ -405,14 +410,14 @@ export function FrenteCaixaCheckoutDialog({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, processing, allocated, activePaymentMethods, exact, customerDialogOpen]);
+  }, [open, step, processing, allocated, activePaymentMethods, exact, customerDialogOpen, lines, defaultFiscalMode, isCreditSale, creditSaleFiscalMode]);
 
   // ===== salvar =====
   async function handleSave(
     fiscalChoice?: 'fiscal' | 'nao_fiscal',
     opts?: { manualCard?: boolean },
   ) {
-    if (!companyId) return;
+    if (!companyId || processing) return;
     const manualCard = opts?.manualCard === true;
     setTefFailure(null);
     if (!exact) {
@@ -438,9 +443,13 @@ export function FrenteCaixaCheckoutDialog({
     //  - Crediário: respeita a config "Quando emitir a NFC-e da venda no crediário":
     //      • on_sale    → emite NFC-e no ato (tPag=05)
     //      • on_receipt → não emite; a nota sai no 1º recebimento em TEF
-    const fiscalMode: 'fiscal' | 'nao_fiscal' = isCreditSale
+    const requestedFiscalMode: 'fiscal' | 'nao_fiscal' = isCreditSale
       ? (creditSaleFiscalMode === 'on_sale' ? 'fiscal' : 'nao_fiscal')
       : (fiscalChoice ?? (defaultFiscalMode === 'ask' ? 'nao_fiscal' : defaultFiscalMode));
+    // The selected TEF amount overrides store defaults and keyboard choices.
+    const fiscalMode = hasTefAllocated && !isCreditSale
+      ? 'fiscal'
+      : requestedFiscalMode;
     setProcessing(true);
     setProcessingStatus(isCreditSale ? 'Gerando título de crediário…' : 'Processando pagamentos…');
     try {
@@ -569,7 +578,7 @@ export function FrenteCaixaCheckoutDialog({
         customerDocument: customerDocument.trim() || undefined,
         notes: [notes.trim(), trocoNote].filter(Boolean).join(' | ') || undefined,
         combinedNotesFragment: mp.combinedNotesFragment,
-        fiscalMode,
+        fiscalMode: resolveFrenteCaixaFiscalMode(fiscalMode, mp.lines || []),
         mpLines: mp.lines || [],
       });
     } catch (err: any) {
@@ -1077,6 +1086,19 @@ export function FrenteCaixaCheckoutDialog({
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando título…</>
                   ) : (
                     <><CreditCard className="h-4 w-4 mr-1" /> Salvar crediário</>
+                  )}
+                </Button>
+              ) : hasTefAllocated ? (
+                <Button
+                  type="button"
+                  onClick={() => handleSave('fiscal')}
+                  disabled={processing || !exact}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[180px]"
+                >
+                  {processing ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando…</>
+                  ) : (
+                    <><Save className="h-4 w-4 mr-1" /> Salvar + NFC-e</>
                   )}
                 </Button>
               ) : defaultFiscalMode === 'ask' ? (

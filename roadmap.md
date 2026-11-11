@@ -1,5 +1,9 @@
 # Roadmap — Retomada ComandaTech
 
+## Frente de Caixa — NFC-e obrigatória com TEF
+- [x] Ocultar pré-venda com TEF alocado e forçar fiscal no checkout/atalho e no registro da venda; 10 testes aprovados, build OK, sem alterar motor TEF, vendas existentes ou emitir notas.
+- [ ] Validar checkout autenticado da loja — sessão disponível é de revendedor e redireciona Frente de Caixa para Home; sem cobrança real ou transmissão fiscal e sem publicação.
+
 ## NF-e modelo 55 — ajustes autorizados
 - [x] Adicionar edição/exclusão protegidas das rejeitadas, duplicação, menu das autorizadas e cancelamento confirmado; 36 testes aprovados, sem emissão/evento fiscal real. Reabertura preserva snapshot e external_id; exclusão não permite chave/protocolo.
 - [ ] Habilitar envio de e-mail e CC-e — bloqueado: endpoints/contrato do serviço fiscal não documentados ou acessíveis; opções exibem indisponibilidade, sem simular envio.

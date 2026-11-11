@@ -104,6 +104,7 @@ import {
 } from '@/utils/frenteCaixaTefEarlyPrint';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
+import { resolveFrenteCaixaFiscalMode } from '@/lib/frenteCaixaFiscalRules';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { FrenteCaixaCashIndicator } from '@/components/frente-caixa/FrenteCaixaCashIndicator';
@@ -991,6 +992,8 @@ export default function FrenteCaixa() {
         );
       }
     });
+    // Defensive boundary: approved TEF can never be persisted as a pre-sale.
+    const fiscalMode = resolveFrenteCaixaFiscalMode(params.fiscalMode, params.mpLines);
     const saleId = await addSale(
       lines.map((l) => ({
         product_id: l.product_id,
@@ -1009,7 +1012,7 @@ export default function FrenteCaixa() {
       params.customerName,
       noteParts.join(' | '),
       undefined,
-      params.fiscalMode,
+      fiscalMode,
       'mercado',
     );
     if (saleId) {
@@ -1179,7 +1182,7 @@ export default function FrenteCaixa() {
       // "movimentar só na nota", a baixa fica pendente até a NFC-e ser emitida
       // (retroativa via Lista do PDV).
       const shouldMoveStockNow = !pdvSettings.stock_move_on_fiscal_only ||
-        params.fiscalMode === 'fiscal';
+        fiscalMode === 'fiscal';
       if (shouldMoveStockNow) {
         (async () => {
           for (const l of lines) {
@@ -1198,7 +1201,7 @@ export default function FrenteCaixa() {
 
       // Fase 1+2 fiscal: prepara payload da NFC-e — emissão real é feita
       // depois de fechar o checkout (await + diálogo pós-venda com polling).
-      const nfcePayload = (params.fiscalMode === 'fiscal' && company?.id)
+      const nfcePayload = (fiscalMode === 'fiscal' && company?.id)
         ? (() => {
             const nfceItems: NFCeItem[] = lines.map((l) => {
               const product = l.product_id ? products.find((p) => p.id === l.product_id) : null;

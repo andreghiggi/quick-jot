@@ -15,6 +15,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '11/11/2026',
+    version: '1.76.0-beta',
+    type: 'fix',
+    description: 'Frente de Caixa: pagamento com valor alocado em TEF libera somente Salvar + NFC-e. A obrigatoriedade fiscal também vale para atalhos e registro da venda, independentemente da configuração de pré-venda da loja. Comunicação com o PinPad, impressão e vendas existentes não foram alteradas.',
+  },
+  {
     date: '03/11/2026',
     version: '1.76.0-beta',
     type: 'fix',
