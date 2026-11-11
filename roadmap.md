@@ -1,6 +1,7 @@
 # Roadmap — Retomada ComandaTech
 
 ## Cupom NFC-e — Cozinha da Ruiva
+- [x] Corrigir leitura do XML persistido (`xml_content`, com fallback legado `xml_retorno`); 11 testes aprovados e cupom conferido no navegador com XML simulado R$10 dinheiro + R$5 PIX, sem emitir notas ou publicar.
 - [x] Exibir pagamentos do XML com fallback ao payload e troco, somente no piloto Cozinha da Ruiva; sem alterar emissão, TEF ou XML.
 - [x] Validar testes e layout digital: 8 testes aprovados e HTML real conferido no navegador com valores simulados R$ 10 dinheiro + R$ 5 PIX, sem emissão.
 - [ ] Validar cupom de venda real e impressão física na Cozinha da Ruiva — depende de publicação autorizada e teste na impressora da loja; portal SEFAZ não foi alterado.

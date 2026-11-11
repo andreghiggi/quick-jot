@@ -106,6 +106,7 @@ export interface NFCeRecord {
   updated_at: string;
   contingencia_offline?: boolean;
   contingencia_efetivada?: boolean;
+  xml_content?: string | null;
   xml_retorno?: string | null;
 }
 
@@ -284,7 +285,7 @@ export async function generateDanfeHtml(
 
   let paymentsHtml = '';
   if (hasNfcePaymentReceipt(record.company_id)) {
-    const receipt = getNfceReceiptPayments(record.xml_retorno, record.request_payload);
+    const receipt = getNfceReceiptPayments(record.xml_content || record.xml_retorno, record.request_payload);
     if (receipt.payments.length) {
       paymentsHtml = `<table class="small">
         <thead><tr><th style="text-align:left;padding:2px 4px;">FORMA DE PAGAMENTO</th><th style="text-align:right;padding:2px 4px;">VALOR PAGO</th></tr></thead>
