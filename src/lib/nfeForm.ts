@@ -37,16 +37,32 @@ export type NFeInstallment = { numero: string; vencimento: string; valor: number
 
 export const toCents = (v: number) => Math.round((Number(v) || 0) * 100);
 
-/** Diferença (em centavos) entre o total da nota e a soma dos pagamentos, descontado o troco. */
-export function paymentDifferenceCents(total: number, payments: NFePayment[], troco = 0): number {
+/** Modelo 55: pagamentos fecham o total, sem troco. */
+export function paymentDifferenceCents(total: number, payments: NFePayment[]): number {
   if (payments.some(p => p.tipo === '90')) return 0;
-  const paid = payments.reduce((s, p) => s + toCents(p.valor), 0) - toCents(troco);
+  const paid = payments.reduce((s, p) => s + toCents(p.valor), 0);
   return toCents(total) - paid;
 }
 
-/** Troco só é permitido quando há pagamento em dinheiro. */
-export function changeAllowed(payments: NFePayment[]): boolean {
-  return payments.some(p => p.tipo === '01');
+/** Uma única forma acompanha o total; divisões manuais permanecem preservadas. */
+export function syncSinglePayment(total: number, payments: NFePayment[]): NFePayment[] {
+  if (payments.length !== 1) return payments;
+  const p = payments[0];
+  const valor = p.tipo === '90' ? 0 : toCents(total) / 100;
+  return p.valor === valor ? payments : [{ ...p, valor }];
+}
+
+export function selectPaymentType(total: number, payments: NFePayment[], index: number, tipo: string): NFePayment[] {
+  if (tipo === '90') return [{ tipo, valor: 0 }];
+  const otherCents = payments.reduce((s, p, i) => i === index ? s : s + toCents(p.valor), 0);
+  return payments.map((p, i) => i === index
+    ? { tipo, valor: payments.length === 1 ? toCents(total) / 100 : (p.valor || Math.max(0, toCents(total) - otherCents) / 100) }
+    : p);
+}
+
+export function appendPayment(total: number, payments: NFePayment[]): NFePayment[] {
+  const current = payments.filter(p => p.tipo !== '90');
+  return [...current, { tipo: '01', valor: Math.max(0, paymentDifferenceCents(total, current)) / 100 }];
 }
 
 /**

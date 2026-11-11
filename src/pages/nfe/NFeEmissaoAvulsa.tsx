@@ -16,14 +16,16 @@ import { toast } from 'sonner';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import {
   NFE_FREIGHT_MODES, NFE_PAYMENT_TYPES, NFE_PRESENCE, NFE_TEXT_LIMITS,
-  buildInstallments, changeAllowed, paymentDifferenceCents, validAccessKey, validTaxDocument,
+  appendPayment, buildInstallments, syncSinglePayment, selectPaymentType, paymentDifferenceCents, validAccessKey, validTaxDocument,
   type NFeInstallment, type NFePayment,
 } from '@/lib/nfeForm';
 import { IND_IE_OPTIONS, formatCep, lookupCep, onlyDigits } from '@/lib/fiscalPerson';
 import { DanfePreviewDialog } from '@/components/nfe/DanfePreviewDialog';
+import { nfeFailureMessage, readNfeInvokeError } from '@/lib/nfeErrors';
 
 type Item = {
   product_id: string | null;
+  code?: string;
   descricao: string;
   ncm: string;
   cfop: string;
@@ -105,7 +107,6 @@ export default function NFeEmissaoAvulsa() {
 
   // Pagamentos
   const [payments, setPayments] = useState<NFePayment[]>([{ tipo: '17', valor: 0 }]);
-  const [troco, setTroco] = useState(0);
   const [terms, setTerms] = useState('');
   const [installments, setInstallments] = useState<NFeInstallment[]>([]);
 
@@ -152,7 +153,7 @@ export default function NFeEmissaoAvulsa() {
         setDestLogradouro(d.logradouro); setDestNumero(d.numero); setDestBairro(d.bairro); setDestCidade(d.cidade);
         setDestUF(d.uf); setDestCep(d.cep); setDestFone(d.fone);
         setDestComplemento(d.complemento || ''); setDestIbge(d.ibge || ''); setDestIndIE(d.indIE || (d.ie ? '1' : '9'));
-        setItems(f.items || []); setPayments(f.payments || []); setTroco(f.troco || 0); setTerms(f.terms || '');
+        setItems(f.items || []); setPayments(f.payments?.length ? f.payments : [{ tipo: '17', valor: 0 }]); setTerms(f.terms || '');
         setInstallments(f.installments || []); setModFrete(f.modFrete); setValorFrete(f.valorFrete || 0);
         setTransp(f.transp); setVeiculo(f.veiculo); setVol(f.vol);
         setXPed(f.xPed || ''); setInfCpl(f.infCpl || ''); setInfAdFisco(f.infAdFisco || '');
@@ -285,6 +286,7 @@ export default function NFeEmissaoAvulsa() {
     if (!taxRule) toast.warning(`"${p.name}" não tem regra tributária associada. Revise os dados fiscais antes de transmitir.`);
     setItems(prev => [...prev, {
       product_id: p.id,
+      code: p.code || '',
       descricao: p.name,
       ncm: taxRule?.ncm || p.ncm || '00000000',
       cfop: taxRule?.cfop || p.cfop || '5102',
@@ -327,7 +329,11 @@ export default function NFeEmissaoAvulsa() {
     [items],
   );
   const valorTotal = Math.round((valorProdutos + (modFrete === '9' ? 0 : valorFrete)) * 100) / 100;
-  const diffCents = paymentDifferenceCents(valorTotal, payments, troco);
+  const diffCents = paymentDifferenceCents(valorTotal, payments);
+
+  useEffect(() => {
+    setPayments(current => syncSinglePayment(valorTotal, current));
+  }, [valorTotal, payments.length]);
 
   function validate(): { tab: Tab; msg: string } | null {
     const g = (msg: string) => ({ tab: 'geral' as Tab, msg });
@@ -347,7 +353,6 @@ export default function NFeEmissaoAvulsa() {
       if (!it.valor_unitario || it.valor_unitario <= 0) return g(`Valor unitário inválido em "${it.descricao}".`);
     }
     if (payments.length === 0) return { tab: 'pagamentos', msg: 'Informe ao menos uma forma de pagamento.' };
-    if (troco > 0 && !changeAllowed(payments)) return { tab: 'pagamentos', msg: 'Troco só é permitido com pagamento em dinheiro.' };
     if (diffCents !== 0) return { tab: 'pagamentos', msg: `A soma dos pagamentos não fecha o total (${money(diffCents / 100)} de diferença).` };
     if (installments.length) {
       const sum = installments.reduce((s, p) => s + Math.round(p.valor * 100), 0);
@@ -381,7 +386,6 @@ export default function NFeEmissaoAvulsa() {
       valor_frete: hasTransport ? valorFrete : 0,
       valor_total: valorTotal,
       pagamentos: payments.map(p => ({ tipo: p.tipo, valor: p.valor })),
-      valor_troco: troco || 0,
       cobranca: installments.length ? { duplicatas: installments } : undefined,
       transporte: {
         modalidade_frete: modFrete,
@@ -407,7 +411,7 @@ export default function NFeEmissaoAvulsa() {
       dest: { tipo: destTipo, cnpj: destCnpj, cpf: destCpf, razao: destRazao, ie: destIE, logradouro: destLogradouro,
         numero: destNumero, bairro: destBairro, cidade: destCidade, uf: destUF, cep: destCep, fone: destFone,
         complemento: destComplemento, ibge: destIbge, indIE: destIndIE },
-      items, payments, troco, terms, installments, modFrete, valorFrete, transp, veiculo, vol,
+      items, payments, terms, installments, modFrete, valorFrete, transp, veiculo, vol,
       xPed, infCpl, infAdFisco, autXml, refs,
     };
   }
@@ -451,16 +455,13 @@ export default function NFeEmissaoAvulsa() {
         await supabase.from('nfe_records').update({ status: 'rascunho_transmitido' }).eq('id', draftId).eq('company_id', company.id);
       }
       if (!data?.ok) {
-        const motivo = data?.result?.data?.message || data?.result?.error || 'Falha na emissão';
-        toast.error(`NF-e rejeitada: ${motivo}`);
-        navigate('/nfe');
+        toast.error(nfeFailureMessage(data) || 'Falha na emissão de NF-e.');
         return;
       }
       toast.success('NF-e emitida com sucesso!');
       navigate('/nfe');
     } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || 'Erro ao emitir NF-e');
+      toast.error(await readNfeInvokeError(e));
     } finally {
       transmitting.current = false;
       setLoading(false);
@@ -696,24 +697,23 @@ export default function NFeEmissaoAvulsa() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Formas de pagamento</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setPayments(p => [...p, { tipo: '01', valor: Math.max(0, diffCents / 100) }])}>
+                <Button variant="outline" size="sm" onClick={() => setPayments(p => appendPayment(valorTotal, p))}>
                   <Plus className="w-4 h-4 mr-1" /> Adicionar
                 </Button>
               </CardHeader>
               <CardContent className="space-y-2">
                 {payments.map((p, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_160px_40px] gap-2 items-center">
-                    <Select value={p.tipo} onValueChange={(v) => setPayments(ps => ps.map((x, j) => j === i ? { ...x, tipo: v } : x))}>
+                  <div key={i} className="grid grid-cols-[minmax(0,1fr)_100px_40px] sm:grid-cols-[minmax(0,1fr)_160px_40px] gap-2 items-center">
+                    <Select value={p.tipo} onValueChange={(v) => setPayments(ps => selectPaymentType(valorTotal, ps, i, v))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>{NFE_PAYMENT_TYPES.map(t => <SelectItem key={t.code} value={t.code}>{t.code} — {t.label}</SelectItem>)}</SelectContent>
                     </Select>
-                    <CurrencyInput value={p.valor} onValueChange={(v) => setPayments(ps => ps.map((x, j) => j === i ? { ...x, valor: v } : x))} />
+                    <CurrencyInput aria-label={`Valor do pagamento ${i + 1}`} value={p.valor} disabled={p.tipo === '90'} onValueChange={(v) => setPayments(ps => ps.map((x, j) => j === i ? { ...x, valor: v } : x))} />
                     <Button variant="ghost" size="icon" onClick={() => setPayments(ps => ps.filter((_, j) => j !== i))}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                   </div>
                 ))}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-                  <div><Label>Troco</Label><CurrencyInput value={troco} onValueChange={setTroco} disabled={!changeAllowed(payments)} /></div>
-                  <div className="md:col-span-2 flex flex-col justify-end text-sm">
+                <div className="pt-2">
+                  <div className="flex flex-col justify-end text-sm">
                     <div>Total da nota: <strong>{money(valorTotal)}</strong></div>
                     <div className={diffCents === 0 ? 'text-primary' : 'text-destructive'}>
                       {diffCents === 0 ? '✓ Pagamentos conferem com o total' : `Diferença: ${money(diffCents / 100)}`}

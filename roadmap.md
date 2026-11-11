@@ -1,5 +1,12 @@
 # Roadmap — Retomada ComandaTech
 
+## NF-e modelo 55 — ajustes autorizados
+- [x] Remover troco e preencher automaticamente total/saldo nas formas de pagamento, sem alterar NFC-e/TEF.
+- [x] Exibir motivo real das falhas de transmissão, preservando erros de acesso; resposta HTTP 422 simulada mostrou o motivo, sem transmissão fiscal.
+- [x] Implementar estrutura A4 da referência no espelho DANFE, mantendo pré-visualização sem chave/protocolo inventados; renderer XML autorizado em piloto Cozinha da Ruiva.
+- [x] Validar seleção de produto real da Cozinha da Ruiva, total automático R$3,20 e pré-visualização no navegador; sem emitir notas ou publicar.
+- [ ] Validar impressão física e XML autorizado da NF-e no piloto; requer documento autorizado disponível e implantação autorizada na VPS. Igualdade exata ao PDF ainda não confirmada.
+
 ## Cupom NFC-e — Cozinha da Ruiva
 - [x] Corrigir leitura do XML persistido (`xml_content`, com fallback legado `xml_retorno`); 11 testes aprovados e cupom conferido no navegador com XML simulado R$10 dinheiro + R$5 PIX, sem emitir notas ou publicar.
 - [x] Exibir pagamentos do XML com fallback ao payload e troco, somente no piloto Cozinha da Ruiva; sem alterar emissão, TEF ou XML.

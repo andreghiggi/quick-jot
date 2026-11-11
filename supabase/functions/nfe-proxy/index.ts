@@ -194,8 +194,9 @@ Deno.serve(async (req) => {
           .select('id')
           .single()
 
-        return new Response(JSON.stringify({ ok: apiResponse.ok, recordId: inserted?.id, result }), {
-          status: apiResponse.ok ? 200 : 422,
+        return new Response(JSON.stringify({ ok: apiResponse.ok, recordId: inserted?.id, result, error: apiResponse.ok ? undefined : insertPayload.motivo_rejeicao }), {
+          // Fiscal rejection is a domain result; auth/configuration errors keep their HTTP status.
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
@@ -213,7 +214,12 @@ Deno.serve(async (req) => {
       case 'xml': {
         if (!nfeId) return new Response(JSON.stringify({ error: 'nfeId obrigatório' }), { status: 400, headers: corsHeaders })
         apiResponse = await fetch(`${NFE_API_URL}/${nfeId}/xml`, { headers: apiHeaders })
-        result = await safeJson(apiResponse)
+        const text = await apiResponse.text()
+        if (text.trim().startsWith('<')) result = { xml: text }
+        else {
+          try { result = JSON.parse(text) }
+          catch { result = { error: 'XML autorizado não disponível.' } }
+        }
         return new Response(JSON.stringify(result), {
           status: apiResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

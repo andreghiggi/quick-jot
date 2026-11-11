@@ -49,6 +49,8 @@
 }
 @layer base {
   :root {
+    --fiscal-paper: 0 0% 100%;
+    --fiscal-ink: 0 0% 0%;
     --background: 0 0% 98%;
     --foreground: 0 0% 15%;
 
@@ -239,4 +241,50 @@
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Model 55 A4 document; identical metrics in preview and print. */
+.nf55-sheet { background:hsl(var(--fiscal-paper)); color:hsl(var(--fiscal-ink)); font-family:'Times New Roman',serif; width:200mm; min-height:282mm; padding:0; margin:auto; position:relative; display:flex; flex-direction:column; font-size:8pt; line-height:1.05; letter-spacing:0; }
+.nf55-sheet * { box-sizing:border-box; }
+.nf55-sheet h1 { font-size:19pt; font-weight:bold; margin:0; line-height:1; }
+.nf55-sheet h2 { font-size:8pt; font-weight:bold; margin:1.2mm 0 0; line-height:1; }
+.nf55-row { display:grid; gap:0; }
+.nf55-cell { border:.2mm solid hsl(var(--fiscal-ink)); padding:.4mm .5mm; min-width:0; overflow-wrap:anywhere; }
+.nf55-label { font-size:5.8pt; font-weight:normal; line-height:1; min-height:2mm; }
+.nf55-value { font-size:9pt; font-weight:bold; min-height:3.8mm; white-space:pre-wrap; }
+.nf55-receipt { border-bottom:.2mm dashed hsl(var(--fiscal-ink)); padding-bottom:1mm; margin-bottom:1.5mm; }
+.nf55-receipt .nf55-value { font-size:7pt; font-weight:normal; }
+.nf55-receipt .nf55-row .nf55-row .nf55-cell { min-height:8mm; }
+.nf55-center { text-align:center; }
+.nf55-issuer { text-align:center; display:flex; flex-direction:column; justify-content:center; position:relative; min-height:30mm; padding-top:5mm; }
+.nf55-issuer i { position:absolute; top:.5mm; width:100%; left:0; font-size:6pt; }
+.nf55-issuer strong { font-size:12pt; }
+.nf55-operation { text-align:left; padding:2mm; position:relative; }
+.nf55-operation b { position:absolute; right:0; bottom:1mm; border:.2mm solid hsl(var(--fiscal-ink)); padding:.7mm 1mm; font-size:12pt; }
+.nf55-barcode { height:15mm; display:flex; align-items:center; justify-content:center; }
+.nf55-barcode svg { width:100%; height:12mm; }
+.nf55-key .nf55-value { font-size:7.2pt; text-align:center; }
+.nf55-right .nf55-value, .nf55-right { text-align:right; }
+.nf55-installments { display:flex; flex-wrap:wrap; min-height:9mm; }
+.nf55-installments .nf55-cell { max-width:46mm; }
+.nf55-products { flex:1; min-height:82mm; display:flex; }
+.nf55-products table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:6pt; min-height:82mm; align-self:stretch; }
+.nf55-products th, .nf55-products td { border:.2mm solid hsl(var(--fiscal-ink)); padding:.25mm; overflow-wrap:anywhere; vertical-align:top; }
+.nf55-products th { font-size:5.5pt; font-weight:normal; text-align:center; height:5mm; }
+.nf55-products tbody tr:not(.nf55-filler) td { border-bottom-style:dashed; font-size:6pt; }
+.nf55-products tbody tr:not(.nf55-filler) { height:3mm; }
+.nf55-products .nf55-filler { height:100%; }
+.nf55-products .nf55-filler td { border-top:0; }
+.nf55-additional { min-height:22mm; }
+.nf55-additional .nf55-value { font-size:7pt; font-weight:normal; }
+.nf55-sheet footer { font-size:5pt; font-style:italic; margin-top:1mm; }
+.nf55-banner { border:.3mm solid hsl(var(--fiscal-ink)); text-align:center; font: bold 9pt Arial,sans-serif; padding:1mm; margin-bottom:1mm; }
+.nf55-watermark { position:absolute; top:45%; left:0; width:100%; text-align:center; transform:rotate(-30deg); opacity:.1; pointer-events:none; font:bold 40pt Arial,sans-serif; z-index:1; }
+.nf55-print { margin:5mm; background:hsl(var(--fiscal-paper)); }
+@page { size:A4 portrait; margin:5mm; }
+@media print {
+  .nf55-sheet { width:200mm; min-height:282mm; print-color-adjust:exact; }
+  .nf55-row, .nf55-sheet tbody tr { break-inside:avoid; }
+  .nf55-sheet thead { display:table-header-group; }
+  .nf55-print { margin:0; }
 }

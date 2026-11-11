@@ -7,9 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Plus, RefreshCw, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+import { nfeDanfeFromXml, openNfeDanfe } from '@/lib/nfeDanfe';
+import { readNfeInvokeError, nfeFailureMessage } from '@/lib/nfeErrors';
 
 type NFe = {
   id: string;
+  nfe_id: string | null;
   numero: string | null;
   serie: string | null;
   chave_acesso: string | null;
@@ -33,6 +37,23 @@ export default function NFeList() {
   const { company } = useAuthContext();
   const [items, setItems] = useState<NFe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [opening, setOpening] = useState<string | null>(null);
+
+  async function viewDanfe(note: NFe) {
+    if (!company?.id || !note.nfe_id) return;
+    setOpening(note.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('nfe-proxy', {
+        body: { action: 'xml', companyId: company.id, nfeId: note.nfe_id },
+      });
+      if (error) throw error;
+      const result = data?.data || data;
+      const xml = typeof result === 'string' ? result : result?.xml_content || result?.xml || result?.xml_retorno;
+      if (typeof xml !== 'string' || !xml.trim().startsWith('<')) throw new Error(nfeFailureMessage(data) || 'XML autorizado não disponível para esta NF-e.');
+      openNfeDanfe(nfeDanfeFromXml(xml));
+    } catch (error) { toast.error(await readNfeInvokeError(error)); }
+    finally { setOpening(null); }
+  }
 
   async function load() {
     if (!company?.id) return;
@@ -94,6 +115,7 @@ export default function NFeList() {
                       <th className="px-3 py-2">Ambiente</th>
                       <th className="px-3 py-2">Status</th>
                       <th className="px-3 py-2">Emitida em</th>
+                      <th className="px-3 py-2">DANFE</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -118,6 +140,13 @@ export default function NFeList() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-xs">{new Date(n.created_at).toLocaleString('pt-BR')}</td>
+                        <td className="px-3 py-2">
+                          {n.status === 'autorizada' && n.nfe_id && company?.id === '55181771-8b10-4af1-afc3-472c090a49be' && (
+                            <Button variant="outline" size="icon" title="Visualizar DANFE A4" aria-label="Visualizar DANFE A4" disabled={opening === n.id} onClick={() => viewDanfe(n)}>
+                              {opening === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
