@@ -168,7 +168,7 @@ export default function NFeEmissaoAvulsa() {
       const q = productSearch.trim().replace(/[%,()]/g, '');
       let query = supabase
         .from('products')
-        .select('id, name, code, gtin, ncm, cfop, cest, icms_origin, tax_rule_id, sale_price, unit')
+        .select('id, name, code, gtin, ncm, cfop, cest, icms_origin, tax_rule_id, price, unit')
         .eq('company_id', company.id)
         .eq('active', true)
         .order('name')
@@ -291,7 +291,7 @@ export default function NFeEmissaoAvulsa() {
       gtin: p.gtin || undefined,
       unidade: p.unit || 'UN',
       quantidade: 1,
-      valor_unitario: Number(p.sale_price) || 0,
+      valor_unitario: Number(p.price) || 0,
       csosn: taxRule?.csosn || '102',
       icms_origin: p.icms_origin || '0',
       icms_aliquot: Number(taxRule?.icms_aliquot) || 0,
@@ -309,7 +309,7 @@ export default function NFeEmissaoAvulsa() {
     const code = barcode.trim();
     if (!code || !company?.id) return;
     const { data } = await supabase.from('products')
-      .select('id, name, code, gtin, ncm, cfop, cest, icms_origin, tax_rule_id, sale_price, unit')
+      .select('id, name, code, gtin, ncm, cfop, cest, icms_origin, tax_rule_id, price, unit')
       .eq('company_id', company.id).or(`gtin.eq.${code.replace(/[,()]/g, '')},code.eq.${code.replace(/[,()]/g, '')}`)
       .limit(1).maybeSingle();
     if (!data) { toast.error('Produto não encontrado para este código.'); return; }
@@ -622,7 +622,7 @@ export default function NFeEmissaoAvulsa() {
                           <button key={p.id} type="button" className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm" onClick={() => addProduct(p)}>
                             <span className="font-medium">{p.name}</span>
                             {p.code && <span className="text-muted-foreground ml-2">#{p.code}</span>}
-                            <span className="text-muted-foreground ml-2">{money(p.sale_price)}</span>
+                            <span className="text-muted-foreground ml-2">{money(p.price)}</span>
                             {!p.ncm && <span className="text-destructive ml-2 text-xs">sem NCM</span>}
                           </button>
                         ))}
