@@ -282,12 +282,13 @@ export default function NFeEmissaoAvulsa() {
 
   async function addProduct(p: any) {
     const taxRule = await fetchTaxRule(p.tax_rule_id);
+    if (!taxRule) toast.warning(`"${p.name}" não tem regra tributária associada. Revise os dados fiscais antes de transmitir.`);
     setItems(prev => [...prev, {
       product_id: p.id,
       descricao: p.name,
-      ncm: p.ncm || taxRule?.ncm || '00000000',
+      ncm: taxRule?.ncm || p.ncm || '00000000',
       cfop: taxRule?.cfop || p.cfop || '5102',
-      cest: p.cest || taxRule?.cest || undefined,
+      cest: taxRule?.cest || p.cest || undefined,
       gtin: p.gtin || undefined,
       unidade: p.unit || 'UN',
       quantidade: 1,
@@ -619,11 +620,11 @@ export default function NFeEmissaoAvulsa() {
                     {productResults.length > 0 && (
                       <div className="absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md max-h-60 overflow-auto">
                         {productResults.map(p => (
-                          <button key={p.id} type="button" className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm" onClick={() => addProduct(p)}>
+                          <button key={p.id} type="button" className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm" onMouseDown={(e) => { e.preventDefault(); addProduct(p); }}>
                             <span className="font-medium">{p.name}</span>
                             {p.code && <span className="text-muted-foreground ml-2">#{p.code}</span>}
                             <span className="text-muted-foreground ml-2">{money(p.price)}</span>
-                            {!p.ncm && <span className="text-destructive ml-2 text-xs">sem NCM</span>}
+                            {!p.tax_rule_id && <span className="text-destructive ml-2 text-xs">sem regra tributária</span>}
                           </button>
                         ))}
                       </div>
