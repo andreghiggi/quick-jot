@@ -1,6 +1,8 @@
 # Roadmap — Retomada ComandaTech
 
 ## NF-e modelo 55 — ajustes autorizados
+- [x] Resolver IBGE por CEP ao selecionar cliente/reabrir rascunho, impedir transmissão com campos inválidos e exibir pendências e detalhes fiscais; 24 testes aprovados e painel/CEP real verificados no navegador, sem emissão nem publicação.
+- [ ] Confirmar fluxo com cliente e produto reais na Cozinha da Ruiva após implantação — sessão de revendedor disponível não assumiu contexto da loja; transmissão fiscal não realizada.
 - [x] Remover troco e preencher automaticamente total/saldo nas formas de pagamento, sem alterar NFC-e/TEF.
 - [x] Exibir motivo real das falhas de transmissão, preservando erros de acesso; resposta HTTP 422 simulada mostrou o motivo, sem transmissão fiscal.
 - [x] Implementar estrutura A4 da referência no espelho DANFE, mantendo pré-visualização sem chave/protocolo inventados; renderer XML autorizado em piloto Cozinha da Ruiva.

@@ -1,6 +1,6 @@
 const FIELD_LABELS: Array<[RegExp, string]> = [
   [/ncm/i, 'NCM (8 dígitos)'], [/cfop/i, 'CFOP'], [/csosn/i, 'CSOSN'], [/cest/i, 'CEST'],
-  [/codigo_municipio|cmun|ibge/i, 'Código IBGE da cidade (redigite o CEP)'],
+  [/codigo_municipio|cmun|ibge/i, 'Cidade identificada pelo CEP (confira o CEP)'],
   [/municipio|cidade/i, 'Cidade'], [/\buf\b|estado/i, 'UF'], [/cep/i, 'CEP'],
   [/logradouro/i, 'Logradouro'], [/numero/i, 'Número'], [/bairro/i, 'Bairro'],
   [/cnpj/i, 'CNPJ'], [/cpf/i, 'CPF'], [/inscricao_estadual|\bie\b/i, 'Inscrição estadual'],
@@ -19,31 +19,37 @@ export function nfeFieldLabel(path: string): string {
 }
 
 const asText = (v: unknown): string => Array.isArray(v) ? v.map(asText).filter(Boolean).join(', ')
-  : typeof v === 'string' ? v : v && typeof v === 'object' ? String((v as any).message || (v as any).mensagem || (v as any).msg || '') : '';
+  : typeof v === 'string' ? v : v && typeof v === 'object' ? asText((v as Record<string, unknown>).message || (v as Record<string, unknown>).mensagem || (v as Record<string, unknown>).msg) : '';
+
+function collectFields(value: unknown, path = '', depth = 0): string[] {
+  if (!value || depth > 10) return [];
+  if (typeof value === 'string') return [path ? `${nfeFieldLabel(path)} — ${value}` : value];
+  if (Array.isArray(value)) return value.flatMap((entry, index) => collectFields(entry,
+    typeof entry === 'object' && path ? `${path}.${index}` : path, depth + 1));
+  if (typeof value !== 'object') return [];
+  const v = value as Record<string, unknown>;
+  const explicitPath = v.campo || v.field || v.path || v.property || v.loc;
+  const field = Array.isArray(explicitPath) ? explicitPath.join('.') : typeof explicitPath === 'string' ? explicitPath : path;
+  const msg = asText(v.message || v.mensagem || v.msg || v.erro || v.error || v.reason);
+  if (msg) return [field ? `${nfeFieldLabel(field)} — ${msg}` : msg];
+  return Object.entries(v).filter(([key]) => !['request_payload', 'payload', 'headers', 'token', 'stack'].includes(key))
+    .flatMap(([key, entry]) => collectFields(entry, path ? `${path}.${key}` : key, depth + 1));
+}
 
 /** Lists every field-level validation error returned by the fiscal service. */
 export function nfeFieldErrors(value: unknown, depth = 0): string[] {
-  if (!value || typeof value !== 'object' || depth > 5) return [];
+  if (typeof value === 'string' && depth <= 10) {
+    try { return nfeFieldErrors(JSON.parse(value), depth + 1); } catch { return []; }
+  }
+  if (!value || typeof value !== 'object' || depth > 10) return [];
+  if (Array.isArray(value)) return value.flatMap(v => nfeFieldErrors(v, depth + 1));
   const v = value as Record<string, unknown>;
   const out: string[] = [];
   for (const key of ['errors', 'erros', 'detalhes', 'details', 'fields', 'issues', 'validation_errors']) {
     const e = v[key];
-    if (Array.isArray(e)) {
-      for (const it of e) {
-        if (typeof it === 'string') out.push(it);
-        else if (it && typeof it === 'object') {
-          const o = it as any;
-          const path = o.campo || o.field || o.path || o.property || (Array.isArray(o.loc) ? o.loc.join('.') : '');
-          const msg = asText(o.message || o.mensagem || o.msg || o.erro || o.error);
-          const p = Array.isArray(path) ? path.join('.') : String(path || '');
-          if (p || msg) out.push(p ? `${nfeFieldLabel(p)}${msg ? ` — ${msg}` : ''}` : msg);
-        }
-      }
-    } else if (e && typeof e === 'object') {
-      for (const [p, msg] of Object.entries(e)) out.push(`${nfeFieldLabel(p)}${asText(msg) ? ` — ${asText(msg)}` : ''}`);
-    }
+    out.push(...collectFields(e));
   }
-  if (!out.length) for (const key of ['result', 'data', 'response']) out.push(...nfeFieldErrors(v[key], depth + 1));
+  for (const key of ['result', 'data', 'response', 'error', 'validation', 'cause']) out.push(...nfeFieldErrors(v[key], depth + 1));
   return [...new Set(out)];
 }
 

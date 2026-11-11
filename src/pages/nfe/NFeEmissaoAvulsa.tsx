@@ -22,6 +22,8 @@ import {
 import { IND_IE_OPTIONS, formatCep, lookupCep, onlyDigits } from '@/lib/fiscalPerson';
 import { DanfePreviewDialog } from '@/components/nfe/DanfePreviewDialog';
 import { nfeFailureMessage, readNfeInvokeError } from '@/lib/nfeErrors';
+import { nfeRecipientItemErrors, type NfePendingField } from '@/lib/nfeValidation';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Item = {
   product_id: string | null;
@@ -90,6 +92,11 @@ export default function NFeEmissaoAvulsa() {
   const [destFone, setDestFone] = useState('');
   const [destComplemento, setDestComplemento] = useState('');
   const [destIbge, setDestIbge] = useState('');
+  const [pendingFields, setPendingFields] = useState<NfePendingField[]>([]);
+  const [failureMessage, setFailureMessage] = useState('');
+  const [pendingOpen, setPendingOpen] = useState(false);
+  const cepIdentity = useRef(0);
+  const cepLookup = useRef<{ cep: string; promise: ReturnType<typeof lookupCep> } | null>(null);
   const [destIndIE, setDestIndIE] = useState('9');
   const [productFocused, setProductFocused] = useState(false);
   const [carrierResults, setCarrierResults] = useState<any[]>([]);
@@ -241,6 +248,8 @@ export default function NFeEmissaoAvulsa() {
   }, [customerSearch, company?.id]);
 
   function selectCustomer(c: any) {
+    cepIdentity.current += 1;
+    cepLookup.current = null;
     const doc = (c.cpf || '').replace(/\D/g, '');
     const isPJ = doc.length === 14 || c.person_type === 'PJ';
     if (isPJ) { setDestTipo('pj'); setDestCnpj(doc); setDestCpf(''); } else { setDestTipo('pf'); setDestCpf(doc); setDestCnpj(''); }
@@ -253,6 +262,29 @@ export default function NFeEmissaoAvulsa() {
     if (!doc) toast.warning('Este cliente não tem CPF/CNPJ no cadastro.');
     setCustomerSearch(''); setCustomerResults([]);
   }
+
+  // Resolve stored CEPs too, not only manually typed CEPs. Ignore stale identities.
+  function resolveRecipientCep(cep: string) {
+    const digits = onlyDigits(cep);
+    if (cepLookup.current?.cep === digits) return cepLookup.current.promise;
+    const promise = lookupCep(digits);
+    cepLookup.current = { cep: digits, promise };
+    return promise;
+  }
+
+  useEffect(() => {
+    if (onlyDigits(destCep).length !== 8 || /^\d{7}$/.test(destIbge)) return;
+    let active = true;
+    const identity = cepIdentity.current;
+    resolveRecipientCep(destCep).then(r => {
+      if (!active || identity !== cepIdentity.current || !r) return;
+      setDestIbge(r.ibge);
+      setDestCidade(r.cidade); setDestUF(r.uf);
+      if (r.logradouro) setDestLogradouro(r.logradouro);
+      if (r.bairro) setDestBairro(r.bairro);
+    });
+    return () => { active = false; };
+  }, [destCep, destIbge, company?.id]);
 
   async function quickSaveCustomer() {
     if (!company?.id) return;
@@ -335,35 +367,22 @@ export default function NFeEmissaoAvulsa() {
     setPayments(current => syncSinglePayment(valorTotal, current));
   }, [valorTotal, payments.length]);
 
-  function validate(): { tab: Tab; msg: string } | null {
-    const g = (msg: string) => ({ tab: 'geral' as Tab, msg });
-    if (destTipo === 'pj') {
-      if (destCnpj.replace(/\D/g, '').length !== 14) return g('CNPJ do destinatário inválido.');
-    } else if (destCpf.replace(/\D/g, '').length !== 11) return g('CPF do destinatário inválido.');
-    if (!destRazao.trim()) return g(destTipo === 'pj' ? 'Razão social do destinatário é obrigatória.' : 'Nome do destinatário é obrigatório.');
-    if (!destLogradouro.trim() || !destCidade.trim() || !destUF.trim()) return g('Endereço do destinatário incompleto.');
-    if (destIndIE === '1' && !destIE.trim()) return g('Informe a inscrição estadual do destinatário contribuinte.');
-    if (!naturezaOperacao.trim()) return g('Natureza da operação é obrigatória.');
-    if (items.length === 0) return g('Adicione pelo menos 1 item.');
-    for (const it of items) {
-      if (!it.descricao.trim()) return g('Item sem descrição.');
-      if (!it.ncm || it.ncm.length < 8) return g(`NCM inválido em "${it.descricao}".`);
-      if (!it.cfop) return g(`CFOP obrigatório em "${it.descricao}".`);
-      if (!it.quantidade || it.quantidade <= 0) return g(`Quantidade inválida em "${it.descricao}".`);
-      if (!it.valor_unitario || it.valor_unitario <= 0) return g(`Valor unitário inválido em "${it.descricao}".`);
-    }
-    if (payments.length === 0) return { tab: 'pagamentos', msg: 'Informe ao menos uma forma de pagamento.' };
-    if (diffCents !== 0) return { tab: 'pagamentos', msg: `A soma dos pagamentos não fecha o total (${money(diffCents / 100)} de diferença).` };
+  function validate(ibge: string): NfePendingField[] {
+    const errors = nfeRecipientItemErrors({ tipo: destTipo, documento: destTipo === 'pj' ? destCnpj : destCpf,
+      nome: destRazao, logradouro: destLogradouro, numero: destNumero, bairro: destBairro, cidade: destCidade,
+      uf: destUF, cep: destCep, ibge, indIE: destIndIE, ie: destIE, natureza: naturezaOperacao, items });
+    if (payments.length === 0) errors.push({ tab: 'pagamentos', msg: 'Informe ao menos uma forma de pagamento.' });
+    if (diffCents !== 0) errors.push({ tab: 'pagamentos', msg: `A soma dos pagamentos não fecha o total (${money(diffCents / 100)} de diferença).` });
     if (installments.length) {
       const sum = installments.reduce((s, p) => s + Math.round(p.valor * 100), 0);
-      if (sum !== Math.round(valorTotal * 100)) return { tab: 'pagamentos', msg: 'A soma das parcelas não fecha o total.' };
+      if (sum !== Math.round(valorTotal * 100)) errors.push({ tab: 'pagamentos', msg: 'A soma das parcelas não fecha o total.' });
     }
     if (modFrete !== '9' && transp.documento && !validTaxDocument(transp.documento))
-      return { tab: 'transporte', msg: 'CPF/CNPJ da transportadora inválido.' };
-    return null;
+      errors.push({ tab: 'transporte', msg: 'CPF/CNPJ da transportadora inválido.' });
+    return errors;
   }
 
-  function buildPayload() {
+  function buildPayload(ibge = destIbge) {
     const hasTransport = modFrete !== '9';
     return {
       serie, ambiente, natureza_operacao: naturezaOperacao, finalidade,
@@ -378,7 +397,7 @@ export default function NFeEmissaoAvulsa() {
           logradouro: destLogradouro, numero: destNumero, bairro: destBairro,
           complemento: destComplemento || undefined,
           municipio: destCidade, uf: destUF, cep: destCep.replace(/\D/g, ''),
-          codigo_municipio: destIbge.replace(/\D/g, '') || undefined,
+          codigo_municipio: ibge.replace(/\D/g, '') || undefined,
         },
         indIEDest: destIndIE,
       },
@@ -439,29 +458,41 @@ export default function NFeEmissaoAvulsa() {
 
   async function transmitir() {
     if (transmitting.current) return;
-    const err = validate();
-    if (err) { setTab(err.tab); toast.error(err.msg); return; }
-    if (!company?.id) return;
-    if (!window.confirm(`Transmitir NF-e de ${money(valorTotal)} para a SEFAZ em ${ambiente === 'producao' ? 'PRODUÇÃO' : 'homologação'}?`)) return;
     transmitting.current = true;
     setLoading(true);
-    await persistCarrier();
     try {
+      const identity = cepIdentity.current;
+      let ibge = destIbge;
+      if (!/^\d{7}$/.test(ibge) && onlyDigits(destCep).length === 8) {
+        const r = await resolveRecipientCep(destCep);
+        if (identity !== cepIdentity.current) return;
+        ibge = r?.ibge || '';
+        if (ibge) setDestIbge(ibge);
+        if (!r) cepLookup.current = null; // Allow retry after postal service failure.
+      }
+      const errors = validate(ibge);
+      if (errors.length) {
+        setPendingFields(errors); setFailureMessage(''); setPendingOpen(true);
+        setTab(errors[0].tab); return;
+      }
+      if (!company?.id) { toast.error('Selecione uma loja antes de transmitir.'); return; }
+      if (!window.confirm(`Transmitir NF-e de ${money(valorTotal)} para a SEFAZ em ${ambiente === 'producao' ? 'PRODUÇÃO' : 'homologação'}?`)) return;
+      await persistCarrier();
       const { data, error } = await supabase.functions.invoke('nfe-proxy', {
-        body: { action: 'emitir', companyId: company.id, payload: buildPayload() },
+        body: { action: 'emitir', companyId: company.id, payload: buildPayload(ibge) },
       });
       if (error) throw error;
       if (draftId) {
         await supabase.from('nfe_records').update({ status: 'rascunho_transmitido' }).eq('id', draftId).eq('company_id', company.id);
       }
       if (!data?.ok) {
-        toast.error(nfeFailureMessage(data) || 'Falha na emissão de NF-e.', { duration: 20000 });
+        setPendingFields([]); setFailureMessage(nfeFailureMessage(data) || 'O serviço fiscal não informou quais campos precisam de correção.'); setPendingOpen(true);
         return;
       }
       toast.success('NF-e emitida com sucesso!');
       navigate('/nfe');
     } catch (e: any) {
-      toast.error(await readNfeInvokeError(e), { duration: 20000 });
+      setPendingFields([]); setFailureMessage(await readNfeInvokeError(e)); setPendingOpen(true);
     } finally {
       transmitting.current = false;
       setLoading(false);
@@ -587,12 +618,9 @@ export default function NFeEmissaoAvulsa() {
                     </Select>
                   </div>
                   <div className="md:col-span-2"><Label>Inscrição Estadual{destIndIE === '1' ? ' *' : ''}</Label><Input value={destIE} disabled={destIndIE !== '1'} onChange={e => setDestIE(e.target.value)} /></div>
-                  <div><Label>CEP</Label><Input value={destCep} onChange={async e => {
-                    const v = formatCep(e.target.value); setDestCep(v);
-                    if (onlyDigits(v).length === 8) {
-                      const r = await lookupCep(v);
-                      if (r) { if (r.logradouro) setDestLogradouro(r.logradouro); if (r.bairro) setDestBairro(r.bairro); setDestCidade(r.cidade); setDestUF(r.uf); setDestIbge(r.ibge); }
-                    }
+                  <div><Label>CEP</Label><Input value={destCep} onChange={e => {
+                    cepIdentity.current += 1; cepLookup.current = null;
+                    setDestIbge(''); setDestCep(formatCep(e.target.value));
                   }} /></div>
                   <div className="md:col-span-2"><Label>Logradouro *</Label><Input value={destLogradouro} onChange={e => setDestLogradouro(e.target.value)} /></div>
                   <div><Label>Número</Label><Input value={destNumero} onChange={e => setDestNumero(e.target.value)} /></div>
@@ -897,6 +925,20 @@ export default function NFeEmissaoAvulsa() {
       </div>
       <DanfePreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} company={company}
         data={{ payload: buildPayload(), valorProdutos, destTipo }} />
+      <Dialog open={pendingOpen} onOpenChange={setPendingOpen}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto" onOpenAutoFocus={e => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Revise os dados da NF-e</DialogTitle>
+            <DialogDescription>{pendingFields.length ? 'Corrija os campos abaixo antes de transmitir.' : 'A transmissão não foi concluída. Retorno do serviço fiscal:'}</DialogDescription>
+          </DialogHeader>
+          {pendingFields.length ? <ul className="space-y-3">
+            {pendingFields.map((field, index) => <li key={index} className="text-sm text-destructive break-words">
+              <Button variant="link" className="h-auto p-0 text-left whitespace-normal text-destructive" onClick={() => { setTab(field.tab); setPendingOpen(false); }}>{field.msg}</Button>
+            </li>)}
+          </ul> : <p className="text-sm whitespace-pre-wrap break-words">{failureMessage.replace(/; /g, '\n')}</p>}
+          <Button onClick={() => setPendingOpen(false)}>Voltar para corrigir</Button>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
