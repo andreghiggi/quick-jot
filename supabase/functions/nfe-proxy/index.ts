@@ -10,6 +10,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { resolveNfeApiUrl } from '../_shared/fiscal-api-url.ts'
+import { withNfeProductCode } from '../_shared/nfe-product-code.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
             const cestRaw = (it.cest ?? '').toString().replace(/\D/g, '')
             const cestField = cestRaw.length === 7 ? { cest: cestRaw } : {}
             return {
-              ...it,
+              ...withNfeProductCode(it),
               ...cestField,
               quantidade: qtd,
               qCom: qty(qtd),

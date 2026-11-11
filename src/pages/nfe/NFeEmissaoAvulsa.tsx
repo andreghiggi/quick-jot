@@ -23,6 +23,7 @@ import { IND_IE_OPTIONS, formatCep, lookupCep, onlyDigits } from '@/lib/fiscalPe
 import { DanfePreviewDialog } from '@/components/nfe/DanfePreviewDialog';
 import { nfeFailureMessage, readNfeInvokeError } from '@/lib/nfeErrors';
 import { nfeRecipientItemErrors, type NfePendingField } from '@/lib/nfeValidation';
+import { nfeProductCode, withNfeProductCode } from '../../../supabase/functions/_shared/nfe-product-code';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Item = {
@@ -318,7 +319,7 @@ export default function NFeEmissaoAvulsa() {
     if (!taxRule) toast.warning(`"${p.name}" não tem regra tributária associada. Revise os dados fiscais antes de transmitir.`);
     setItems(prev => [...prev, {
       product_id: p.id,
-      code: p.code || '',
+      code: nfeProductCode(p),
       descricao: p.name,
       ncm: taxRule?.ncm || p.ncm || '00000000',
       cfop: taxRule?.cfop || p.cfop || '5102',
@@ -401,7 +402,7 @@ export default function NFeEmissaoAvulsa() {
         },
         indIEDest: destIndIE,
       },
-      itens: items,
+      itens: items.map(withNfeProductCode),
       valor_frete: hasTransport ? valorFrete : 0,
       valor_total: valorTotal,
       pagamentos: payments.map(p => ({ tipo: p.tipo, valor: p.valor })),

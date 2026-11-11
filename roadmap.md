@@ -1,6 +1,7 @@
 # Roadmap — Retomada ComandaTech
 
 ## NF-e modelo 55 — ajustes autorizados
+- [x] Corrigir código do produto no formulário e proxy NF-e (`codigo`/`cProd`), com fallback código → GTIN → identificador cadastrado e compatibilidade com rascunhos; 31 testes aprovados e produto real selecionado/visualizado na Cozinha da Ruiva, sem transmissão fiscal, gravação ou publicação.
 - [x] Resolver IBGE por CEP ao selecionar cliente/reabrir rascunho, impedir transmissão com campos inválidos e exibir pendências e detalhes fiscais; 24 testes aprovados e painel/CEP real verificados no navegador, sem emissão nem publicação.
 - [ ] Confirmar fluxo com cliente e produto reais na Cozinha da Ruiva após implantação — sessão de revendedor disponível não assumiu contexto da loja; transmissão fiscal não realizada.
 - [x] Remover troco e preencher automaticamente total/saldo nas formas de pagamento, sem alterar NFC-e/TEF.
