@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTaxRules, TaxRule, TaxRuleFormData } from '@/hooks/useTaxRules';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Pencil, Trash2, FileText, Loader2, Receipt } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText, Loader2, Receipt, Save } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
@@ -89,10 +90,62 @@ export default function Fiscal() {
   const { taxRules, loading, addTaxRule, updateTaxRule, deleteTaxRule } = useTaxRules({ companyId: company?.id });
   const { isModuleEnabled, toggleModule } = useCompanyModules({ companyId: company?.id });
   const fiscalEnabled = isModuleEnabled('fiscal');
+  const nfseEnabled = isModuleEnabled('nfse');
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<TaxRule | null>(null);
   const [form, setForm] = useState<TaxRuleFormData>(EMPTY_FORM);
+
+  // Configuração da NFS-e (tabela pdv_settings, mesma convenção do nfe_*).
+  const [nfseAmbiente, setNfseAmbiente] = useState<'homologacao' | 'producao'>('homologacao');
+  const [nfseSerie, setNfseSerie] = useState('1');
+  const [nfseCodigoMunicipio, setNfseCodigoMunicipio] = useState('');
+  const [nfseRegime, setNfseRegime] = useState<'mei' | 'simples_nacional' | 'normal' | ''>('');
+  const [nfseSettingsLoading, setNfseSettingsLoading] = useState(true);
+  const [nfseSettingsSaving, setNfseSettingsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!nfseEnabled || !company?.id) { setNfseSettingsLoading(false); return; }
+    supabase
+      .from('pdv_settings')
+      .select('nfse_ambiente, nfse_serie, nfse_codigo_municipio, nfse_regime_tributario')
+      .eq('company_id', company.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          if (data.nfse_ambiente) setNfseAmbiente(data.nfse_ambiente as any);
+          if (data.nfse_serie) setNfseSerie(data.nfse_serie);
+          if (data.nfse_codigo_municipio) setNfseCodigoMunicipio(data.nfse_codigo_municipio);
+          if (data.nfse_regime_tributario) setNfseRegime(data.nfse_regime_tributario as any);
+        }
+        setNfseSettingsLoading(false);
+      });
+  }, [nfseEnabled, company?.id]);
+
+  async function salvarConfigNfse() {
+    if (!company?.id) return;
+    if (nfseCodigoMunicipio && nfseCodigoMunicipio.length !== 7) {
+      toast.error('Código do município (IBGE) precisa ter 7 dígitos.');
+      return;
+    }
+    setNfseSettingsSaving(true);
+    const { error } = await supabase
+      .from('pdv_settings')
+      .upsert({
+        company_id: company.id,
+        nfse_ambiente: nfseAmbiente,
+        nfse_serie: nfseSerie,
+        nfse_codigo_municipio: nfseCodigoMunicipio || null,
+        nfse_regime_tributario: nfseRegime || null,
+      }, { onConflict: 'company_id' });
+    setNfseSettingsSaving(false);
+    if (error) {
+      console.error('[Fiscal] salvar config NFS-e', error);
+      toast.error('Erro ao salvar configuração da NFS-e');
+      return;
+    }
+    toast.success('Configuração da NFS-e salva!');
+  }
 
   function openNew() {
     setEditingRule(null);
@@ -268,6 +321,73 @@ export default function Fiscal() {
             )}
           </CardContent>
         </Card>
+
+        {nfseEnabled && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                NFS-e
+              </CardTitle>
+              <CardDescription>
+                Configuração da Nota Fiscal de Serviço Eletrônica (padrão nacional). O regime
+                tributário é usado só pra avisar antes de emitir se bate com o que a Receita
+                Federal tem registrado — evita a nota ser rejeitada.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {nfseSettingsLoading ? (
+                <div className="flex items-center justify-center py-6 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" /> Carregando…
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label>Ambiente</Label>
+                      <Select value={nfseAmbiente} onValueChange={(v: any) => setNfseAmbiente(v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="homologacao">Homologação</SelectItem>
+                          <SelectItem value="producao">Produção</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Série</Label>
+                      <Input value={nfseSerie} onChange={(e) => setNfseSerie(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Município de prestação (IBGE)</Label>
+                      <Input
+                        value={nfseCodigoMunicipio}
+                        onChange={(e) => setNfseCodigoMunicipio(e.target.value.replace(/\D/g, '').slice(0, 7))}
+                        placeholder="7 dígitos"
+                        maxLength={7}
+                      />
+                    </div>
+                    <div>
+                      <Label>Regime tributário</Label>
+                      <Select value={nfseRegime || '__none__'} onValueChange={(v: any) => setNfseRegime(v === '__none__' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Não informado</SelectItem>
+                          <SelectItem value="mei">MEI</SelectItem>
+                          <SelectItem value="simples_nacional">Simples Nacional</SelectItem>
+                          <SelectItem value="normal">Lucro Presumido/Real</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button onClick={salvarConfigNfse} disabled={nfseSettingsSaving}>
+                    {nfseSettingsSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Salvar configuração
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Tax Rule Form Dialog */}
