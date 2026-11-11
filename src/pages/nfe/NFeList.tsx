@@ -77,7 +77,7 @@ export default function NFeList() {
       });
       if (error) throw error;
       if (data?.success === false || data?.error || data?.ok === false) throw new Error(nfeFailureMessage(data));
-      toast.success(dialog.action === 'excluir' ? 'Registro excluído.' : 'Cancelamento solicitado ao serviço fiscal.');
+      toast.success('Cancelamento solicitado ao serviço fiscal.');
       setDialog(null); await load();
     } catch (error) { setActionError(await readNfeInvokeError(error)); }
     finally { setBusy(false); }
