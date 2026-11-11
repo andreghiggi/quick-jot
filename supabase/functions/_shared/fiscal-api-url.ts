@@ -43,3 +43,13 @@ export function resolveDfeApiUrl(raw?: string | null): string {
   if (env.includes('/nfce-api')) return env.replace('/nfce-api', '/dfe-api').replace(/\/+$/, '')
   return normalizeBase(env) + '/dfe-api'
 }
+
+export function resolveNfseApiUrl(raw?: string | null, nfceRaw?: string | null): string {
+  const env = (raw ?? Deno.env.get('NFSE_API_URL') ?? '').trim()
+  if (env && !isLegacyFiscalUrl(env)) return normalizeBase(env)
+
+  const nfce = resolveNfceApiUrl(nfceRaw)
+  if (nfce.includes('/nfce-api')) return nfce.replace('/nfce-api', '/nfse-api')
+  if (nfce.includes('/nfce')) return nfce.replace('/nfce', '/nfse')
+  return 'https://emit.agilizeerp.com.br/functions/v1/nfse-api'
+}

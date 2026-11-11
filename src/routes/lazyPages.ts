@@ -74,6 +74,8 @@ export const ComprasConfiguracoes = lazy(() => import('@/pages/compras/ComprasCo
 export const NovaCompra = lazy(() => import('@/pages/compras/NovaCompra'));
 export const NFeList = lazy(() => import('@/pages/nfe/NFeList'));
 export const NFeEmissaoAvulsa = lazy(() => import('@/pages/nfe/NFeEmissaoAvulsa'));
+export const NfseList = lazy(() => import('@/pages/nfse/NfseList'));
+export const NfseNova = lazy(() => import('@/pages/nfse/NfseNova'));
 export const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 export const IntegrationsPage = lazy(() => import('@/pages/admin/IntegrationsPage'));
 export const CompanyModulesPage = lazy(() => import('@/pages/admin/CompanyModulesPage'));

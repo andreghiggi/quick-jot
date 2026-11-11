@@ -21,6 +21,7 @@ import { usePdvV2Enabled } from "@/hooks/usePdvV2Enabled";
 import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useFinanceiroEnabled } from "@/hooks/useFinanceiroEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
+import { useNfseEnabled } from "@/hooks/useNfseEnabled";
 import { CompanyProfileTheme } from "@/components/CompanyProfileTheme";
 const PDVV2 = lazy(() => import("./pages/PDVV2"));
 
@@ -86,6 +87,18 @@ function FrenteCaixaGuard({ children }: { children: ReactNode }) {
 function FinanceiroGuard({ children }: { children: ReactNode }) {
   const { company } = useAuthContext();
   const { enabled, loading } = useFinanceiroEnabled(company?.id);
+  if (loading) return <PageLoader />;
+  if (!enabled) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+/**
+ * Guard das rotas /nfse/*: bloqueia acesso quando a loja não tem o módulo
+ * `nfse` ativo (diferente do /nfe hoje, que só esconde do menu).
+ */
+function NfseGuard({ children }: { children: ReactNode }) {
+  const { company } = useAuthContext();
+  const { enabled, loading } = useNfseEnabled(company?.id);
   if (loading) return <PageLoader />;
   if (!enabled) return <Navigate to="/" replace />;
   return <>{children}</>;
@@ -393,6 +406,22 @@ function AppRoutes() {
       <Route path="/nfe/nova" element={
         <ProtectedRoute requireCompany>
           <P.NFeEmissaoAvulsa />
+        </ProtectedRoute>
+      } />
+
+      {/* NFS-e (padrão nacional) — módulo `nfse`. Isolado do fluxo NF-e/NFC-e. */}
+      <Route path="/nfse" element={
+        <ProtectedRoute requireCompany>
+          <NfseGuard>
+            <P.NfseList />
+          </NfseGuard>
+        </ProtectedRoute>
+      } />
+      <Route path="/nfse/nova" element={
+        <ProtectedRoute requireCompany>
+          <NfseGuard>
+            <P.NfseNova />
+          </NfseGuard>
         </ProtectedRoute>
       } />
 

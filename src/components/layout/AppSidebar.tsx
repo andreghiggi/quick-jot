@@ -145,6 +145,9 @@ function OperationalSidebar() {
     ...(isModuleEnabled('nfe')
       ? [{ title: 'NF-e', icon: FileText, href: '/nfe' }]
       : []),
+    ...(isModuleEnabled('nfse')
+      ? [{ title: 'NFS-e', icon: FileText, href: '/nfse' }]
+      : []),
   ];
 
   // Cadastros - bloco Produtos
