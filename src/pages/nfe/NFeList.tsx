@@ -59,6 +59,18 @@ export default function NFeList() {
     if (dialog.action === 'cancelar' && !nfeEventTextValid(text)) return;
     setBusy(true);
     try {
+      if (dialog.action === 'excluir') {
+        const note = dialog.note;
+        if (!['rascunho', 'rejeitada'].includes(note.status) || note.chave_acesso || note.protocolo) throw new Error('Somente registros não autorizados podem ser excluídos.');
+        const guard = (q: any) => q.eq('id', note.id).eq('company_id', company.id).in('status', ['rascunho', 'rejeitada']).is('chave_acesso', null).is('protocolo', null);
+        const { data: del, error: delErr } = await guard((supabase as any).from('nfe_records').delete()).select('id');
+        if (delErr || !del?.length) {
+          const { data: upd, error: updErr } = await guard((supabase as any).from('nfe_records').update({ status: 'excluida' })).select('id');
+          if (updErr) throw updErr;
+          if (!upd?.length) throw new Error('Não foi possível excluir este registro.');
+        }
+        toast.success('Registro excluído.'); setDialog(null); await load(); return;
+      }
       const { data, error } = await supabase.functions.invoke('nfe-proxy', {
         body: { action: dialog.action, companyId: company.id, recordId: dialog.note.id,
           nfeId: dialog.note.nfe_id || undefined, payload: { justificativa: text.trim() } },
@@ -94,7 +106,7 @@ export default function NFeList() {
       .from('nfe_records')
       .select('*')
       .eq('company_id', company.id)
-      .neq('status', 'rascunho_transmitido')
+      .not('status', 'in', '(rascunho_transmitido,excluida)')
       .order('created_at', { ascending: false })
       .limit(200);
     if (error) toast.error('Não foi possível carregar as NF-e.');
