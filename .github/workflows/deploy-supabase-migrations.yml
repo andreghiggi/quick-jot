@@ -13,6 +13,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/**'
+      - 'deploy/sql/*_auto.sql'
       - '.github/workflows/deploy-supabase-migrations.yml'
   workflow_dispatch:
 
@@ -37,7 +38,14 @@ jobs:
 
       - name: Backup + aplicar apenas migracoes pendentes (nunca reaplica as ja feitas)
         run: |
-          tar -C supabase/migrations -czf /tmp/migrations.tar.gz .
+          mkdir -p /tmp/comandatech-migrations
+          cp supabase/migrations/*.sql /tmp/comandatech-migrations/
+          # Only explicitly opted-in mirrors; historical manual scripts are not replayed.
+          for f in deploy/sql/*_auto.sql; do
+            [ -f "$f" ] || continue
+            cp "$f" /tmp/comandatech-migrations/
+          done
+          tar -C /tmp/comandatech-migrations -czf /tmp/migrations.tar.gz .
           scp -i ~/.ssh/deploy_key /tmp/migrations.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/migrations.tar.gz
           ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e

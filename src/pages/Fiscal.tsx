@@ -106,12 +106,12 @@ export default function Fiscal() {
 
   useEffect(() => {
     if (!nfseEnabled || !company?.id) { setNfseSettingsLoading(false); return; }
-    supabase
+    (supabase as any)
       .from('pdv_settings')
       .select('nfse_ambiente, nfse_serie, nfse_codigo_municipio, nfse_regime_tributario')
       .eq('company_id', company.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data }: { data: any }) => {
         if (data) {
           if (data.nfse_ambiente) setNfseAmbiente(data.nfse_ambiente as any);
           if (data.nfse_serie) setNfseSerie(data.nfse_serie);

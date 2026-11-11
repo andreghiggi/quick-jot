@@ -43,6 +43,13 @@
       "when": 1794243534024,
       "tag": "0005_customers_fiscal_fields_and_carriers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794418358183,
+      "tag": "0006_nfe_safe_record_delete",
+      "breakpoints": true
     }
   ]
 }

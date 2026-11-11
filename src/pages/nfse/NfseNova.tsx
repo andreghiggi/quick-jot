@@ -56,8 +56,8 @@ export default function NfseNova() {
 
   useEffect(() => {
     if (!company?.id) return;
-    supabase.from('pdv_settings').select('nfse_ambiente, nfse_serie, nfse_codigo_municipio').eq('company_id', company.id).maybeSingle()
-      .then(({ data }) => {
+    (supabase as any).from('pdv_settings').select('nfse_ambiente, nfse_serie, nfse_codigo_municipio').eq('company_id', company.id).maybeSingle()
+      .then(({ data }: { data: any }) => {
         if (!data) return;
         if (data.nfse_ambiente) setAmbiente(data.nfse_ambiente as any);
         if (data.nfse_serie) setSerie(data.nfse_serie);

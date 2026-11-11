@@ -1,6 +1,10 @@
 # Roadmap — Retomada ComandaTech
 
 ## NF-e modelo 55 — ajustes autorizados
+- [x] Adicionar edição/exclusão protegidas das rejeitadas, duplicação, menu das autorizadas e cancelamento confirmado; 36 testes aprovados, sem emissão/evento fiscal real. Reabertura preserva snapshot e external_id; exclusão não permite chave/protocolo.
+- [ ] Habilitar envio de e-mail e CC-e — bloqueado: endpoints/contrato do serviço fiscal não documentados ou acessíveis; opções exibem indisponibilidade, sem simular envio.
+- [ ] Validar edição e ações com documentos reais da loja — bloqueado: sessão de revendedor retorna “Permissão negada” ao acessar Cozinha da Ruiva; não emitir testes.
+- [x] Preparar espelho SQL da exclusão segura para deploy automático na VPS (pipeline inclui apenas novos arquivos *_auto.sql); implantação não disparada.
 - [x] Corrigir código do produto no formulário e proxy NF-e (`codigo`/`cProd`), com fallback código → GTIN → identificador cadastrado e compatibilidade com rascunhos; 31 testes aprovados e produto real selecionado/visualizado na Cozinha da Ruiva, sem transmissão fiscal, gravação ou publicação.
 - [x] Resolver IBGE por CEP ao selecionar cliente/reabrir rascunho, impedir transmissão com campos inválidos e exibir pendências e detalhes fiscais; 24 testes aprovados e painel/CEP real verificados no navegador, sem emissão nem publicação.
 - [ ] Confirmar fluxo com cliente e produto reais na Cozinha da Ruiva após implantação — sessão de revendedor disponível não assumiu contexto da loja; transmissão fiscal não realizada.

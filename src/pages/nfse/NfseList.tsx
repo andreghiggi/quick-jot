@@ -54,7 +54,7 @@ export default function NfseList() {
   async function load() {
     if (!company?.id) return;
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('nfse_records')
       .select('*')
       .eq('company_id', company.id)

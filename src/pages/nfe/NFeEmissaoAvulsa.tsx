@@ -24,6 +24,8 @@ import { DanfePreviewDialog } from '@/components/nfe/DanfePreviewDialog';
 import { nfeFailureMessage, readNfeInvokeError } from '@/lib/nfeErrors';
 import { nfeRecipientItemErrors, type NfePendingField } from '@/lib/nfeValidation';
 import { nfeProductCode, withNfeProductCode } from '../../../supabase/functions/_shared/nfe-product-code';
+import { canEditNfe } from '../../../supabase/functions/_shared/nfe-record-actions';
+import { nfeStoredForm } from '@/lib/nfeStoredForm';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Item = {
@@ -65,7 +67,10 @@ export default function NFeEmissaoAvulsa() {
   const [tab, setTab] = useState<Tab>('geral');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [draftId, setDraftId] = useState<string | null>(params.get('rascunho'));
+  const [draftId, setDraftId] = useState<string | null>(params.get('editar') || params.get('rascunho'));
+  const duplicateId = params.get('duplicar');
+  const [recordLoading, setRecordLoading] = useState(!!(draftId || duplicateId));
+  const [recordBlocked, setRecordBlocked] = useState(false);
   const transmitting = useRef(false);
 
   // Cabeçalho
@@ -135,7 +140,7 @@ export default function NFeEmissaoAvulsa() {
   const [refInput, setRefInput] = useState('');
 
   useEffect(() => {
-    if (!company?.id || draftId) return;
+    if (!company?.id || draftId || duplicateId) return;
     supabase.from('pdv_settings').select('*').eq('company_id', company.id).maybeSingle()
       .then(({ data }) => {
         if (!data) return;
@@ -149,13 +154,20 @@ export default function NFeEmissaoAvulsa() {
 
   // Reabrir rascunho
   useEffect(() => {
-    if (!company?.id || !draftId) return;
-    supabase.from('nfe_records').select('request_payload, status').eq('id', draftId).eq('company_id', company.id).maybeSingle()
-      .then(({ data }) => {
-        const f = (data as any)?.request_payload?.form;
-        if (!f || (data as any).status !== 'rascunho') { toast.error('Rascunho não encontrado.'); setDraftId(null); return; }
+    const sourceId = duplicateId || draftId;
+    if (!company?.id || !sourceId) return;
+    let active = true;
+    setRecordLoading(true);
+    supabase.from('nfe_records').select('request_payload, status, protocolo, chave_acesso').eq('id', sourceId).eq('company_id', company.id).maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        setRecordLoading(false);
+        if (error || !data?.request_payload || (!duplicateId && !canEditNfe(data)) || (duplicateId && data.status !== 'autorizada')) {
+          toast.error('Esta NF-e não está disponível para edição ou duplicação.'); setRecordBlocked(true); return;
+        }
+        const f = nfeStoredForm(data.request_payload);
         setSerie(f.serie); setAmbiente(f.ambiente); setNaturezaOperacao(f.naturezaOperacao); setFinalidade(f.finalidade);
-        setDhEmi(f.dhEmi); setDhSaiEnt(f.dhSaiEnt); setIndPres(f.indPres); setIndFinal(f.indFinal);
+        setDhEmi(duplicateId ? nowLocal() : f.dhEmi || nowLocal()); setDhSaiEnt(duplicateId ? nowLocal() : f.dhSaiEnt || nowLocal()); setIndPres(f.indPres); setIndFinal(f.indFinal);
         const d = f.dest || {};
         setDestTipo(d.tipo); setDestCnpj(d.cnpj); setDestCpf(d.cpf); setDestRazao(d.razao); setDestIE(d.ie);
         setDestLogradouro(d.logradouro); setDestNumero(d.numero); setDestBairro(d.bairro); setDestCidade(d.cidade);
@@ -167,6 +179,7 @@ export default function NFeEmissaoAvulsa() {
         setXPed(f.xPed || ''); setInfCpl(f.infCpl || ''); setInfAdFisco(f.infAdFisco || '');
         setAutXml(f.autXml || []); setRefs(f.refs || []);
       });
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
@@ -437,8 +450,8 @@ export default function NFeEmissaoAvulsa() {
   }
 
   // Rascunho: nunca chama a SEFAZ, só grava localmente com status 'rascunho'.
-  async function salvarRascunho(silent = false): Promise<boolean> {
-    if (!company?.id) return false;
+  async function salvarRascunho(silent = false): Promise<string | null> {
+    if (!company?.id || recordLoading || recordBlocked) return null;
     setSaving(true);
     await persistCarrier();
     const row: any = {
@@ -448,17 +461,17 @@ export default function NFeEmissaoAvulsa() {
       request_payload: { form: formSnapshot() },
     };
     const res = draftId
-      ? await supabase.from('nfe_records').update(row).eq('id', draftId).eq('company_id', company.id).select('id').single()
+      ? await supabase.from('nfe_records').update(row).eq('id', draftId).eq('company_id', company.id).in('status', ['rascunho', 'rejeitada']).is('protocolo', null).select('id').single()
       : await supabase.from('nfe_records').insert({ ...row, external_id: `rascunho-${crypto.randomUUID()}`, created_by: user?.id ?? null }).select('id').single();
     setSaving(false);
-    if (res.error) { toast.error('Não foi possível salvar o rascunho.'); return false; }
+    if (res.error) { toast.error('Não foi possível salvar. Confira se esta nota ainda pode ser editada.'); return null; }
     setDraftId(res.data.id);
     if (!silent) toast.success('Rascunho salvo. Nada foi enviado à SEFAZ.');
-    return true;
+    return res.data.id;
   }
 
   async function transmitir() {
-    if (transmitting.current) return;
+    if (transmitting.current || recordLoading || recordBlocked) return;
     transmitting.current = true;
     setLoading(true);
     try {
@@ -478,16 +491,15 @@ export default function NFeEmissaoAvulsa() {
       }
       if (!company?.id) { toast.error('Selecione uma loja antes de transmitir.'); return; }
       if (!window.confirm(`Transmitir NF-e de ${money(valorTotal)} para a SEFAZ em ${ambiente === 'producao' ? 'PRODUÇÃO' : 'homologação'}?`)) return;
-      await persistCarrier();
+      const savedId = await salvarRascunho(true);
+      if (!savedId) return;
       const { data, error } = await supabase.functions.invoke('nfe-proxy', {
-        body: { action: 'emitir', companyId: company.id, payload: buildPayload(ibge) },
+        body: { action: 'emitir', companyId: company.id, recordId: savedId, payload: { ...buildPayload(ibge), form: formSnapshot() } },
       });
       if (error) throw error;
-      if (draftId) {
-        await supabase.from('nfe_records').update({ status: 'rascunho_transmitido' }).eq('id', draftId).eq('company_id', company.id);
-      }
       if (!data?.ok) {
-        setPendingFields([]); setFailureMessage(nfeFailureMessage(data) || 'O serviço fiscal não informou quais campos precisam de correção.'); setPendingOpen(true);
+        if (data?.pending) setRecordBlocked(true);
+        setPendingFields([]); setFailureMessage(data?.pending ? 'NF-e em processamento. Consulte a situação na listagem; não repita a transmissão.' : nfeFailureMessage(data) || 'O serviço fiscal não informou quais campos precisam de correção.'); setPendingOpen(true);
         return;
       }
       toast.success('NF-e emitida com sucesso!');
@@ -914,11 +926,11 @@ export default function NFeEmissaoAvulsa() {
           <Button variant="outline" onClick={() => navigate('/nfe')}>Sair</Button>
           <span className="text-sm text-muted-foreground mr-auto ml-2">Total: <strong className="text-foreground">{money(valorTotal)}</strong></span>
           <Button variant="outline" disabled={tabIdx === 0} onClick={() => setTab(TABS[tabIdx - 1])}>Voltar</Button>
-          <Button variant="secondary" onClick={() => salvarRascunho()} disabled={saving || loading}>
+          <Button variant="secondary" onClick={() => salvarRascunho()} disabled={saving || loading || recordLoading || recordBlocked}>
             {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar
           </Button>
           <Button variant="outline" onClick={() => setPreviewOpen(true)}>Pré-visualizar DANFE</Button>
-          <Button onClick={transmitir} disabled={loading || saving}>
+          <Button onClick={transmitir} disabled={loading || saving || recordLoading || recordBlocked}>
             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Salvar e Transmitir
           </Button>
           <Button variant="outline" disabled={tabIdx === TABS.length - 1} onClick={() => setTab(TABS[tabIdx + 1])}>Próximo</Button>

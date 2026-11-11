@@ -6,7 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, Plus, RefreshCw, FileText } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, FileText, MoreHorizontal, Pencil, Trash2, Eye, Mail, Copy, MessageSquare, XCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { canEditNfe, canDeleteNfe, nfeEventTextValid } from '../../../supabase/functions/_shared/nfe-record-actions';
 import { toast } from 'sonner';
 import { nfeDanfeFromXml, openNfeDanfe } from '@/lib/nfeDanfe';
 import { readNfeInvokeError, nfeFailureMessage } from '@/lib/nfeErrors';
@@ -38,13 +43,40 @@ export default function NFeList() {
   const [items, setItems] = useState<NFe[]>([]);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{ note: NFe; action: 'excluir' | 'cancelar' | 'email' | 'correcao' } | null>(null);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
+
+  function showAction(note: NFe, action: 'excluir' | 'cancelar' | 'email' | 'correcao') {
+    setText(action === 'email' ? note.destinatario?.email || '' : '');
+    setActionError(''); setDialog({ note, action });
+  }
+
+  async function confirmAction() {
+    if (!dialog || !company?.id || busy) return;
+    if (!['excluir', 'cancelar'].includes(dialog.action)) return;
+    if (dialog.action === 'cancelar' && !nfeEventTextValid(text)) return;
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('nfe-proxy', {
+        body: { action: dialog.action, companyId: company.id, recordId: dialog.note.id,
+          nfeId: dialog.note.nfe_id || undefined, payload: { justificativa: text.trim() } },
+      });
+      if (error) throw error;
+      if (data?.success === false || data?.error || data?.ok === false) throw new Error(nfeFailureMessage(data));
+      toast.success(dialog.action === 'excluir' ? 'Registro excluído.' : 'Cancelamento solicitado ao serviço fiscal.');
+      setDialog(null); await load();
+    } catch (error) { setActionError(await readNfeInvokeError(error)); }
+    finally { setBusy(false); }
+  }
 
   async function viewDanfe(note: NFe) {
     if (!company?.id || !note.nfe_id) return;
     setOpening(note.id);
     try {
       const { data, error } = await supabase.functions.invoke('nfe-proxy', {
-        body: { action: 'xml', companyId: company.id, nfeId: note.nfe_id },
+        body: { action: 'xml', companyId: company.id, nfeId: note.nfe_id, recordId: note.id },
       });
       if (error) throw error;
       const result = data?.data || data;
@@ -56,15 +88,16 @@ export default function NFeList() {
   }
 
   async function load() {
-    if (!company?.id) return;
+    if (!company?.id) { setItems([]); setLoading(false); return; }
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('nfe_records')
       .select('*')
       .eq('company_id', company.id)
       .neq('status', 'rascunho_transmitido')
       .order('created_at', { ascending: false })
       .limit(200);
+    if (error) toast.error('Não foi possível carregar as NF-e.');
     setItems((data as any) || []);
     setLoading(false);
   }
@@ -115,7 +148,7 @@ export default function NFeList() {
                       <th className="px-3 py-2">Ambiente</th>
                       <th className="px-3 py-2">Status</th>
                       <th className="px-3 py-2">Emitida em</th>
-                      <th className="px-3 py-2">DANFE</th>
+                      <th className="px-3 py-2">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -139,13 +172,22 @@ export default function NFeList() {
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-xs">{new Date(n.created_at).toLocaleString('pt-BR')}</td>
+                        <td className="px-3 py-2 text-xs">{new Date(n.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
                         <td className="px-3 py-2">
-                          {n.status === 'autorizada' && n.nfe_id && company?.id === '55181771-8b10-4af1-afc3-472c090a49be' && (
-                            <Button variant="outline" size="icon" title="Visualizar DANFE A4" aria-label="Visualizar DANFE A4" disabled={opening === n.id} onClick={() => viewDanfe(n)}>
-                              {opening === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {canEditNfe(n) && <Button asChild variant="ghost" size="icon" title="Editar e retransmitir" aria-label="Editar e retransmitir"><Link to={`/nfe/nova?editar=${n.id}`}><Pencil className="w-4 h-4" /></Link></Button>}
+                            {canDeleteNfe(n) && <Button variant="ghost" size="icon" title="Excluir" aria-label="Excluir" onClick={() => showAction(n, 'excluir')}><Trash2 className="w-4 h-4 text-destructive" /></Button>}
+                            {n.status === 'autorizada' && <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label="Opções da NF-e" title="Opções da NF-e" disabled={opening === n.id}>{opening === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}</Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem disabled={!n.nfe_id} onSelect={() => viewDanfe(n)}><Eye className="w-4 h-4 mr-2" />Visualizar</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => showAction(n, 'email')}><Mail className="w-4 h-4 mr-2" />Enviar por e-mail</DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link to={`/nfe/nova?duplicar=${n.id}`}><Copy className="w-4 h-4 mr-2" />Duplicar</Link></DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => showAction(n, 'correcao')}><MessageSquare className="w-4 h-4 mr-2" />Carta de correção</DropdownMenuItem>
+                                <DropdownMenuItem disabled={!n.nfe_id} onSelect={() => showAction(n, 'cancelar')} className="text-destructive"><XCircle className="w-4 h-4 mr-2" />Cancelar</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -156,6 +198,22 @@ export default function NFeList() {
           </CardContent>
         </Card>
       </div>
+      <Dialog open={!!dialog} onOpenChange={open => { if (!open && !busy) setDialog(null); }}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{dialog?.action === 'excluir' ? 'Excluir NF-e' : dialog?.action === 'cancelar' ? 'Cancelar NF-e' : dialog?.action === 'email' ? 'Enviar por e-mail' : 'Carta de correção'}</DialogTitle>
+            <DialogDescription>{dialog?.action === 'excluir' ? 'Excluir somente este registro não autorizado? Esta ação não cancela nem inutiliza numeração fiscal.' : dialog?.action === 'cancelar' ? 'O cancelamento será enviado à SEFAZ. Informe a justificativa (15 a 1000 caracteres).' : 'Este envio depende da integração disponibilizada pelo serviço fiscal e ainda não está disponível.'}</DialogDescription>
+          </DialogHeader>
+          {dialog?.action === 'cancelar' && <Textarea aria-label="Justificativa do cancelamento" value={text} onChange={e => setText(e.target.value)} maxLength={1000} disabled={busy} />}
+          {dialog?.action === 'email' && <Input aria-label="E-mail do destinatário" type="email" value={text} onChange={e => setText(e.target.value)} />}
+          {dialog?.action === 'correcao' && <Textarea aria-label="Texto da carta de correção" value={text} onChange={e => setText(e.target.value)} maxLength={1000} />}
+          {actionError && <p role="alert" className="text-sm text-destructive whitespace-pre-wrap">{actionError}</p>}
+          <DialogFooter>
+            <Button variant="outline" disabled={busy} onClick={() => setDialog(null)}>Voltar</Button>
+            {(dialog?.action === 'excluir' || dialog?.action === 'cancelar') && <Button variant="destructive" onClick={confirmAction} disabled={busy || (dialog?.action === 'cancelar' && !nfeEventTextValid(text))}>{busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{dialog?.action === 'excluir' ? 'Confirmar exclusão' : 'Confirmar cancelamento'}</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
