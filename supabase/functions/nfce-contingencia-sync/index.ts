@@ -9,6 +9,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { fiscalFlowBaseFromNfceUrl, resolveNfceApiUrl } from '../_shared/fiscal-api-url.ts'
+import { buildNfceFiscalFields } from '../_shared/nfce-fiscal-fields.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,6 +23,24 @@ function buildQrcodeUrl(chave: string, ambiente: string): string | null {
     ? `https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx`
     : `https://www.sefaz.rs.gov.br/NFCE/NFCE-COM.aspx`
   return `${base}?chNFe=${chave}&tpAmb=${ambiente === 'producao' ? '1' : '2'}`
+}
+
+// Extrai NSU/autorização/bandeira do texto livre salvo em pdv_sales.notes
+// (ex.: "NSU:564726288 | Aut 564726288 | PIX | SICREDI"). Best-effort: se
+// não achar NSU+autorização, devolve null e a venda é emitida sem o bloco
+// `tef` detalhado (ainda válida, só sem o rastro de NSU/bandeira).
+function parseTefFromNotes(notes: string | null | undefined, amount: number): Record<string, unknown> | null {
+  if (!notes) return null
+  const nsuMatch = notes.match(/NSU:?\s*(\d{4,})/i)
+  const autMatch = notes.match(/\bAut:?\s*(\d{4,})/i)
+  if (!nsuMatch || !autMatch) return null
+  const upper = notes.toUpperCase()
+  let tipo_pagamento: 'credit' | 'debit' | 'pix' = 'credit'
+  if (upper.includes('PIX')) tipo_pagamento = 'pix'
+  else if (upper.includes('DEBITO') || upper.includes('DÉBITO')) tipo_pagamento = 'debit'
+  const brands = ['VISA', 'MASTERCARD', 'ELO', 'AMEX', 'HIPERCARD', 'SICREDI', 'CABAL', 'BANRICOMPRAS']
+  const bandeira = brands.find((b) => upper.includes(b)) || (tipo_pagamento === 'pix' ? 'PIX' : 'CARTAO')
+  return { nsu: nsuMatch[1], autorizacao: autMatch[1], bandeira, tipo_pagamento, valor: amount }
 }
 
 function pickExternalIdMatch(result: any, externalId: string): any | null {
@@ -327,8 +346,141 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Auto-emissão de vendas "fiscal" órfãs (sem nenhuma tentativa) ───────
+    // Caso real (12/11/2026, Cozinha da Ruiva): a tela ficou com código
+    // antigo em cache e salvou 2 vendas com TEF como pdv_sales.fiscal_mode=
+    // 'nao_fiscal' (a trava de banco -- migração trava_tef_fiscal_mode --
+    // corrige esse rótulo sozinha). Mesmo corrigido o rótulo, se a tela
+    // nunca chegou a chamar o nfce-proxy (aba fechada, erro de JS antes da
+    // chamada etc.), a venda fica "fiscal" pra sempre sem nota. Esta seção
+    // fecha esse ciclo: procura vendas 'fiscal' com mais de 3 min, sem
+    // NENHUM nfce_records e sem cancelamento, monta o mesmo payload que a
+    // Frente de Caixa montaria, e chama o nfce-proxy (via x-admin-secret)
+    // reaproveitando toda a normalização/idempotência que já existe lá.
+    // external_id = FCX-<saleId> (mesmo esquema do frontend) garante que,
+    // se a tela e este job correrem ao mesmo tempo, o nfce-proxy devolve o
+    // registro já criado em vez de duplicar.
+    let autoEmitted = 0
+    let autoEmitErrors = 0
+    try {
+      const cutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+      const { data: candidateSales } = await supabase
+        .from('pdv_sales')
+        .select('id, company_id, discount, customer_name, notes, created_at')
+        .eq('fiscal_mode', 'fiscal')
+        .lt('created_at', cutoff)
+        .order('created_at', { ascending: false })
+        .limit(30)
+
+      if (candidateSales && candidateSales.length > 0) {
+        const saleIds = candidateSales.map((s) => s.id)
+
+        const { data: existingNfce } = await supabase
+          .from('nfce_records')
+          .select('sale_id')
+          .in('sale_id', saleIds)
+        const idsComNfce = new Set((existingNfce || []).map((r: any) => r.sale_id))
+
+        const { data: cancelled } = await supabase
+          .from('pdv_sale_cancellations')
+          .select('sale_id')
+          .in('sale_id', saleIds)
+        const idsCancelados = new Set((cancelled || []).map((r: any) => r.sale_id))
+
+        const orfas = candidateSales.filter((s) => !idsComNfce.has(s.id) && !idsCancelados.has(s.id))
+
+        if (orfas.length > 0) {
+          console.log(`[nfce-contingencia-sync] ${orfas.length} venda(s) fiscal(is) órfã(s) (sem nenhuma tentativa de NFC-e)`)
+        }
+
+        const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+        const ADMIN_SECRET = Deno.env.get('NFCE_WEBHOOK_SECRET') ?? ''
+
+        for (const sale of orfas) {
+          try {
+            const { data: items } = await supabase
+              .from('pdv_sale_items')
+              .select('product_id, product_name, quantity, unit_price, total_price')
+              .eq('sale_id', sale.id)
+
+            if (!items || items.length === 0) {
+              console.warn('[nfce-contingencia-sync] venda órfã sem itens, pulando:', sale.id)
+              continue
+            }
+
+            const productIds = items.map((i: any) => i.product_id).filter(Boolean)
+            const { data: products } = productIds.length
+              ? await supabase.from('products').select('id, ncm, cest, code, unit, tax_rule_id').in('id', productIds)
+              : { data: [] }
+            const productsById = new Map((products || []).map((p: any) => [p.id, p]))
+
+            const taxRuleIds = (products || []).map((p: any) => p.tax_rule_id).filter(Boolean)
+            const { data: taxRules } = taxRuleIds.length
+              ? await supabase.from('tax_rules').select('id, ncm, cfop, cest, csosn, icms_aliquot, pis_cst, pis_aliquot, cofins_cst, cofins_aliquot').in('id', taxRuleIds)
+              : { data: [] }
+            const taxRulesById = new Map((taxRules || []).map((t: any) => [t.id, t]))
+
+            const nfceItems = items.map((it: any) => {
+              const product = it.product_id ? productsById.get(it.product_id) : null
+              const taxRule = product?.tax_rule_id ? taxRulesById.get(product.tax_rule_id) : null
+              const fallbackNcm = it.product_id ? '00000000' : '21069090'
+              const unitNet = Number(it.quantity) > 0 ? Number(it.total_price) / Number(it.quantity) : Number(it.unit_price)
+              return {
+                codigo: product?.code || it.product_id || 'AVULSO',
+                descricao: it.product_name,
+                unidade: product?.unit || 'UN',
+                quantidade: Number(it.quantity),
+                valor_unitario: Math.round(unitNet * 100) / 100,
+                ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled: true, fallbackNcm }),
+              }
+            })
+
+            const { data: payments } = await supabase
+              .from('pdv_sale_payments')
+              .select('amount, integration, payment_method_name')
+              .eq('sale_id', sale.id)
+
+            const pagamentosSplit = (payments || []).map((p: any) => {
+              const isTef = p.integration === 'tef_pinpad' || p.integration === 'tef_smartpos'
+              if (!isTef) return { tipo: 'cash', valor: Number(p.amount) }
+              const tef = parseTefFromNotes(sale.notes, Number(p.amount))
+              return tef ? { tipo: 'tef', valor: Number(p.amount), tef } : { tipo: 'tef', valor: Number(p.amount) }
+            })
+
+            const payload = {
+              external_id: `FCX-${sale.id}`,
+              itens: nfceItems,
+              valor_desconto: Number(sale.discount) || 0,
+              valor_frete: 0,
+              observacoes: sale.customer_name ? `Cliente: ${sale.customer_name}` : undefined,
+              pagamentos_split: pagamentosSplit,
+            }
+
+            const resp = await fetch(`${SUPABASE_URL}/functions/v1/nfce-proxy`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+              body: JSON.stringify({ action: 'emitir', companyId: sale.company_id, saleId: sale.id, payload }),
+            })
+            const result = await resp.json().catch(() => null)
+            if (resp.ok && result?.success !== false) {
+              autoEmitted++
+              console.log(`[nfce-contingencia-sync] Venda órfã emitida: ${sale.id} (company ${sale.company_id})`)
+            } else {
+              autoEmitErrors++
+              console.error(`[nfce-contingencia-sync] Falha ao emitir venda órfã ${sale.id}:`, resp.status, result)
+            }
+          } catch (err) {
+            autoEmitErrors++
+            console.error('[nfce-contingencia-sync] Erro processando venda órfã', sale.id, err)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[nfce-contingencia-sync] Erro na varredura de vendas fiscais órfãs:', err)
+    }
+
     return new Response(
-      JSON.stringify({ ok: true, checked: pending?.length ?? 0, effected, reconciled, stuckSynced, errors }),
+      JSON.stringify({ ok: true, checked: pending?.length ?? 0, effected, reconciled, stuckSynced, autoEmitted, autoEmitErrors, errors }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (err) {
