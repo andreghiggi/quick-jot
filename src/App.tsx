@@ -22,6 +22,7 @@ import { useMercadoEnabled } from "@/hooks/useMercadoEnabled";
 import { useFinanceiroEnabled } from "@/hooks/useFinanceiroEnabled";
 import { useCardapioEnabled } from "@/hooks/useCardapioEnabled";
 import { useNfseEnabled } from "@/hooks/useNfseEnabled";
+import { useAutoVersionUpdate } from "@/hooks/useAutoVersionUpdate";
 import { CompanyProfileTheme } from "@/components/CompanyProfileTheme";
 const PDVV2 = lazy(() => import("./pages/PDVV2"));
 
@@ -698,7 +699,8 @@ function AppRoutes() {
 
 function AppWithProviders() {
   const { isImpersonating } = useAuthContext();
-  
+  useAutoVersionUpdate();
+
   return (
     <CompanyProfileTheme>
     <OrderProvider>
