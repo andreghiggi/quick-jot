@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveNfceApiUrl } from '../_shared/fiscal-api-url.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,11 +106,7 @@ Deno.serve(async (req) => {
       userId = user.id
     }
     const GLOBAL_NFCE_API_KEY = Deno.env.get('NFCE_API_KEY')
-    const NFCE_API_URL = Deno.env.get('NFCE_API_URL')
-
-    if (!NFCE_API_URL) {
-      return new Response(JSON.stringify({ error: 'NFC-e API não configurada (URL ausente)' }), { status: 500, headers: corsHeaders })
-    }
+    const NFCE_API_URL = resolveNfceApiUrl()
 
     const body = await req.json()
     const { action, companyId, saleId, nfceId, payload } = body
@@ -726,12 +723,27 @@ Deno.serve(async (req) => {
           // Quando recebia em maiúsculas (CPF/CNPJ), ela montava um destinatário
           // vazio + xNome em posição inválida no XML, gerando rejeição SEFAZ.
           // Em homologação, omitimos xNome (a SEFAZ exige nome fictício específico).
+          // ORDEM XML SEFAZ: CNPJ/CPF → xNome → indIEDest (rejeição se xNome antes do doc).
           const destOrdered: Record<string, string> = {}
           if (dest.cnpj) destOrdered.cnpj = String(dest.cnpj).replace(/\D/g, '')
           else if (dest.cpf) destOrdered.cpf = String(dest.cpf).replace(/\D/g, '')
-          destOrdered.indIEDest = '9' // Não contribuinte
+          const nomeTrim = String(dest.nome || '').trim()
+          if (nomeTrim) {
+            destOrdered.nome = nomeTrim.substring(0, 60)
+          } else if (destOrdered.cnpj) {
+            // CNPJ exige xNome no XML; fallback evita emitir sem destinatário identificado.
+            destOrdered.nome = 'CONSUMIDOR'
+          }
+          destOrdered.indIEDest = '9' // Não contribuinte — sempre após documento e nome
           emitPayload.destinatario = destOrdered
-          console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario))
+          // Fiscal Flow (emit.agilizeerp) lê o bloco `cliente`, não `destinatario`.
+          // Sem `cliente`, a API autoriza sem <dest> no XML mesmo com destinatario preenchido.
+          const cliente: Record<string, string> = {}
+          if (destOrdered.cnpj) cliente.cnpj = destOrdered.cnpj
+          else if (destOrdered.cpf) cliente.cpf = destOrdered.cpf
+          if (destOrdered.nome) cliente.nome = destOrdered.nome
+          emitPayload.cliente = cliente
+          console.log('[nfce-proxy] Destinatário identificado:', JSON.stringify(emitPayload.destinatario), 'cliente:', JSON.stringify(cliente))
         } else {
           // Garante que nada sobre dest vá para a API: evita XML inválido
           delete emitPayload.destinatario
@@ -1173,6 +1185,55 @@ Deno.serve(async (req) => {
               emitData.contingencia_efetivada === true
             ),
           }
+          // -----------------------------------------------------------------
+          // IDEMPOTÊNCIA por (company_id, numero, serie) autorizado — rede de
+          // segurança final, independente de external_id/sale_id/janela de
+          // tempo. Cobre o caso real observado na Cozinha da Ruiva: vendas
+          // DIFERENTES (sale_id/external_id distintos) receberam da Fiscal
+          // Flow o MESMO número de NFC-e já autorizado (contador da Fiscal
+          // Flow não avançou do lado dela). Sem esta checagem, cada uma
+          // dessas vendas gera um novo registro local "autorizada" com
+          // numero/chave duplicados, mascarando a colisão de numeração em vez
+          // de expô-la — e algumas dessas tentativas tardias colidem de
+          // verdade na SEFAZ (rejeição por duplicidade de chave/número).
+          if (nfceRecord.numero && nfceRecord.serie && nfceRecord.status === 'autorizada') {
+            const { data: existingByNumero } = await supabase
+              .from('nfce_records')
+              .select('*')
+              .eq('company_id', companyId)
+              .eq('numero', nfceRecord.numero)
+              .eq('serie', nfceRecord.serie)
+              .eq('status', 'autorizada')
+              .neq('sale_id', saleId || '00000000-0000-0000-0000-000000000000')
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .maybeSingle()
+            if (existingByNumero) {
+              console.error(
+                '[nfce-proxy][idempotency][NUMERO-COLISAO] numero/serie já autorizado para OUTRA venda — ' +
+                'provável contador de numeração travado na Fiscal Flow. numero=', nfceRecord.numero,
+                'serie=', nfceRecord.serie, 'sale_id atual=', saleId, 'sale_id original=', existingByNumero.sale_id,
+                'chave atual=', nfceRecord.chave_acesso, 'chave original=', existingByNumero.chave_acesso,
+              )
+              return new Response(JSON.stringify({
+                success: false,
+                blocked: true,
+                numero_collision: true,
+                error:
+                  'A Fiscal Flow retornou o número ' + nfceRecord.numero + '/' + nfceRecord.serie +
+                  ' já autorizado para outra venda deste estabelecimento. Isso indica que o contador de ' +
+                  'numeração da Fiscal Flow não avançou. NÃO foi criado registro duplicado — contate o ' +
+                  'suporte da Fiscal Flow para corrigir a numeração antes de reemitir esta venda.',
+                existing: {
+                  sale_id: existingByNumero.sale_id,
+                  chave_acesso: existingByNumero.chave_acesso,
+                  protocolo: existingByNumero.protocolo,
+                  created_at: existingByNumero.created_at,
+                },
+              }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+            }
+          }
+
           console.log('[nfce-proxy] Inserting record:', JSON.stringify(nfceRecord))
           const { error: insertError } = await supabase.from('nfce_records').insert(nfceRecord)
           if (insertError) {

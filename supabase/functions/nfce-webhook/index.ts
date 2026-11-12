@@ -119,9 +119,11 @@ Deno.serve(async (req) => {
       .from('nfce_records')
       .update(updateData)
       .eq('nfce_id', dados.id)
-      .select('id')
+      .select('id, sale_id')
 
     if (err1) console.error('[nfce-webhook] Update error (nfce_id):', err1)
+
+    let touchedSaleIds: (string | null)[] = (byId || []).map((r: any) => r.sale_id)
 
     if ((!byId || byId.length === 0) && dados.external_id) {
       const { data: byExt, error: err2 } = await supabase
@@ -129,9 +131,29 @@ Deno.serve(async (req) => {
         .update({ ...updateData, nfce_id: dados.id })
         .eq('external_id', dados.external_id)
         .is('nfce_id', null)
-        .select('id')
+        .select('id, sale_id')
       if (err2) console.error('[nfce-webhook] Update error (external_id):', err2)
-      else console.log('[nfce-webhook] Reconciliado por external_id:', dados.external_id, 'rows=', byExt?.length ?? 0)
+      else {
+        console.log('[nfce-webhook] Reconciliado por external_id:', dados.external_id, 'rows=', byExt?.length ?? 0)
+        touchedSaleIds = (byExt || []).map((r: any) => r.sale_id)
+      }
+    }
+
+    // Marca a venda como fiscal-concluída em pdv_sales quando a NFC-e é
+    // autorizada. Sem isso, pdv_sales nunca sabe que a sincronização fiscal
+    // terminou — apenas nfce_records sabe — e qualquer rotina que decida
+    // "esta venda ainda precisa de NFC-e" com base em pdv_sales sozinha fica
+    // presa indefinidamente mesmo após a autorização real na SEFAZ.
+    if (evento === 'nfce.autorizada') {
+      const saleIds = touchedSaleIds.filter((id): id is string => !!id)
+      if (saleIds.length > 0) {
+        const { error: errSale } = await supabase
+          .from('pdv_sales')
+          .update({ nfce_sync_completed_at: new Date().toISOString() })
+          .in('id', saleIds)
+        if (errSale) console.error('[nfce-webhook] Update error (pdv_sales.nfce_sync_completed_at):', errSale)
+        else console.log('[nfce-webhook] pdv_sales marcadas como fiscal-concluídas:', saleIds)
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {
