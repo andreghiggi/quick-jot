@@ -89,7 +89,7 @@ export function PDVV2Sidebar() {
     ...(tableService ? [{ title: 'Comandas', icon: History, href: '/pdv-v2/comandas-historico' }] : []),
   ];
 
-  // Movimentações (idêntico à AppSidebar): Frente de Caixa · Compras · NF-e
+  // Movimentações (idêntico à AppSidebar): Frente de Caixa · Compras · NF-e · NFS-e
   const movimentacoes = [
     ...(isModuleEnabled('mercado')
       ? [
@@ -99,6 +99,9 @@ export function PDVV2Sidebar() {
       : []),
     ...(isModuleEnabled('nfe')
       ? [{ title: 'NF-e', icon: FileText, href: '/nfe' }]
+      : []),
+    ...(isModuleEnabled('nfse')
+      ? [{ title: 'NFS-e', icon: FileText, href: '/nfse' }]
       : []),
   ];
 
