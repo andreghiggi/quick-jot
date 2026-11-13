@@ -45,6 +45,7 @@ import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { useCardapioEnabled } from '@/hooks/useCardapioEnabled';
 import { useFiscalEnabled } from '@/hooks/useFiscalEnabled';
+import { useNfseEnabled } from '@/hooks/useNfseEnabled';
 import { useTefEnabled } from '@/hooks/useTefEnabled';
 import {
   Sidebar,
@@ -86,6 +87,7 @@ function OperationalSidebar() {
   const { enabled: financeiroEnabled } = useFinanceiroEnabled(company?.id);
   const { enabled: cardapioEnabled } = useCardapioEnabled(company?.id);
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
+  const { enabled: nfseEnabled } = useNfseEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
   const isFlorist = isModuleEnabled('floricultura');
   const terminology = getCompanyTerminology(isFlorist);
@@ -145,7 +147,7 @@ function OperationalSidebar() {
     ...(isModuleEnabled('nfe')
       ? [{ title: 'NF-e', icon: FileText, href: '/nfe' }]
       : []),
-    ...(isModuleEnabled('nfse')
+    ...((nfseEnabled || isModuleEnabled('nfse'))
       ? [{ title: 'NFS-e', icon: FileText, href: '/nfse' }]
       : []),
   ];
