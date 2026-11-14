@@ -48,6 +48,32 @@ serve(async (req) => {
       });
       return parseJsonResponse(stateRes);
     };
+    const ensureWebhook = async (instanceName: string) => {
+      const webhookUrl = `${Deno.env.get('SUPABASE_URL')!}/functions/v1/whatsapp-webhook`;
+      try {
+        const res = await fetch(`${baseUrl}/webhook/set/${instanceName}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+          body: JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: webhookUrl,
+              byEvents: false,
+              base64: false,
+              events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+            },
+            url: webhookUrl,
+            enabled: true,
+            webhook_by_events: false,
+            webhook_base64: false,
+            events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+          }),
+        });
+        if (!res.ok) console.warn(`[ensureWebhook] ${instanceName} HTTP ${res.status}:`, (await res.text()).slice(0, 200));
+      } catch (e) {
+        console.warn(`[ensureWebhook] ${instanceName} failed:`, e);
+      }
+    };
     const createEvolutionInstance = async (instanceName: string) => {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
@@ -311,6 +337,9 @@ serve(async (req) => {
           await supabase.from('whatsapp_instances')
             .update(updatePayload)
             .eq('company_id', companyId);
+
+          // Reconexão via QR pode limpar o webhook na Evolution: reaplica sempre que conectado.
+          await ensureWebhook(instanceName);
         }
 
         return new Response(JSON.stringify(data), {
