@@ -24,6 +24,7 @@ export const WhatsAppSettings = lazy(() => import('@/pages/WhatsAppSettings'));
 export const Changelog = lazy(() => import('@/pages/Changelog'));
 export const Fiscal = lazy(() => import('@/pages/Fiscal'));
 export const NFCeMonitor = lazy(() => import('@/pages/NFCeMonitor'));
+export const NFeMonitor = lazy(() => import('@/pages/NFeMonitor'));
 export const EspelhoFiscal = lazy(() => import('@/pages/fiscal/EspelhoFiscal'));
 export const Suggestions = lazy(() => import('@/pages/Suggestions'));
 export const MenuImport = lazy(() => import('@/pages/MenuImport'));

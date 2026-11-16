@@ -499,6 +499,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/nfe-monitor" element={
+        <ProtectedRoute requireCompany>
+          <P.NFeMonitor />
+        </ProtectedRoute>
+      } />
+
       <Route path="/fiscal/espelho" element={
         <ProtectedRoute requireCompany>
           <P.EspelhoFiscal />
