@@ -10,6 +10,7 @@ import {
   LogOut,
   ShieldCheck,
   Activity,
+  MessageCircle,
 } from 'lucide-react';
 
 import {
@@ -38,6 +39,7 @@ const adminMenuItems = [
   { title: 'Campanhas (config)', icon: Megaphone, href: '/admin/campanhas-config' },
   { title: 'Mídia Kit', icon: FolderOpen, href: '/admin/midia-kit' },
   { title: 'Monitor de Backup', icon: Activity, href: '/admin/backup-monitor' },
+  { title: 'Saúde do WhatsApp', icon: MessageCircle, href: '/admin/whatsapp-saude' },
 ];
 
 

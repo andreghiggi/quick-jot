@@ -85,6 +85,7 @@ export const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 export const CampaignSettings = lazy(() => import('@/pages/admin/CampaignSettings'));
 export const MediaKitAdmin = lazy(() => import('@/pages/admin/MediaKitAdmin'));
 export const BackupMonitor = lazy(() => import('@/pages/admin/BackupMonitor'));
+export const WhatsAppHealth = lazy(() => import('@/pages/admin/WhatsAppHealth'));
 export const ResellerMediaKit = lazy(() => import('@/pages/reseller/ResellerMediaKit'));
 export const ResellerHome = lazy(() => import('@/pages/reseller/ResellerHome'));
 export const ResellerLojas = lazy(() => import('@/pages/reseller/ResellerLojas'));
