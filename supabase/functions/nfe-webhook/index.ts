@@ -14,6 +14,13 @@ function timingSafeEqual(a: string, b: string): boolean {
   return result === 0
 }
 
+// Aceita a assinatura com ou sem o prefixo "sha256=" -- alguns emissores
+// (ex.: Fiscal Flow) mandam so o hex puro, sem o prefixo estilo GitHub.
+function stripSigPrefix(s: string): string {
+  const i = s.indexOf('=')
+  return i > 0 && i <= 10 ? s.slice(i + 1) : s
+}
+
 async function validateSignature(payload: string, signature: string, secret: string): Promise<boolean> {
   if (!signature || !secret) return false
   try {
@@ -25,10 +32,10 @@ async function validateSignature(payload: string, signature: string, secret: str
       ['sign']
     )
     const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload))
-    const expectedSig = 'sha256=' + Array.from(new Uint8Array(sig))
+    const expectedHex = Array.from(new Uint8Array(sig))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('')
-    return timingSafeEqual(signature, expectedSig)
+    return timingSafeEqual(stripSigPrefix(signature).toLowerCase(), expectedHex)
   } catch {
     return false
   }
