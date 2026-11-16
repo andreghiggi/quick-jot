@@ -6,6 +6,93 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const jsonResponse = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+// Esta função aceitava qualquer chamada, sem login (apagar/resetar instância,
+// enviar mensagem). Agora exige a chave de serviço (chamadas internas de outras
+// edge functions) OU um usuário logado com acesso à empresa informada (membro,
+// revendedor ou super admin), e a instância precisa ser dessa empresa.
+//
+// Fase 1 (AUTHZ_ENFORCE = false): decide e registra em whatsapp_authz_audit o que
+// seria negado, mas ainda não bloqueia. Depois de conferir que o tráfego legítimo
+// passa, mude para true.
+const AUTHZ_ENFORCE = true;
+
+type Decision = { allow: boolean; status: number; reason: string; userId: string | null; internal?: boolean };
+
+async function decide(req: Request, supabase: any, params: any): Promise<Decision> {
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { allow: false, status: 401, reason: 'Não autenticado', userId: null };
+
+  if (token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+    return { allow: true, status: 200, reason: 'service', userId: null, internal: true };
+  }
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+  const userId = userData?.user?.id ?? null;
+  if (userErr || !userId) return { allow: false, status: 401, reason: 'Sessão inválida', userId: null };
+
+  const { instanceName, companyId } = params;
+  if (typeof instanceName !== 'string' || typeof companyId !== 'string' || !instanceName || !companyId) {
+    return { allow: false, status: 400, reason: 'instanceName e companyId são obrigatórios', userId };
+  }
+  // Só mexe em instâncias do ComandaTech, nunca de outros sistemas no mesmo Evolution.
+  if (!instanceName.startsWith('ct-')) {
+    return { allow: false, status: 403, reason: 'Instância não permitida', userId };
+  }
+
+  const { data: inst } = await supabase
+    .from('whatsapp_instances')
+    .select('company_id')
+    .eq('instance_name', instanceName)
+    .maybeSingle();
+  if (inst && inst.company_id !== companyId) {
+    return { allow: false, status: 403, reason: 'Instância de outra empresa', userId };
+  }
+
+  const [superAdmin, member, isReseller] = await Promise.all([
+    supabase.from('user_roles').select('id').eq('user_id', userId).eq('role', 'super_admin').limit(1),
+    supabase.from('company_users').select('id').eq('user_id', userId).eq('company_id', companyId).limit(1),
+    (async () => {
+      const { data: resellerId } = await supabase.rpc('get_reseller_id', { _user_id: userId });
+      if (!resellerId) return false;
+      const { data } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('id', companyId)
+        .eq('reseller_id', resellerId)
+        .limit(1);
+      return !!data?.length;
+    })(),
+  ]);
+  if (superAdmin.data?.length) return { allow: true, status: 200, reason: 'super_admin', userId };
+  if (member.data?.length) return { allow: true, status: 200, reason: 'membro', userId };
+  if (isReseller) return { allow: true, status: 200, reason: 'revendedor', userId };
+  return { allow: false, status: 403, reason: 'Sem acesso a esta empresa', userId };
+}
+
+async function authorizeRequest(req: Request, supabase: any, action: string, params: any): Promise<Response | null> {
+  const d = await decide(req, supabase, params);
+  if (d.internal) return null;
+  try {
+    await supabase.from('whatsapp_authz_audit').insert({
+      decision: d.allow ? 'allow' : 'deny',
+      reason: d.reason,
+      action: String(action ?? '').slice(0, 40),
+      company_id: String(params?.companyId ?? '').slice(0, 60) || null,
+      instance_name: String(params?.instanceName ?? '').slice(0, 80) || null,
+      user_id: d.userId,
+      enforced: AUTHZ_ENFORCE,
+    });
+  } catch (_e) { /* auditoria nunca derruba a chamada */ }
+  if (d.allow || !AUTHZ_ENFORCE) return null;
+  return jsonResponse(d.status, { error: d.reason });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -28,6 +115,10 @@ serve(async (req) => {
 
   try {
     const { action, ...params } = await req.json();
+
+    const denied = await authorizeRequest(req, supabase, action, params);
+    if (denied) return denied;
+
     const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
     const apiHeaders = { 'apikey': EVOLUTION_API_KEY };
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

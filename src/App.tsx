@@ -662,6 +662,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/admin/whatsapp-saude" element={
+        <ProtectedRoute requiredRole="super_admin">
+          <P.WhatsAppHealth />
+        </ProtectedRoute>
+      } />
+
 
       {/* Reseller Routes */}
       <Route path="/revendedor/home" element={
