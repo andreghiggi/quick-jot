@@ -351,7 +351,7 @@ export default function NFeEmissaoAvulsa() {
       ipi_cst: taxRule?.ipi_cst || '99',
       ipi_aliquot: Number(taxRule?.ipi_aliquot) || 0,
     }]);
-    setProductSearch(''); setProductResults([]);
+    setProductSearch(''); setProductResults([]); setProductFocused(false);
   }
 
   async function addByBarcode() {
@@ -517,7 +517,7 @@ export default function NFeEmissaoAvulsa() {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-4 pb-28">
+      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-4 pb-36">
         <div>
           <h1 className="text-2xl font-bold">Nova NF-e {draftId && <span className="text-sm font-normal text-muted-foreground">(rascunho)</span>}</h1>
           <p className="text-sm text-muted-foreground">Emissão de Nota Fiscal Eletrônica (modelo 55).</p>
@@ -682,9 +682,9 @@ export default function NFeEmissaoAvulsa() {
                 {items.length === 0 ? (
                   <div className="text-center text-muted-foreground py-6 text-sm">Nenhum item adicionado.</div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto overflow-y-auto max-h-[420px] border rounded-md mb-2">
                     <table className="w-full text-sm min-w-[1100px]">
-                      <thead className="bg-muted/50">
+                      <thead className="bg-muted/50 sticky top-0 z-10">
                         <tr className="text-left">
                           <th className="px-2 py-1">Descrição</th>
                           <th className="px-2 py-1 w-24">NCM</th>
