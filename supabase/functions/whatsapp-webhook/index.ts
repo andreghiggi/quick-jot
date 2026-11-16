@@ -6,21 +6,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Greeting patterns - only clear initial greetings, NOT mid-conversation phrases
+// Greeting patterns - only clear initial greetings, NOT mid-conversation phrases.
+// Patterns are accent-free: the text is normalized (NFD + strip diacritics) and
+// repeated letters are collapsed before matching, so "olá", "olaaaa", "oieee"
+// all match their base form.
 const GREETING_PATTERNS = [
-  /^(oi+e?|olá|ola|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|hello|hi|opa|ou|ow|ei|hei|alô|alo|boa|bão|buenas)\b/i,
-  /^(quero|queria|gostaria).*(pedir|cardapio|cardápio|menu)/i,
-  /^(tem|qual).*(cardapio|cardápio|menu)/i,
+  /^(oie?|ola|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|helo|hi|opa|ou|ow|ei|hei|alo|boa|bao|buenas)\b/i,
+  /^(quero|queria|gostaria).*(pedir|cardapio|menu)/i,
+  /^(tem|qual).*(cardapio|menu)/i,
   // Palavras-chave diretas: pedir, pedido, cardápio, catálogo (isoladas ou em frases)
   /\b(pedir|pedido|fazer pedido)\b/i,
-  /\b(cardapio|cardápio|catalogo|catálogo)\b/i,
+  /\b(cardapio|catalogo)\b/i,
 ];
 
 // Production URL - NEVER use Lovable preview URLs
 const PRODUCTION_URL = 'https://app.comandatech.com.br';
 
 function isGreeting(message: string): boolean {
-  const clean = message.trim().toLowerCase();
+  const clean = message
+    .trim()
+    .toLowerCase()
+    // Strip accents: "olá" -> "ola", "alô" -> "alo", "cardápio" -> "cardapio"
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    // Collapse repeated letters: "oieee" -> "oie", "olaaaa" -> "ola", "opaaa" -> "opa"
+    .replace(/(.)\1{1,}/g, '$1');
   return GREETING_PATTERNS.some(pattern => pattern.test(clean));
 }
 
@@ -173,7 +183,7 @@ serve(async (req) => {
     if (rawTs > 0) {
       const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
       const ageMs = Date.now() - tsMs;
-      if (ageMs > 2 * 60 * 1000) {
+      if (ageMs > 30 * 60 * 1000) {
         console.log('Skipping stale message, age(s):', Math.round(ageMs / 1000));
         return new Response(JSON.stringify({ ok: true, skipped: 'stale_message' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -244,8 +254,9 @@ serve(async (req) => {
         .eq('phone', senderPhone);
 
     try {
-      // COOLDOWN: 24h per phone per company
-      const cooldownDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // COOLDOWN: 4h per phone per company (24h travava clientes que pediam
+      // mais de uma vez no mesmo dia e impedia testes do lojista)
+      const cooldownDate = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
       const { data: recentReply } = await supabase
         .from('whatsapp_messages')
         .select('id')
