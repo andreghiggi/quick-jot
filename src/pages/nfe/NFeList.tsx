@@ -29,6 +29,7 @@ type NFe = {
   destinatario: any;
   motivo_rejeicao: string | null;
   created_at: string;
+  cce_history: Array<{ sequencia: number; correcao: string; created_at: string }> | null;
 };
 
 const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -55,8 +56,8 @@ export default function NFeList() {
 
   async function confirmAction() {
     if (!dialog || !company?.id || busy) return;
-    if (!['excluir', 'cancelar'].includes(dialog.action)) return;
-    if (dialog.action === 'cancelar' && !nfeEventTextValid(text)) return;
+    if (!['excluir', 'cancelar', 'correcao'].includes(dialog.action)) return;
+    if ((dialog.action === 'cancelar' || dialog.action === 'correcao') && !nfeEventTextValid(text)) return;
     setBusy(true);
     try {
       if (dialog.action === 'excluir') {
@@ -71,13 +72,15 @@ export default function NFeList() {
         }
         toast.success('Registro excluído.'); setDialog(null); await load(); return;
       }
+      const isCce = dialog.action === 'correcao';
       const { data, error } = await supabase.functions.invoke('nfe-proxy', {
-        body: { action: dialog.action, companyId: company.id, recordId: dialog.note.id,
-          nfeId: dialog.note.nfe_id || undefined, payload: { justificativa: text.trim() } },
+        body: { action: isCce ? 'cce' : dialog.action, companyId: company.id, recordId: dialog.note.id,
+          nfeId: dialog.note.nfe_id || undefined,
+          payload: isCce ? { correcao: text.trim() } : { justificativa: text.trim() } },
       });
       if (error) throw error;
       if (data?.success === false || data?.error || data?.ok === false) throw new Error(nfeFailureMessage(data));
-      toast.success('Cancelamento solicitado ao serviço fiscal.');
+      toast.success(isCce ? 'Carta de correção registrada na SEFAZ.' : 'Cancelamento solicitado ao serviço fiscal.');
       setDialog(null); await load();
     } catch (error) { setActionError(await readNfeInvokeError(error)); }
     finally { setBusy(false); }
@@ -214,15 +217,25 @@ export default function NFeList() {
         <DialogContent className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{dialog?.action === 'excluir' ? 'Excluir NF-e' : dialog?.action === 'cancelar' ? 'Cancelar NF-e' : dialog?.action === 'email' ? 'Enviar por e-mail' : 'Carta de correção'}</DialogTitle>
-            <DialogDescription>{dialog?.action === 'excluir' ? 'Excluir somente este registro não autorizado? Esta ação não cancela nem inutiliza numeração fiscal.' : dialog?.action === 'cancelar' ? 'O cancelamento será enviado à SEFAZ. Informe a justificativa (15 a 1000 caracteres).' : 'Este envio depende da integração disponibilizada pelo serviço fiscal e ainda não está disponível.'}</DialogDescription>
+            <DialogDescription>{dialog?.action === 'excluir' ? 'Excluir somente este registro não autorizado? Esta ação não cancela nem inutiliza numeração fiscal.'
+              : dialog?.action === 'cancelar' ? 'O cancelamento será enviado à SEFAZ. Informe a justificativa (15 a 1000 caracteres). O prazo de cancelamento é o da SEFAZ (em geral 24h após a autorização).'
+              : dialog?.action === 'correcao' ? 'A carta de correção será enviada à SEFAZ. Não corrige valores, impostos, dados do destinatário que mudem o imposto, data de emissão nem quantidades — só informações complementares. Informe o texto (15 a 1000 caracteres).'
+              : 'Este envio depende da integração disponibilizada pelo serviço fiscal e ainda não está disponível.'}</DialogDescription>
           </DialogHeader>
           {dialog?.action === 'cancelar' && <Textarea aria-label="Justificativa do cancelamento" value={text} onChange={e => setText(e.target.value)} maxLength={1000} disabled={busy} />}
           {dialog?.action === 'email' && <Input aria-label="E-mail do destinatário" type="email" value={text} onChange={e => setText(e.target.value)} />}
-          {dialog?.action === 'correcao' && <Textarea aria-label="Texto da carta de correção" value={text} onChange={e => setText(e.target.value)} maxLength={1000} />}
+          {dialog?.action === 'correcao' && (dialog.note.cce_history?.length ?? 0) > 0 && (
+            <div className="text-xs text-muted-foreground space-y-1 max-h-32 overflow-y-auto border rounded p-2">
+              {dialog.note.cce_history!.map((h) => (
+                <div key={h.sequencia}><b>Sequência {h.sequencia}</b> ({new Date(h.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}): {h.correcao}</div>
+              ))}
+            </div>
+          )}
+          {dialog?.action === 'correcao' && <Textarea aria-label="Texto da carta de correção" value={text} onChange={e => setText(e.target.value)} maxLength={1000} disabled={busy} />}
           {actionError && <p role="alert" className="text-sm text-destructive whitespace-pre-wrap">{actionError}</p>}
           <DialogFooter>
             <Button variant="outline" disabled={busy} onClick={() => setDialog(null)}>Voltar</Button>
-            {(dialog?.action === 'excluir' || dialog?.action === 'cancelar') && <Button variant="destructive" onClick={confirmAction} disabled={busy || (dialog?.action === 'cancelar' && !nfeEventTextValid(text))}>{busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{dialog?.action === 'excluir' ? 'Confirmar exclusão' : 'Confirmar cancelamento'}</Button>}
+            {(dialog?.action === 'excluir' || dialog?.action === 'cancelar' || dialog?.action === 'correcao') && <Button variant="destructive" onClick={confirmAction} disabled={busy || ((dialog?.action === 'cancelar' || dialog?.action === 'correcao') && !nfeEventTextValid(text))}>{busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{dialog?.action === 'excluir' ? 'Confirmar exclusão' : dialog?.action === 'correcao' ? 'Enviar carta de correção' : 'Confirmar cancelamento'}</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

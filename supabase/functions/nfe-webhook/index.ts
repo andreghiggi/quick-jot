@@ -72,9 +72,12 @@ Deno.serve(async (req) => {
     }
 
     const payload = JSON.parse(rawBody)
-    const { evento, dados } = payload
+    // Formato real da Fiscal Flow para NF-e: o id do documento vem solto em
+    // documento_id, nao dentro de dados (diferente do nfce-webhook). dados{}
+    // so traz numero/serie/chave_acesso/status/protocolo/motivo_retorno.
+    const { evento, documento_id: documentoId, dados } = payload
 
-    console.log(`[nfe-webhook] Received event: ${evento}`, { nfe_id: dados?.id })
+    console.log(`[nfe-webhook] Received event: ${evento}`, { documento_id: documentoId })
 
     const statusMap: Record<string, string> = {
       'nfe.autorizada': 'autorizada',
@@ -84,7 +87,7 @@ Deno.serve(async (req) => {
     }
 
     const newStatus = statusMap[evento]
-    if (!newStatus || !dados?.id) {
+    if (!newStatus || !documentoId) {
       return new Response(JSON.stringify({ received: true, message: 'Event ignored' }), {
         status: 200,
         headers: corsHeaders,
@@ -106,7 +109,7 @@ Deno.serve(async (req) => {
     }
 
     if (evento === 'nfe.rejeitada' || evento === 'nfe.denegada') {
-      updateData.motivo_rejeicao = dados.motivo_retorno || dados.motivo
+      updateData.motivo_rejeicao = dados?.motivo_retorno || dados?.motivo
     }
 
     // Mesma reconciliacao por external_id que o nfce-webhook ja faz: cobre
@@ -114,20 +117,21 @@ Deno.serve(async (req) => {
     const { data: byId, error: err1 } = await supabase
       .from('nfe_records')
       .update(updateData)
-      .eq('nfe_id', dados.id)
+      .eq('nfe_id', documentoId)
       .select('id')
 
     if (err1) console.error('[nfe-webhook] Update error (nfe_id):', err1)
 
-    if ((!byId || byId.length === 0) && dados.external_id) {
+    const externalId = dados?.external_id || payload.external_id
+    if ((!byId || byId.length === 0) && externalId) {
       const { data: byExt, error: err2 } = await supabase
         .from('nfe_records')
-        .update({ ...updateData, nfe_id: dados.id })
-        .eq('external_id', dados.external_id)
+        .update({ ...updateData, nfe_id: documentoId })
+        .eq('external_id', externalId)
         .is('nfe_id', null)
         .select('id')
       if (err2) console.error('[nfe-webhook] Update error (external_id):', err2)
-      else console.log('[nfe-webhook] Reconciliado por external_id:', dados.external_id, 'rows=', byExt?.length ?? 0)
+      else console.log('[nfe-webhook] Reconciliado por external_id:', externalId, 'rows=', byExt?.length ?? 0)
     }
 
     return new Response(JSON.stringify({ received: true }), {

@@ -95,6 +95,9 @@ Deno.serve(async (req) => {
     if (action === 'cancelar' && (!record || record.status !== 'autorizada' || !nfeEventTextValid(payload?.justificativa || ''))) {
       return jsonResponse({ error: 'Selecione uma NF-e autorizada e informe justificativa de 15 a 1000 caracteres.' }, 400)
     }
+    if (action === 'cce' && (!record || record.status !== 'autorizada' || !nfeEventTextValid(payload?.correcao || ''))) {
+      return jsonResponse({ error: 'Selecione uma NF-e autorizada e informe o texto da correção, de 15 a 1000 caracteres.' }, 400)
+    }
     if (action === 'emitir') {
       if (!record || !canEditNfe(record)) return jsonResponse({ error: 'Esta NF-e não pode ser retransmitida. Consulte a situação antes de tentar novamente.' }, 409)
     }
@@ -137,6 +140,7 @@ Deno.serve(async (req) => {
       case 'emitir': {
         const emitPayload = { ...payload }
         delete emitPayload.form
+        delete emitPayload.ambiente
         emitPayload.external_id = record.external_id
         // Normalização básica de itens (mesmo padrão da NFC-e)
         if (Array.isArray(emitPayload.itens)) {
@@ -219,7 +223,9 @@ Deno.serve(async (req) => {
           finalidade: Number(payload?.finalidade ?? 1),
           valor_total: Number(emitPayload.valor_total || 0),
           destinatario: payload?.destinatario || null,
-          motivo_rejeicao: apiResponse.ok ? null : (d?.message || d?.error || result?.error || 'Erro'),
+          motivo_rejeicao: apiResponse.ok ? null : (
+            d?.xMotivo ? `${d?.cStat ? `SEFAZ ${d.cStat}: ` : ''}${d.xMotivo}` : (d?.erro || d?.message || d?.error || result?.error || 'Erro')
+          ),
           request_payload: { ...emitPayload, form: payload?.form },
           response_payload: result,
           created_by: user.id,
@@ -291,6 +297,33 @@ Deno.serve(async (req) => {
           }).eq('id', recordId).eq('company_id', companyId).eq('status', 'autorizada')
         }
         if (apiResponse.ok && !cancelConfirmed) return jsonResponse({ success: false, error: 'Cancelamento não confirmado pelo serviço fiscal. Consulte a situação da NF-e antes de repetir.' })
+        return new Response(JSON.stringify(result), {
+          status: apiResponse.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      case 'cce': {
+        if (!nfeId) return new Response(JSON.stringify({ error: 'nfeId obrigatório' }), { status: 400, headers: corsHeaders })
+        const sequencia = Number(payload?.sequencia) || (Array.isArray(record.cce_history) ? record.cce_history.length : 0) + 1
+        apiResponse = await fetch(`${NFE_API_URL}/${nfeId}/cce`, {
+          method: 'POST',
+          headers: apiHeaders,
+          body: JSON.stringify({ correcao: payload?.correcao || '', sequencia }),
+        })
+        result = await safeJson(apiResponse)
+        if (apiResponse.ok && result?.success !== false && !result?.error && recordId) {
+          const entry = {
+            sequencia,
+            correcao: payload?.correcao || '',
+            created_at: new Date().toISOString(),
+            created_by: user.id,
+            protocolo: (result?.data || result)?.protocolo || null,
+          }
+          await supabase.from('nfe_records')
+            .update({ cce_history: [...(Array.isArray(record.cce_history) ? record.cce_history : []), entry] })
+            .eq('id', recordId).eq('company_id', companyId)
+        }
         return new Response(JSON.stringify(result), {
           status: apiResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
