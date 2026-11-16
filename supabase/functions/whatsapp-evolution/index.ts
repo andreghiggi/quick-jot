@@ -20,7 +20,7 @@ const jsonResponse = (status: number, body: unknown) =>
 // Fase 1 (AUTHZ_ENFORCE = false): decide e registra em whatsapp_authz_audit o que
 // seria negado, mas ainda não bloqueia. Depois de conferir que o tráfego legítimo
 // passa, mude para true.
-const AUTHZ_ENFORCE = false;
+const AUTHZ_ENFORCE = true;
 
 type Decision = { allow: boolean; status: number; reason: string; userId: string | null; internal?: boolean };
 
