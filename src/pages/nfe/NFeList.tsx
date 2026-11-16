@@ -32,11 +32,13 @@ type NFe = {
   cce_history: Array<{ sequencia: number; correcao: string; created_at: string }> | null;
 };
 
-const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  autorizada: 'default',
-  pendente: 'secondary',
+const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning'> = {
+  autorizada: 'success',
+  pendente: 'warning',
   rejeitada: 'destructive',
+  denegada: 'destructive',
   cancelada: 'outline',
+  rascunho: 'secondary',
 };
 
 export default function NFeList() {

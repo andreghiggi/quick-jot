@@ -683,44 +683,44 @@ export default function NFeEmissaoAvulsa() {
                   <div className="text-center text-muted-foreground py-6 text-sm">Nenhum item adicionado.</div>
                 ) : (
                   <div className="overflow-x-auto overflow-y-auto max-h-[420px] border rounded-md mb-2">
-                    <table className="w-full text-sm min-w-[1100px]">
+                    <table className="w-full text-sm min-w-[1100px] border-separate border-spacing-0">
                       <thead className="bg-muted/50 sticky top-0 z-10">
-                        <tr className="text-left">
-                          <th className="px-2 py-1">Descrição</th>
-                          <th className="px-2 py-1 w-24">NCM</th>
-                          <th className="px-2 py-1 w-20">CFOP</th>
-                          <th className="px-2 py-1 w-16">UN</th>
-                          <th className="px-2 py-1 w-20">Qtd</th>
-                          <th className="px-2 py-1 w-32">Vlr Unit.</th>
-                          <th className="px-2 py-1 w-28">Total</th>
-                          <th className="px-2 py-1 w-20">CSOSN</th>
-                          <th className="px-2 py-1 w-16">Orig.</th>
-                          <th className="px-2 py-1 w-20">% ICMS</th>
-                          <th className="px-2 py-1 w-16">CST PIS</th>
-                          <th className="px-2 py-1 w-16">CST COF.</th>
-                          <th className="px-2 py-1 w-16">CST IPI</th>
-                          <th className="px-2 py-1 w-16">% IPI</th>
-                          <th className="px-2 py-1 w-10"></th>
+                        <tr className="text-left text-xs text-muted-foreground">
+                          <th className="px-3 py-2 font-medium">Descrição</th>
+                          <th className="px-2 py-2 w-16 font-medium">UN</th>
+                          <th className="px-2 py-2 w-20 font-medium">Qtd</th>
+                          <th className="px-2 py-2 w-28 font-medium">Vlr Unit.</th>
+                          <th className="px-2 py-2 w-28 font-medium">Total</th>
+                          <th className="px-2 py-2 w-24 font-medium border-l bg-muted/70">NCM</th>
+                          <th className="px-2 py-2 w-20 font-medium bg-muted/70">CFOP</th>
+                          <th className="px-2 py-2 w-20 font-medium bg-muted/70">CSOSN</th>
+                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">Orig.</th>
+                          <th className="px-2 py-2 w-20 font-medium bg-muted/70">% ICMS</th>
+                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">CST PIS</th>
+                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">CST COF.</th>
+                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">CST IPI</th>
+                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">% IPI</th>
+                          <th className="px-2 py-2 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {items.map((it, idx) => (
-                          <tr key={idx} className="border-t">
-                            <td className="px-2 py-1"><Input value={it.descricao} onChange={e => updateItem(idx, { descricao: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input value={it.ncm} onChange={e => updateItem(idx, { ncm: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input value={it.cfop} onChange={e => updateItem(idx, { cfop: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input value={it.unidade} onChange={e => updateItem(idx, { unidade: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input type="number" value={it.quantidade} onChange={e => updateItem(idx, { quantidade: Number(e.target.value) })} /></td>
-                            <td className="px-2 py-1"><CurrencyInput value={it.valor_unitario} onValueChange={(v) => updateItem(idx, { valor_unitario: v })} /></td>
-                            <td className="px-2 py-1 text-right font-medium">{money((it.quantidade || 0) * (it.valor_unitario || 0))}</td>
-                            <td className="px-2 py-1"><Input value={it.csosn || ''} onChange={e => updateItem(idx, { csosn: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input value={it.icms_origin || ''} onChange={e => updateItem(idx, { icms_origin: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input type="number" value={it.icms_aliquot ?? 0} onChange={e => updateItem(idx, { icms_aliquot: Number(e.target.value) })} /></td>
-                            <td className="px-2 py-1"><Input value={it.cst_pis || ''} onChange={e => updateItem(idx, { cst_pis: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input value={it.cst_cofins || ''} onChange={e => updateItem(idx, { cst_cofins: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input value={it.ipi_cst || ''} onChange={e => updateItem(idx, { ipi_cst: e.target.value })} /></td>
-                            <td className="px-2 py-1"><Input type="number" value={it.ipi_aliquot ?? 0} onChange={e => updateItem(idx, { ipi_aliquot: Number(e.target.value) })} /></td>
-                            <td className="px-2 py-1">
+                          <tr key={idx} className="border-t even:bg-muted/20">
+                            <td className="px-3 py-1.5 min-w-[200px]"><Input className="h-9" value={it.descricao} onChange={e => updateItem(idx, { descricao: e.target.value })} /></td>
+                            <td className="px-2 py-1.5"><Input className="h-9 text-center" value={it.unidade} onChange={e => updateItem(idx, { unidade: e.target.value })} /></td>
+                            <td className="px-2 py-1.5"><Input className="h-9 text-right" type="number" value={it.quantidade} onChange={e => updateItem(idx, { quantidade: Number(e.target.value) })} /></td>
+                            <td className="px-2 py-1.5"><CurrencyInput className="h-9 text-right" value={it.valor_unitario} onValueChange={(v) => updateItem(idx, { valor_unitario: v })} /></td>
+                            <td className="px-2 py-1.5 text-right font-medium">{money((it.quantidade || 0) * (it.valor_unitario || 0))}</td>
+                            <td className="px-2 py-1.5 border-l bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.ncm} onChange={e => updateItem(idx, { ncm: e.target.value })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.cfop} onChange={e => updateItem(idx, { cfop: e.target.value })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.csosn || ''} onChange={e => updateItem(idx, { csosn: e.target.value })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.icms_origin || ''} onChange={e => updateItem(idx, { icms_origin: e.target.value })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" type="number" value={it.icms_aliquot ?? 0} onChange={e => updateItem(idx, { icms_aliquot: Number(e.target.value) })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.cst_pis || ''} onChange={e => updateItem(idx, { cst_pis: e.target.value })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.cst_cofins || ''} onChange={e => updateItem(idx, { cst_cofins: e.target.value })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.ipi_cst || ''} onChange={e => updateItem(idx, { ipi_cst: e.target.value })} /></td>
+                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" type="number" value={it.ipi_aliquot ?? 0} onChange={e => updateItem(idx, { ipi_aliquot: Number(e.target.value) })} /></td>
+                            <td className="px-2 py-1.5">
                               <Button variant="ghost" size="icon" onClick={() => removeItem(idx)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                             </td>
                           </tr>
