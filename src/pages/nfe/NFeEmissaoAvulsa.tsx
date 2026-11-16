@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Search, ScanBarcode, UserPlus } from 'lucide-react';
+import { Loader2, Plus, Trash2, Search, ScanBarcode, UserPlus, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import {
@@ -117,6 +117,8 @@ export default function NFeEmissaoAvulsa() {
   const [productSearch, setProductSearch] = useState('');
   const [productResults, setProductResults] = useState<any[]>([]);
   const [barcode, setBarcode] = useState('');
+  const skipNextProductSearch = useRef(false);
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
   // Pagamentos
   const [payments, setPayments] = useState<NFePayment[]>([{ tipo: '17', valor: 0 }]);
@@ -186,6 +188,7 @@ export default function NFeEmissaoAvulsa() {
   // Lista produtos ao focar o campo (mesmo vazio); a digitação filtra.
   useEffect(() => {
     if (!company?.id || !productFocused) { setProductResults([]); return; }
+    if (skipNextProductSearch.current) { skipNextProductSearch.current = false; return; }
     const t = setTimeout(async () => {
       const q = productSearch.trim().replace(/[%,()]/g, '');
       let query = supabase
@@ -351,7 +354,8 @@ export default function NFeEmissaoAvulsa() {
       ipi_cst: taxRule?.ipi_cst || '99',
       ipi_aliquot: Number(taxRule?.ipi_aliquot) || 0,
     }]);
-    setProductSearch(''); setProductResults([]); setProductFocused(false);
+    skipNextProductSearch.current = true;
+    setProductSearch(''); setProductResults([]);
   }
 
   async function addByBarcode() {
@@ -368,7 +372,12 @@ export default function NFeEmissaoAvulsa() {
 
   const updateItem = (idx: number, patch: Partial<Item>) =>
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it));
-  const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
+  const removeItem = (idx: number) => { setItems(prev => prev.filter((_, i) => i !== idx)); setExpandedItems(new Set()); };
+  const toggleExpanded = (idx: number) => setExpandedItems(prev => {
+    const next = new Set(prev);
+    next.has(idx) ? next.delete(idx) : next.add(idx);
+    return next;
+  });
 
   const valorProdutos = useMemo(
     () => items.reduce((s, it) => s + (Number(it.quantidade) || 0) * (Number(it.valor_unitario) || 0), 0),
@@ -682,51 +691,47 @@ export default function NFeEmissaoAvulsa() {
                 {items.length === 0 ? (
                   <div className="text-center text-muted-foreground py-6 text-sm">Nenhum item adicionado.</div>
                 ) : (
-                  <div className="overflow-x-auto overflow-y-auto max-h-[420px] border rounded-md mb-2">
-                    <table className="w-full text-sm min-w-[1100px] border-separate border-spacing-0">
-                      <thead className="bg-muted/50 sticky top-0 z-10">
-                        <tr className="text-left text-xs text-muted-foreground">
-                          <th className="px-3 py-2 font-medium">Descrição</th>
-                          <th className="px-2 py-2 w-16 font-medium">UN</th>
-                          <th className="px-2 py-2 w-20 font-medium">Qtd</th>
-                          <th className="px-2 py-2 w-28 font-medium">Vlr Unit.</th>
-                          <th className="px-2 py-2 w-28 font-medium">Total</th>
-                          <th className="px-2 py-2 w-24 font-medium border-l bg-muted/70">NCM</th>
-                          <th className="px-2 py-2 w-20 font-medium bg-muted/70">CFOP</th>
-                          <th className="px-2 py-2 w-20 font-medium bg-muted/70">CSOSN</th>
-                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">Orig.</th>
-                          <th className="px-2 py-2 w-20 font-medium bg-muted/70">% ICMS</th>
-                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">CST PIS</th>
-                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">CST COF.</th>
-                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">CST IPI</th>
-                          <th className="px-2 py-2 w-16 font-medium bg-muted/70">% IPI</th>
-                          <th className="px-2 py-2 w-10"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((it, idx) => (
-                          <tr key={idx} className="border-t even:bg-muted/20">
-                            <td className="px-3 py-1.5 min-w-[200px]"><Input className="h-9" value={it.descricao} onChange={e => updateItem(idx, { descricao: e.target.value })} /></td>
-                            <td className="px-2 py-1.5"><Input className="h-9 text-center" value={it.unidade} onChange={e => updateItem(idx, { unidade: e.target.value })} /></td>
-                            <td className="px-2 py-1.5"><Input className="h-9 text-right" type="number" value={it.quantidade} onChange={e => updateItem(idx, { quantidade: Number(e.target.value) })} /></td>
-                            <td className="px-2 py-1.5"><CurrencyInput className="h-9 text-right" value={it.valor_unitario} onValueChange={(v) => updateItem(idx, { valor_unitario: v })} /></td>
-                            <td className="px-2 py-1.5 text-right font-medium">{money((it.quantidade || 0) * (it.valor_unitario || 0))}</td>
-                            <td className="px-2 py-1.5 border-l bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.ncm} onChange={e => updateItem(idx, { ncm: e.target.value })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.cfop} onChange={e => updateItem(idx, { cfop: e.target.value })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.csosn || ''} onChange={e => updateItem(idx, { csosn: e.target.value })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.icms_origin || ''} onChange={e => updateItem(idx, { icms_origin: e.target.value })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" type="number" value={it.icms_aliquot ?? 0} onChange={e => updateItem(idx, { icms_aliquot: Number(e.target.value) })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.cst_pis || ''} onChange={e => updateItem(idx, { cst_pis: e.target.value })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.cst_cofins || ''} onChange={e => updateItem(idx, { cst_cofins: e.target.value })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" value={it.ipi_cst || ''} onChange={e => updateItem(idx, { ipi_cst: e.target.value })} /></td>
-                            <td className="px-2 py-1.5 bg-muted/10"><Input className="h-8 text-xs text-center px-1" type="number" value={it.ipi_aliquot ?? 0} onChange={e => updateItem(idx, { ipi_aliquot: Number(e.target.value) })} /></td>
-                            <td className="px-2 py-1.5">
-                              <Button variant="ghost" size="icon" onClick={() => removeItem(idx)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-2 overflow-y-auto max-h-[480px] pr-1">
+                    <div className="hidden sm:flex gap-2 px-2 text-xs font-medium text-muted-foreground">
+                      <span className="flex-1">Descrição</span>
+                      <span className="w-16 text-center">UN</span>
+                      <span className="w-20 text-center">Qtd</span>
+                      <span className="w-28 text-center">Vlr Unit.</span>
+                      <span className="w-28 text-center">Total</span>
+                      <span className="w-[108px]"></span>
+                    </div>
+                    {items.map((it, idx) => {
+                      const expanded = expandedItems.has(idx);
+                      return (
+                        <div key={idx} className="border rounded-md bg-background">
+                          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2">
+                            <Input className="flex-1 min-w-[160px]" placeholder="Descrição" value={it.descricao} onChange={e => updateItem(idx, { descricao: e.target.value })} />
+                            <Input className="w-16 text-center" placeholder="UN" value={it.unidade} onChange={e => updateItem(idx, { unidade: e.target.value })} />
+                            <Input className="w-20 text-right" type="number" value={it.quantidade} onChange={e => updateItem(idx, { quantidade: Number(e.target.value) })} />
+                            <CurrencyInput className="w-28 text-right" value={it.valor_unitario} onValueChange={(v) => updateItem(idx, { valor_unitario: v })} />
+                            <span className="w-28 text-right font-medium text-sm">{money((it.quantidade || 0) * (it.valor_unitario || 0))}</span>
+                            <Button type="button" variant="outline" size="sm" className="h-9 px-2 text-xs" onClick={() => toggleExpanded(idx)}>
+                              {expanded ? <ChevronDown className="w-3.5 h-3.5 mr-1" /> : <ChevronRight className="w-3.5 h-3.5 mr-1" />}
+                              Fiscal
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => removeItem(idx)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                          </div>
+                          {expanded && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2 p-2 pt-0 border-t bg-muted/30">
+                              <div><Label className="text-xs text-muted-foreground">NCM</Label><Input className="h-8 text-xs" value={it.ncm} onChange={e => updateItem(idx, { ncm: e.target.value })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">CFOP</Label><Input className="h-8 text-xs" value={it.cfop} onChange={e => updateItem(idx, { cfop: e.target.value })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">CSOSN</Label><Input className="h-8 text-xs" value={it.csosn || ''} onChange={e => updateItem(idx, { csosn: e.target.value })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">Origem</Label><Input className="h-8 text-xs" value={it.icms_origin || ''} onChange={e => updateItem(idx, { icms_origin: e.target.value })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">% ICMS</Label><Input className="h-8 text-xs" type="number" value={it.icms_aliquot ?? 0} onChange={e => updateItem(idx, { icms_aliquot: Number(e.target.value) })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">CST PIS</Label><Input className="h-8 text-xs" value={it.cst_pis || ''} onChange={e => updateItem(idx, { cst_pis: e.target.value })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">CST COFINS</Label><Input className="h-8 text-xs" value={it.cst_cofins || ''} onChange={e => updateItem(idx, { cst_cofins: e.target.value })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">CST IPI</Label><Input className="h-8 text-xs" value={it.ipi_cst || ''} onChange={e => updateItem(idx, { ipi_cst: e.target.value })} /></div>
+                              <div><Label className="text-xs text-muted-foreground">% IPI</Label><Input className="h-8 text-xs" type="number" value={it.ipi_aliquot ?? 0} onChange={e => updateItem(idx, { ipi_aliquot: Number(e.target.value) })} /></div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
