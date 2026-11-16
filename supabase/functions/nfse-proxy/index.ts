@@ -217,27 +217,33 @@ Deno.serve(async (req) => {
 
         const cnpjDigits = String(companyRow?.cnpj || '').replace(/\D/g, '')
         const regimeCadastrado = (settings?.nfse_regime_tributario || '').toLowerCase()
-        if (cnpjDigits.length === 14 && regimeCadastrado) {
+        let cnae: { codigo: string; descricao: string } | null = null
+        if (cnpjDigits.length === 14) {
           try {
             const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjDigits}`, {
               headers: { Accept: 'application/json' },
             })
             if (r.ok) {
               const j = await r.json()
-              const isMei = j?.opcao_pelo_mei === true && !j?.data_exclusao_do_mei
-              const isSimples = j?.opcao_pelo_simples === true && !j?.data_exclusao_do_simples
-              const esperado = isMei ? 'mei' : (isSimples ? 'simples_nacional' : 'normal')
-              if (esperado !== regimeCadastrado) {
-                const nomes: Record<string, string> = { mei: 'MEI', simples_nacional: 'Simples Nacional', normal: 'Lucro Presumido/Real' }
-                problemas.push({
-                  nivel: 'erro',
-                  campo: 'regime',
-                  mensagem: `Na Receita Federal esta empresa é ${nomes[esperado]}, mas o regime cadastrado é diferente. A SEFIN rejeita a nota com o erro 160. Corrija em Fiscal → NFS-e.`,
-                })
+              if (j?.cnae_fiscal) {
+                cnae = { codigo: String(j.cnae_fiscal), descricao: String(j.cnae_fiscal_descricao || '') }
+              }
+              if (regimeCadastrado) {
+                const isMei = j?.opcao_pelo_mei === true && !j?.data_exclusao_do_mei
+                const isSimples = j?.opcao_pelo_simples === true && !j?.data_exclusao_do_simples
+                const esperado = isMei ? 'mei' : (isSimples ? 'simples_nacional' : 'normal')
+                if (esperado !== regimeCadastrado) {
+                  const nomes: Record<string, string> = { mei: 'MEI', simples_nacional: 'Simples Nacional', normal: 'Lucro Presumido/Real' }
+                  problemas.push({
+                    nivel: 'erro',
+                    campo: 'regime',
+                    mensagem: `Na Receita Federal esta empresa é ${nomes[esperado]}, mas o regime cadastrado é diferente. A SEFIN rejeita a nota com o erro 160. Corrija em Fiscal → NFS-e.`,
+                  })
+                }
               }
             }
           } catch {
-            // BrasilAPI fora do ar não bloqueia a emissão, só não valida.
+            // BrasilAPI fora do ar não bloqueia a emissão, só não valida/sugere.
           }
         }
 
@@ -245,7 +251,7 @@ Deno.serve(async (req) => {
           problemas.push({ nivel: 'aviso', campo: 'ambiente', mensagem: 'Ambiente de homologação: a nota emitida não tem validade fiscal.' })
         }
 
-        return new Response(JSON.stringify({ ok: true, problemas }), {
+        return new Response(JSON.stringify({ ok: true, problemas, cnae }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })

@@ -13,6 +13,7 @@ import { Loader2, Search, AlertTriangle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NFSE_CTRIBNAC } from '@/data/nfse-ctribnac';
+import { NFSE_CTRIBNAC_POR_CNAE } from '@/data/nfse-cnae-ctribnac';
 import { NFSE_NBS_POR_SUBITEM, NFSE_NBS_NOMES } from '@/data/nfse-nbs';
 import { validarNfse, type Problema } from '@/utils/nfseValidacao';
 
@@ -27,6 +28,7 @@ export default function NfseNova() {
   const [municipioPrestacao, setMunicipioPrestacao] = useState('');
   const [tokenOk, setTokenOk] = useState(true);
   const [problemasCadastro, setProblemasCadastro] = useState<Problema[]>([]);
+  const [cnae, setCnae] = useState<{ codigo: string; descricao: string } | null>(null);
 
   // Tomador
   const [destDoc, setDestDoc] = useState('');
@@ -66,8 +68,21 @@ export default function NfseNova() {
     supabase.from('store_settings').select('value').eq('company_id', company.id).eq('key', 'fiscal_flow_api_token').maybeSingle()
       .then(({ data }) => setTokenOk(!!data?.value?.trim()));
     supabase.functions.invoke('nfse-proxy', { body: { action: 'pre-validacao', companyId: company.id } })
-      .then(({ data }) => { if (data?.problemas) setProblemasCadastro(data.problemas); });
+      .then(({ data }) => {
+        if (data?.problemas) setProblemasCadastro(data.problemas);
+        if (data?.cnae) setCnae(data.cnae);
+      });
   }, [company?.id]);
+
+  // Sugestão de código de serviço pelo CNAE da empresa (não substitui a busca
+  // livre, só adianta os casos mais comuns pra não precisar digitar).
+  const sugeridosPorCnae = useMemo(() => {
+    if (!cnae) return [];
+    const codigos = NFSE_CTRIBNAC_POR_CNAE[cnae.codigo] || [];
+    return codigos
+      .map((cod) => ({ codigo: cod, descricao: NFSE_CTRIBNAC.find(([c]) => c === cod)?.[1] || cod }))
+      .filter((s) => s.descricao);
+  }, [cnae]);
 
   const cTribNacResultados = useMemo(() => {
     const termo = cTribNacBusca.trim().toLowerCase();
@@ -230,6 +245,22 @@ export default function NfseNova() {
             </div>
             <div className="md:col-span-2 relative">
               <Label>Código de Tributação Nacional *</Label>
+              {sugeridosPorCnae.length > 0 && !cTribNac && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  <span className="text-xs text-muted-foreground self-center mr-1">Sugeridos para esta empresa:</span>
+                  {sugeridosPorCnae.map((s) => (
+                    <button
+                      key={s.codigo}
+                      type="button"
+                      className="text-xs border rounded-full px-2 py-0.5 hover:bg-muted/60"
+                      onClick={() => { setCTribNac(s.codigo); setCTribNacBusca(''); setNbs(''); }}
+                      title={s.descricao}
+                    >
+                      {s.codigo} — {s.descricao.length > 40 ? `${s.descricao.slice(0, 40)}…` : s.descricao}
+                    </button>
+                  ))}
+                </div>
+              )}
               <Input
                 placeholder="Buscar por código ou descrição…"
                 value={cTribNac ? `${cTribNac} — ${NFSE_CTRIBNAC.find(([c]) => c === cTribNac)?.[1] || ''}` : cTribNacBusca}
