@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Plus, RefreshCw, FileText, Download, XCircle, Search } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, FileText, Download, XCircle, Search, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Nfse = {
@@ -28,10 +28,10 @@ type Nfse = {
   created_at: string;
 };
 
-const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  autorizada: 'default',
-  processada: 'secondary',
-  pendente: 'secondary',
+const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning'> = {
+  autorizada: 'success',
+  processada: 'warning',
+  pendente: 'warning',
   rejeitada: 'destructive',
   cancelada: 'outline',
 };
@@ -91,6 +91,22 @@ export default function NfseList() {
       const data = await invoke('pdf', item.id);
       if (!data?.pdf_base64) { toast.error(data?.error || 'Falha ao gerar DANFSe'); return; }
       downloadBase64(data.pdf_base64, `danfse-${item.numero_nfse || item.id}.pdf`, 'application/pdf');
+    } finally { setBusyId(null); }
+  }
+
+  async function imprimir(item: Nfse) {
+    setBusyId(item.id);
+    try {
+      const data = await invoke('pdf', item.id);
+      if (!data?.pdf_base64) { toast.error(data?.error || 'Falha ao gerar DANFSe'); return; }
+      const byteChars = atob(data.pdf_base64);
+      const bytes = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) { toast.error('Pop-up bloqueado. Permita pop-ups para imprimir.'); return; }
+      win.addEventListener('load', () => { try { win.print(); } catch { /* viewer nativo já tem botão de imprimir */ } });
     } finally { setBusyId(null); }
   }
 
@@ -188,6 +204,9 @@ export default function NfseList() {
                             </Button>
                             {(n.status === 'autorizada' || n.status === 'processada') && (
                               <>
+                                <Button variant="ghost" size="icon" title="Imprimir" disabled={busyId === n.id} onClick={() => imprimir(n)}>
+                                  <Printer className="w-4 h-4" />
+                                </Button>
                                 <Button variant="ghost" size="icon" title="Baixar DANFSe (PDF)" disabled={busyId === n.id} onClick={() => baixarPdf(n)}>
                                   <Download className="w-4 h-4" />
                                 </Button>

@@ -276,6 +276,11 @@ function OperationalSidebar() {
       icon: FileText,
       href: '/nfe-monitor',
     }] : []),
+    ...(fiscalTokensEnabled && isModuleEnabled('nfse') ? [{
+      title: 'NFS-e Monitor',
+      icon: FileText,
+      href: '/nfse-monitor',
+    }] : []),
     {
       title: 'Espelho Fiscal',
       icon: FileCheck,

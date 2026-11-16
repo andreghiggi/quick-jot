@@ -97,8 +97,11 @@ export default function NfseNova() {
     ambienteHomologacao: ambiente === 'homologacao',
   }), [tokenOk, destDoc, destNome, discriminacao, valorServico, municipioPrestacao, cTribNac, nbs, destLogradouro, destCep, ambiente]);
 
-  const todosProblemas = [...problemasCadastro, ...problemas];
-  const temErro = todosProblemas.some((p) => p.nivel === 'erro');
+  // Avisos (nivel 'aviso') nao bloqueiam a emissao e nao fazem parte do que
+  // precisa ser corrigido para montar a nota (ex.: "ambiente homologacao nao
+  // tem validade fiscal") -- so os erros reais aparecem no topo da tela.
+  const todosProblemas = [...problemasCadastro, ...problemas].filter((p) => p.nivel === 'erro');
+  const temErro = todosProblemas.length > 0;
 
   async function emitir() {
     if (temErro) { toast.error('Corrija os problemas indicados antes de emitir.'); return; }

@@ -157,6 +157,7 @@ export function PDVV2Sidebar() {
         { title: 'Fiscal', icon: Receipt, href: '/fiscal' },
         ...(fiscalTokensEnabled ? [{ title: 'NFC-e Monitor', icon: FileText, href: '/nfce' }] : []),
         ...(fiscalTokensEnabled && isModuleEnabled('nfe') ? [{ title: 'NF-e Monitor', icon: FileText, href: '/nfe-monitor' }] : []),
+        ...(fiscalTokensEnabled && isModuleEnabled('nfse') ? [{ title: 'NFS-e Monitor', icon: FileText, href: '/nfse-monitor' }] : []),
         { title: 'Espelho Fiscal', icon: FileText, href: '/fiscal/espelho' },
       ]
     : [];
