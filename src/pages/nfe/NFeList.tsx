@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { canEditNfe, canDeleteNfe, nfeEventTextValid } from '../../../supabase/functions/_shared/nfe-record-actions';
 import { toast } from 'sonner';
 import { nfeDanfeFromXml, openNfeDanfe } from '@/lib/nfeDanfe';
@@ -50,6 +51,9 @@ export default function NFeList() {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   function showAction(note: NFe, action: 'excluir' | 'cancelar' | 'email' | 'correcao') {
     setText(action === 'email' ? note.destinatario?.email || '' : '');
@@ -107,19 +111,23 @@ export default function NFeList() {
   async function load() {
     if (!company?.id) { setItems([]); setLoading(false); return; }
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('nfe_records')
       .select('*')
       .eq('company_id', company.id)
       .not('status', 'in', '(rascunho_transmitido,excluida)')
       .order('created_at', { ascending: false })
       .limit(200);
+    if (statusFilter !== 'all') query = query.eq('status', statusFilter);
+    if (dateFrom) query = query.gte('created_at', `${dateFrom}T00:00:00`);
+    if (dateTo) query = query.lte('created_at', `${dateTo}T23:59:59`);
+    const { data, error } = await query;
     if (error) toast.error('Não foi possível carregar as NF-e.');
     setItems((data as any) || []);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, [company?.id]);
+  useEffect(() => { load(); }, [company?.id, statusFilter, dateFrom, dateTo]);
 
   return (
     <AppLayout>
@@ -144,6 +152,28 @@ export default function NFeList() {
         </div>
 
         <Card>
+          <CardContent className="pt-4 pb-3 flex flex-col sm:flex-row flex-wrap gap-3 border-b">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="rascunho">Rascunho</SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+                <SelectItem value="autorizada">Autorizada</SelectItem>
+                <SelectItem value="rejeitada">Rejeitada</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
+                <SelectItem value="denegada">Denegada</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <Input type="date" aria-label="De" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full sm:w-auto" />
+              <span className="text-sm text-muted-foreground">até</span>
+              <Input type="date" aria-label="Até" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full sm:w-auto" />
+            </div>
+            {(statusFilter !== 'all' || dateFrom || dateTo) && (
+              <Button variant="ghost" size="sm" onClick={() => { setStatusFilter('all'); setDateFrom(''); setDateTo(''); }}>Limpar filtros</Button>
+            )}
+          </CardContent>
           <CardContent className="p-0">
             {loading ? (
               <div className="flex items-center justify-center py-16 text-muted-foreground">

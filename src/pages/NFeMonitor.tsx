@@ -64,6 +64,8 @@ export default function NFeMonitor() {
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<NFeRecord | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const recordsRef = useRef<NFeRecord[]>([]);
@@ -82,6 +84,8 @@ export default function NFeMonitor() {
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
+      if (dateFrom) query = query.gte('created_at', `${dateFrom}T00:00:00`);
+      if (dateTo) query = query.lte('created_at', `${dateTo}T23:59:59`);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -95,7 +99,7 @@ export default function NFeMonitor() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [company?.id, statusFilter]);
+  }, [company?.id, statusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     loadRecords();
@@ -340,6 +344,14 @@ export default function NFeMonitor() {
                   <SelectItem value="denegada">Denegada</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-2">
+                <Input type="date" aria-label="De" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full sm:w-auto" />
+                <span className="text-sm text-muted-foreground">até</span>
+                <Input type="date" aria-label="Até" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full sm:w-auto" />
+              </div>
+              {(statusFilter !== 'all' || dateFrom || dateTo || searchTerm) && (
+                <Button variant="ghost" onClick={() => { setStatusFilter('all'); setDateFrom(''); setDateTo(''); setSearchTerm(''); }}>Limpar filtros</Button>
+              )}
             </div>
           </CardContent>
         </Card>
