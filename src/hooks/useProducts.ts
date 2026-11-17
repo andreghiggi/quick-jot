@@ -261,6 +261,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       if ((productData as any).gtin !== undefined) (updateData as any).gtin = (productData as any).gtin || null;
       if ((productData as any).unit !== undefined) (updateData as any).unit = (productData as any).unit || 'UN';
       if ((productData as any).icmsOrigin !== undefined) (updateData as any).icms_origin = (productData as any).icmsOrigin || '0';
+      if ((productData as any).taxRuleId !== undefined) (updateData as any).tax_rule_id = (productData as any).taxRuleId || null;
       if ((productData as any).netWeight !== undefined) (updateData as any).net_weight = (productData as any).netWeight;
       if ((productData as any).grossWeight !== undefined) (updateData as any).gross_weight = (productData as any).grossWeight;
       if ((productData as any).swappableInOrder !== undefined) (updateData as any).swappable_in_order = (productData as any).swappableInOrder;
