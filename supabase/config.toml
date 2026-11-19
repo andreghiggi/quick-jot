@@ -45,3 +45,6 @@ verify_jwt = false
 
 [functions.export-migration]
 verify_jwt = false
+
+[functions.whatsapp-auto-heal]
+verify_jwt = false

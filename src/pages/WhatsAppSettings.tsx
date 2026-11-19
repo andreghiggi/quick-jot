@@ -47,6 +47,7 @@ export default function WhatsAppSettings() {
     disconnect,
     deleteInstance,
     resetInstance,
+    restartInstance,
   } = useWhatsApp(company?.id);
 
   // whatsapp-reset-v1 rollout — explicit allow-list of company IDs.
@@ -277,6 +278,18 @@ export default function WhatsAppSettings() {
                     >
                       {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                       Resetar Conexão
+                    </Button>
+                  )}
+                  {isConnected && (
+                    <Button
+                      variant="outline"
+                      onClick={restartInstance}
+                      disabled={connecting}
+                      className="gap-2"
+                      title="Recarrega a conexão sem desconectar o celular e sem novo QR Code"
+                    >
+                      {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      Reiniciar conexão (sem QR)
                     </Button>
                   )}
                   {isConnected && (

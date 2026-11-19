@@ -152,6 +152,25 @@ export default function WhatsAppHealth() {
     }, 4000);
   };
 
+  const [restarting, setRestarting] = useState<string | null>(null);
+  const softRestart = async (row: HealthRow) => {
+    if (!row.company_id) return;
+    setRestarting(row.instance_name);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: { action: 'restart_instance', instanceName: row.instance_name, companyId: row.company_id },
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.error || 'A conexão não voltou.');
+      toast.success(`${row.company_name}: sessão reiniciada sem QR.`);
+      fetchRows();
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao reiniciar a sessão');
+    } finally {
+      setRestarting(null);
+    }
+  };
+
   const confirmReset = async () => {
     const row = resetTarget;
     setResetTarget(null);
@@ -291,6 +310,21 @@ export default function WhatsAppHealth() {
                               onClick={() => openStore(row)}
                             >
                               <ExternalLink className="w-4 h-4" /> Abrir loja
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              disabled={!row.company_id || restarting === row.instance_name}
+                              onClick={() => softRestart(row)}
+                              title="Recarrega a sessão salva — a loja não precisa ler QR Code"
+                            >
+                              {restarting === row.instance_name ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4" />
+                              )}
+                              Reiniciar (sem QR)
                             </Button>
                             <Button
                               variant={row.status === 'deaf' || row.status === 'state' ? 'default' : 'outline'}

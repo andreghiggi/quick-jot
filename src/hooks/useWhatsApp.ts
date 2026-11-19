@@ -170,6 +170,26 @@ export function useWhatsApp(companyId?: string) {
     }
   }
 
+  // Reinício suave: recarrega a sessão salva sem pedir novo QR Code.
+  async function restartInstance() {
+    if (!companyId || !instance?.instance_name) return;
+    setConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+        body: { action: 'restart_instance', instanceName: instance.instance_name, companyId },
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.error || 'A conexão não voltou.');
+      await fetchInstance();
+      toast.success('WhatsApp reiniciado! A resposta automática foi reativada.');
+    } catch (e: any) {
+      console.error('Error restarting instance:', e);
+      toast.error(e.message || 'Erro ao reiniciar o WhatsApp');
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   async function sendMessage(phone: string, message: string, orderId?: string) {
     if (!instance?.instance_name || !companyId) return false;
     if (instance.status !== 'connected') {
@@ -206,6 +226,7 @@ export function useWhatsApp(companyId?: string) {
     disconnect,
     deleteInstance,
     resetInstance,
+    restartInstance,
     sendMessage,
     refetch: fetchInstance,
   };

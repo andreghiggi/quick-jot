@@ -165,6 +165,29 @@ serve(async (req) => {
         console.warn(`[ensureWebhook] ${instanceName} failed:`, e);
       }
     };
+    // alwaysOnline=true (09/11) coincidiu com sessões "surdas"; força false preservando demais ajustes.
+    const ensureSettings = async (instanceName: string) => {
+      try {
+        const cur = await parseJsonResponse(await fetch(`${baseUrl}/settings/find/${instanceName}`, { headers: apiHeaders }));
+        if (cur?.alwaysOnline === false) return;
+        const res = await fetch(`${baseUrl}/settings/set/${instanceName}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+          body: JSON.stringify({
+            rejectCall: cur?.rejectCall ?? false,
+            msgCall: cur?.msgCall ?? '',
+            groupsIgnore: cur?.groupsIgnore ?? false,
+            alwaysOnline: false,
+            readMessages: cur?.readMessages ?? false,
+            readStatus: cur?.readStatus ?? false,
+            syncFullHistory: cur?.syncFullHistory ?? false,
+          }),
+        });
+        if (!res.ok) console.warn(`[ensureSettings] ${instanceName} HTTP ${res.status}`);
+      } catch (e) {
+        console.warn(`[ensureSettings] ${instanceName} failed:`, e);
+      }
+    };
     const createEvolutionInstance = async (instanceName: string) => {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
@@ -179,7 +202,7 @@ serve(async (req) => {
           integration: 'WHATSAPP-BAILEYS',
           qrcode: true,
           rejectCall: false,
-          alwaysOnline: true,
+          alwaysOnline: false,
           readMessages: false,
           readStatus: false,
           webhook: {
@@ -212,7 +235,7 @@ serve(async (req) => {
             integration: 'WHATSAPP-BAILEYS',
             qrcode: true,
             rejectCall: false,
-            alwaysOnline: true,
+            alwaysOnline: false,
             readMessages: false, // Don't mark as read - preserves native notifications
             readStatus: false,
             webhook: {
@@ -431,6 +454,7 @@ serve(async (req) => {
 
           // Reconexão via QR pode limpar o webhook na Evolution: reaplica sempre que conectado.
           await ensureWebhook(instanceName);
+          await ensureSettings(instanceName);
         }
 
         return new Response(JSON.stringify(data), {
@@ -551,6 +575,27 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: res.ok, data }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      case 'restart_instance': {
+        // Reinício suave: recarrega o socket com a sessão salva — NÃO exige novo QR.
+        const { instanceName, companyId } = params;
+        const rr = await fetch(`${baseUrl}/instance/restart/${instanceName}`, { method: 'POST', headers: apiHeaders });
+        const restartData = await parseJsonResponse(rr);
+        let state: string | null = null;
+        for (let i = 0; i < 6; i++) {
+          await delay(1500);
+          const st = await fetchConnectionState(instanceName).catch(() => null);
+          state = st?.instance?.state ?? null;
+          if (state === 'open') break;
+        }
+        if (state === 'open') {
+          await ensureWebhook(instanceName);
+          await ensureSettings(instanceName);
+          if (companyId) await supabase.from('whatsapp_instances').update({ status: 'connected' }).eq('company_id', companyId);
+        }
+        return jsonResponse(200, { success: state === 'open', state, restartStatus: rr.status, data: restartData,
+          error: state === 'open' ? undefined : 'A conexão não voltou sozinha. Se persistir, use "Resetar e gerar QR".' });
       }
 
       case 'disconnect': {
@@ -749,7 +794,7 @@ serve(async (req) => {
             integration: 'WHATSAPP-BAILEYS',
             qrcode: true,
             rejectCall: false,
-            alwaysOnline: true,
+            alwaysOnline: false,
             readMessages: false,
             readStatus: false,
             webhook: {

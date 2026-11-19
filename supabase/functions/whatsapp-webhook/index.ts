@@ -183,7 +183,7 @@ serve(async (req) => {
     if (rawTs > 0) {
       const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
       const ageMs = Date.now() - tsMs;
-      if (ageMs > 30 * 60 * 1000) {
+      if (ageMs > 4 * 60 * 60 * 1000) { // tolerância de 4h para atrasos de fila/reconexão
         console.log('Skipping stale message, age(s):', Math.round(ageMs / 1000));
         return new Response(JSON.stringify({ ok: true, skipped: 'stale_message' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -254,9 +254,8 @@ serve(async (req) => {
         .eq('phone', senderPhone);
 
     try {
-      // COOLDOWN: 4h per phone per company (24h travava clientes que pediam
-      // mais de uma vez no mesmo dia e impedia testes do lojista)
-      const cooldownDate = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+      // COOLDOWN: 24h por telefone/empresa (regra original, evita reenviar o link no mesmo dia)
+      const cooldownDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: recentReply } = await supabase
         .from('whatsapp_messages')
         .select('id')
