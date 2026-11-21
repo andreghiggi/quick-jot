@@ -1,38 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { extractMessageText, isGreeting, isStaleMessage, isLoggedOut, REPLY_COOLDOWN_MS } from '../_shared/whatsapp-message.ts';
+import { evolutionRequest, recoverInstance, restoreConfiguration } from '../_shared/whatsapp-recovery.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Greeting patterns - only clear initial greetings, NOT mid-conversation phrases.
-// Patterns are accent-free: the text is normalized (NFD + strip diacritics) and
-// repeated letters are collapsed before matching, so "olá", "olaaaa", "oieee"
-// all match their base form.
-const GREETING_PATTERNS = [
-  /^(oie?|ola|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|helo|hi|opa|ou|ow|ei|hei|alo|boa|bao|buenas)\b/i,
-  /^(quero|queria|gostaria).*(pedir|cardapio|menu)/i,
-  /^(tem|qual).*(cardapio|menu)/i,
-  // Palavras-chave diretas: pedir, pedido, cardápio, catálogo (isoladas ou em frases)
-  /\b(pedir|pedido|fazer pedido)\b/i,
-  /\b(cardapio|catalogo)\b/i,
-];
-
-// Production URL - NEVER use Lovable preview URLs
+// Keep the same words, with shared accent/repetition and wrapped-message handling.
 const PRODUCTION_URL = 'https://app.comandatech.com.br';
-
-function isGreeting(message: string): boolean {
-  const clean = message
-    .trim()
-    .toLowerCase()
-    // Strip accents: "olá" -> "ola", "alô" -> "alo", "cardápio" -> "cardapio"
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    // Collapse repeated letters: "oieee" -> "oie", "olaaaa" -> "ola", "opaaa" -> "opa"
-    .replace(/(.)\1{1,}/g, '$1');
-  return GREETING_PATTERNS.some(pattern => pattern.test(clean));
-}
 
 function sanitizeBaseUrl(url: string | null): string {
   if (!url) return PRODUCTION_URL;
@@ -139,27 +112,51 @@ serve(async (req) => {
 
   const supabase = createClient(
     SUPABASE_URL,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
   );
 
   try {
     const body = await req.json();
-    console.log('Webhook received:', JSON.stringify(body).slice(0, 500));
+    if (!body || typeof body !== 'object' || typeof body.event !== 'string') {
+      return new Response(JSON.stringify({ error: 'Evento inválido' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    body.event = body.event.toLowerCase().replace(/_/g, '.');
+    console.log('Webhook event:', body.event);
 
-    // ─── Handle CONNECTION_UPDATE: keep DB status in sync with real session state ───
     if (body.event === 'connection.update') {
-      const instanceName = body.instance;
-      const state = body.data?.state; // 'open' | 'connecting' | 'close'
-      console.log(`[connection.update] instance=${instanceName} state=${state}`);
-
-      if (instanceName && state) {
-        const newStatus = state === 'open' ? 'connected' : 'disconnected';
-        await supabase
-          .from('whatsapp_instances')
-          .update({ status: newStatus })
-          .eq('instance_name', instanceName);
+      // Connection events can trigger restarts, so require Evolution's shared API key.
+      if ((req.headers.get('apikey') || body.apikey) !== EVOLUTION_API_KEY) {
+        return new Response(JSON.stringify({ error: 'Evento não autenticado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
-
+      const instanceName = body.instance;
+      const state = body.data?.state;
+      if (typeof instanceName !== 'string' || !/^ct-[a-zA-Z0-9-]+$/.test(instanceName) || !['open', 'close', 'connecting'].includes(state)) {
+        return new Response(JSON.stringify({ error: 'Conexão inválida' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const { data: instance, error: instanceError } = await supabase.from('whatsapp_instances')
+        .select('company_id').eq('instance_name', instanceName).maybeSingle();
+      if (instanceError) throw new Error('Falha ao consultar conexão');
+      if (instance) {
+        const loggedOut = isLoggedOut(body.data || {});
+        const { error } = await supabase.rpc('whatsapp_observe_connection', {
+          _name: instanceName, _company: instance.company_id, _state: state, _logged_out: loggedOut,
+        });
+        if (error) throw new Error('Falha ao registrar evento da conexão');
+        if (state !== 'connecting') {
+          await supabase.from('whatsapp_instances').update({ status: state === 'open' ? 'connected' : 'disconnected' })
+            .eq('instance_name', instanceName).eq('company_id', instance.company_id);
+        }
+        const call = evolutionRequest(EVOLUTION_API_URL, EVOLUTION_API_KEY);
+        const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+        const work = async () => {
+          if (state === 'close' && !loggedOut) await recoverInstance(supabase, call, instanceName, instance.company_id, webhookUrl);
+          else if (state === 'open') await restoreConfiguration(call, instanceName, webhookUrl);
+        };
+        const task = work().catch(() => console.error('Connection recovery/configuration failed'));
+        const runtime = (globalThis as typeof globalThis & { EdgeRuntime?: { waitUntil: (task: Promise<unknown>) => void } }).EdgeRuntime;
+        if (runtime) runtime.waitUntil(task);
+        else await task;
+      }
       return new Response(JSON.stringify({ ok: true, handled: 'connection.update' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -178,17 +175,11 @@ serve(async (req) => {
       });
     }
 
-    // Skip stale messages (delivered late after a reconnect / history catch-up)
-    const rawTs = Number(messageData.messageTimestamp ?? 0);
-    if (rawTs > 0) {
-      const tsMs = rawTs > 1e12 ? rawTs : rawTs * 1000;
-      const ageMs = Date.now() - tsMs;
-      if (ageMs > 4 * 60 * 60 * 1000) { // tolerância de 4h para atrasos de fila/reconexão
-        console.log('Skipping stale message, age(s):', Math.round(ageMs / 1000));
-        return new Response(JSON.stringify({ ok: true, skipped: 'stale_message' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    // Retain the approved 4-hour queue/reconnection tolerance.
+    if (isStaleMessage(messageData.messageTimestamp)) {
+      return new Response(JSON.stringify({ ok: true, skipped: 'stale_message' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Skip group messages — auto-reply must only run in 1:1 chats
@@ -200,9 +191,7 @@ serve(async (req) => {
       });
     }
 
-    const text = messageData.message?.conversation
-      || messageData.message?.extendedTextMessage?.text
-      || '';
+    const text = extractMessageText(messageData.message);
 
     if (!text || !isGreeting(text)) {
       console.log('Non-greeting, passing through:', text?.slice(0, 50));
@@ -254,8 +243,8 @@ serve(async (req) => {
         .eq('phone', senderPhone);
 
     try {
-      // COOLDOWN: 24h por telefone/empresa (regra original, evita reenviar o link no mesmo dia)
-      const cooldownDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      // COOLDOWN: 2h por telefone/empresa, conforme pacote aprovado.
+      const cooldownDate = new Date(Date.now() - REPLY_COOLDOWN_MS).toISOString();
       const { data: recentReply } = await supabase
         .from('whatsapp_messages')
         .select('id')
@@ -408,8 +397,8 @@ serve(async (req) => {
         clearTimeout(sendTimeout);
       }
 
-      const responseData = await res.json();
-      console.log('Auto-reply sent:', res.ok, JSON.stringify(responseData).slice(0, 200));
+      await res.text();
+      console.log('Auto-reply HTTP status:', res.status);
 
       // Log the message
       await supabase.from('whatsapp_messages').insert({
@@ -421,7 +410,7 @@ serve(async (req) => {
 
       await releaseLock();
 
-      return new Response(JSON.stringify({ ok: true, replied: true, outsideHours: !withinHours }), {
+      return new Response(JSON.stringify({ ok: res.ok, replied: res.ok, outsideHours: !withinHours }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (innerError) {

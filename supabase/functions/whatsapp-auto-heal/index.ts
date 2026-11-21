@@ -1,66 +1,66 @@
-// Auto-healer do WhatsApp: a cada execução (cron) reaplica o webhook e força
-// alwaysOnline=false em todas as instâncias ComandaTech conectadas.
-// Operações idempotentes; não desloga, não reinicia e não envia mensagens.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { evolutionRequest, recoverInstance, restoreConfiguration } from '../_shared/whatsapp-recovery.ts';
 
 Deno.serve(async (req) => {
+  const json = (status: number, body: unknown) => new Response(JSON.stringify(body), {
+    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  const json = (status: number, body: unknown) =>
-    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
-  const EVO_URL = Deno.env.get('EVOLUTION_API_URL');
-  const EVO_KEY = Deno.env.get('EVOLUTION_API_KEY');
-  if (!EVO_URL || !EVO_KEY) return json(500, { error: 'Evolution API not configured' });
-  const baseUrl = EVO_URL.replace(/\/$/, '');
-  const webhookUrl = `${Deno.env.get('SUPABASE_URL')!}/functions/v1/whatsapp-webhook`;
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-
-  const { data: rows } = await supabase
-    .from('whatsapp_instances')
-    .select('instance_name')
-    .eq('status', 'connected')
-    .like('instance_name', 'ct-%');
-
-  const results: Record<string, string> = {};
-  for (const { instance_name: name } of rows ?? []) {
-    try {
-      const st = await (await fetch(`${baseUrl}/instance/connectionState/${name}`, { headers: { apikey: EVO_KEY } })).json().catch(() => null);
-      if (st?.instance?.state !== 'open') { results[name] = `skip:${st?.instance?.state ?? 'unknown'}`; continue; }
-
-      const wh = await fetch(`${baseUrl}/webhook/set/${name}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-        body: JSON.stringify({
-          webhook: { enabled: true, url: webhookUrl, byEvents: false, base64: false, events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'] },
-          url: webhookUrl, enabled: true, webhook_by_events: false, webhook_base64: false,
-          events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
-        }),
-      });
-
-      const cur = await (await fetch(`${baseUrl}/settings/find/${name}`, { headers: { apikey: EVO_KEY } })).json().catch(() => ({}));
-      let settings = 'ok';
-      if (cur?.alwaysOnline !== false) {
-        const sr = await fetch(`${baseUrl}/settings/set/${name}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
-          body: JSON.stringify({
-            rejectCall: cur?.rejectCall ?? false, msgCall: cur?.msgCall ?? '', groupsIgnore: cur?.groupsIgnore ?? false,
-            alwaysOnline: false, readMessages: cur?.readMessages ?? false, readStatus: cur?.readStatus ?? false,
-            syncFullHistory: cur?.syncFullHistory ?? false,
-          }),
-        });
-        settings = `set:${sr.status}`;
+  if (req.method !== 'POST') return json(405, { error: 'Method not allowed' });
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  // The host cron authenticates; anonymous requests must never restart stores.
+  if (!serviceKey || req.headers.get('Authorization') !== `Bearer ${serviceKey}`) return json(401, { error: 'Unauthorized' });
+  const evoUrl = Deno.env.get('EVOLUTION_API_URL');
+  const evoKey = Deno.env.get('EVOLUTION_API_KEY');
+  const dbUrl = Deno.env.get('SUPABASE_URL');
+  if (!evoUrl || !evoKey || !dbUrl) return json(500, { error: 'Not configured' });
+  try {
+    const body = await req.json();
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length) return json(400, { error: 'Expected empty object' });
+    const db = createClient(dbUrl, serviceKey);
+    const { data: rows, error } = await db.from('whatsapp_recovery').select('*')
+      .in('phase', ['ready', 'retry_pending', 'recovering']).order('next_restart_at');
+    if (error) return json(503, { error: 'Recovery migration unavailable' });
+    const call = evolutionRequest(evoUrl, evoKey);
+    const webhookUrl = `${dbUrl}/functions/v1/whatsapp-webhook`;
+    // Restarts are serialized and staggered; full configuration repair stays at 10 minutes.
+    const repair = Math.floor(Date.now() / 60000) % 10 === 0;
+    const results: Record<string, string> = {};
+    const deadline = Date.now() + 45000;
+    const sorted = (rows || []).sort((a, b) => Number(b.phase !== 'ready') - Number(a.phase !== 'ready'));
+    for (const row of sorted) {
+      if (Date.now() > deadline) break;
+      const name = row.instance_name;
+      if (!/^ct-[a-zA-Z0-9-]+$/.test(name)) continue;
+      if (row.lease_until && Date.parse(row.lease_until) > Date.now()) continue;
+      if (row.phase === 'recovering' && row.attempts >= 2) {
+        await db.from('whatsapp_recovery').update({ phase: 'blocked', detail: 'Duas tentativas interrompidas; recuperação automática bloqueada. Verificar sessão/QR.', checked_at: new Date().toISOString() })
+          .eq('instance_name', name).eq('company_id', row.company_id).eq('lease_token', row.lease_token);
+        continue;
       }
-      results[name] = `webhook:${wh.status} settings:${settings}`;
-    } catch (e) {
-      results[name] = `error:${String(e).slice(0, 80)}`;
+      const { data: module } = await db.from('company_modules').select('enabled')
+        .eq('company_id', row.company_id).eq('module_name', 'whatsapp').maybeSingle();
+      if (!module?.enabled) continue;
+      try {
+        const state = await call(`/instance/connectionState/${name}`);
+        const closed = state?.instance?.state === 'close';
+        if (closed && row.phase === 'ready') await db.rpc('whatsapp_observe_connection', {
+          _name: name, _company: row.company_id, _state: 'close', _logged_out: false,
+        });
+        const due = Date.parse(row.next_restart_at) <= Date.now();
+        if (closed || row.phase !== 'ready' || due) {
+          const result = await recoverInstance(db, call, name, row.company_id, webhookUrl);
+          results[name] = result.skipped ? 'deferred' : result.success ? 'reconnected_not_receipt_verified' : 'recovery_failed';
+          // One restart per invocation, plus global database lease across webhook/manual calls.
+          if (!result.skipped) break;
+        } else if (repair && state?.instance?.state === 'open') {
+          await restoreConfiguration(call, name, webhookUrl);
+          results[name] = 'configuration_repaired';
+        }
+      } catch { results[name] = 'provider_unavailable'; }
     }
-  }
-  console.log('[whatsapp-auto-heal]', JSON.stringify(results));
-  return json(200, { ok: true, count: Object.keys(results).length, results });
+    console.log('[whatsapp-auto-heal]', JSON.stringify(results));
+    return json(200, { ok: true, results });
+  } catch { return json(500, { error: 'Recovery check failed' }); }
 });

@@ -38,6 +38,14 @@ import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+interface RecoveryRow {
+  instance_name: string;
+  phase: 'ready' | 'recovering' | 'retry_pending' | 'blocked' | 'needs_qr' | 'manual_disconnect';
+  detail: string | null;
+  checked_at: string;
+  last_restart_at: string | null;
+}
+
 type HealthStatus = 'ok' | 'deaf' | 'state' | 'disconnected' | 'error';
 
 interface HealthRow {
@@ -95,6 +103,7 @@ export default function WhatsAppHealth() {
   const navigate = useNavigate();
   const { impersonateCompany } = useAuthContext();
   const [rows, setRows] = useState<HealthRow[]>([]);
+  const [recovery, setRecovery] = useState<Record<string, RecoveryRow>>({});
   const [loading, setLoading] = useState(true);
   const [resetTarget, setResetTarget] = useState<HealthRow | null>(null);
   const [resetting, setResetting] = useState<string | null>(null);
@@ -104,7 +113,15 @@ export default function WhatsAppHealth() {
 
   const fetchRows = useCallback(async () => {
     try {
-      const { data, error } = await (supabase as any).from('whatsapp_health').select('*');
+      const [{ data, error }, recoveryResult] = await Promise.all([
+        (supabase as any).from('whatsapp_health').select('*'),
+        (supabase as any).from('whatsapp_recovery').select('instance_name,phase,detail,checked_at,last_restart_at'),
+      ]);
+      if (!recoveryResult.error) {
+        setRecovery(Object.fromEntries((recoveryResult.data || []).map((r: RecoveryRow) => [r.instance_name, r])));
+      } else {
+        setRecovery({});
+      }
       if (error) throw error;
       const list = ((data || []) as HealthRow[]).sort(
         (a, b) =>
@@ -207,9 +224,9 @@ export default function WhatsAppHealth() {
     if (ok) navigate('/configuracoes/whatsapp');
   };
 
-  const attention = rows.filter((r) => ['deaf', 'state', 'error'].includes(r.status)).length;
-  const healthy = rows.filter((r) => r.status === 'ok').length;
-  const disconnected = rows.filter((r) => r.status === 'disconnected').length;
+  const attention = rows.filter((r) => ['deaf', 'state', 'error'].includes(r.status) || ['needs_qr', 'blocked', 'retry_pending'].includes(recovery[r.instance_name]?.phase)).length;
+  const healthy = rows.filter((r) => r.status === 'ok' && (!recovery[r.instance_name] || recovery[r.instance_name]?.phase === 'ready')).length;
+  const disconnected = rows.filter((r) => r.status === 'disconnected' || ['needs_qr', 'manual_disconnect'].includes(recovery[r.instance_name]?.phase)).length;
   const lastCheck = rows.reduce<string | null>(
     (acc, r) => (!acc || r.checked_at > acc ? r.checked_at : acc),
     null,
@@ -280,6 +297,8 @@ export default function WhatsAppHealth() {
                 <TableBody>
                   {rows.map((row) => {
                     const justReconnected = reconnected[row.instance_name] === row.checked_at;
+                    const rec = recovery[row.instance_name];
+                    const recoveryAlert = rec && ['recovering', 'retry_pending', 'blocked', 'needs_qr'].includes(rec.phase);
                     return (
                       <TableRow key={row.instance_name}>
                         <TableCell>
@@ -287,12 +306,22 @@ export default function WhatsAppHealth() {
                           <div className="text-xs text-muted-foreground">{row.instance_name}</div>
                         </TableCell>
                         <TableCell>
-                          {justReconnected ? (
+                          {recoveryAlert ? (
+                            <Badge variant={rec.phase === 'recovering' ? 'secondary' : 'destructive'} className="gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              {rec.phase === 'needs_qr' ? 'Novo QR necessário' : rec.phase === 'blocked' ? 'Recuperação bloqueada — verificar QR' : rec.phase === 'recovering' ? 'Recuperando conexão' : 'Falha de recuperação — verificar QR'}
+                            </Badge>
+                          ) : justReconnected ? (
                             <Badge className="bg-green-500 hover:bg-green-600 gap-1">
                               <CheckCircle2 className="w-3 h-3" /> Reconectada agora
                             </Badge>
                           ) : (
                             statusBadge(row.status)
+                          )}
+                          {rec?.detail && (
+                            <div className="text-xs text-muted-foreground mt-1 max-w-xs">
+                              {rec.detail} · {fmtDate(rec.checked_at)}
+                            </div>
                           )}
                           {row.detail && !justReconnected && (
                             <div className="text-xs text-muted-foreground mt-1 max-w-xs">{row.detail}</div>
@@ -315,7 +344,7 @@ export default function WhatsAppHealth() {
                               variant="outline"
                               size="sm"
                               className="gap-1"
-                              disabled={!row.company_id || restarting === row.instance_name}
+                              disabled={!row.company_id || restarting === row.instance_name || rec?.phase === 'recovering' || rec?.phase === 'needs_qr'}
                               onClick={() => softRestart(row)}
                               title="Recarrega a sessão salva — a loja não precisa ler QR Code"
                             >

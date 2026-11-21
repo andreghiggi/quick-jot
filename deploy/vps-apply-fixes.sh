@@ -66,9 +66,8 @@ echo "==> 6) Cron host: nfce-contingencia-sync (fallback se pg_cron indisponíve
 CRON_LINE='*/10 * * * * curl -s -X POST https://api.comandatech.com.br/functions/v1/nfce-contingencia-sync -H '"'"'Content-Type: application/json'"'"' -d '"'"'{}'"'"' >/dev/null 2>&1'
 ( crontab -l 2>/dev/null | grep -v nfce-contingencia-sync || true; echo "$CRON_LINE" ) | crontab -
 
-echo "==> 6b) Cron host: whatsapp-auto-heal (reaplica webhook/ajustes das instâncias a cada 10 min)"
-CRON_LINE_WA='*/10 * * * * curl -s -X POST https://api.comandatech.com.br/functions/v1/whatsapp-auto-heal -H '"'"'Content-Type: application/json'"'"' -d '"'"'{}'"'"' >/dev/null 2>&1'
-( crontab -l 2>/dev/null | grep -v whatsapp-auto-heal || true; echo "$CRON_LINE_WA" ) | crontab -
+echo "==> 6b) Cron host autenticado: recuperação WhatsApp"
+bash "$REPO_DEPLOY/install-whatsapp-recovery-cron.sh"
 
 echo "==> 7) Reconciliar NFC-e órfãs"
 if [[ -f "$APP_DIR/scripts/reconcile-nfce-orphans.mjs" ]]; then

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { evolutionRequest, recoverInstance } from '../_shared/whatsapp-recovery.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -455,6 +456,9 @@ serve(async (req) => {
           // Reconexão via QR pode limpar o webhook na Evolution: reaplica sempre que conectado.
           await ensureWebhook(instanceName);
           await ensureSettings(instanceName);
+          await supabase.rpc('whatsapp_observe_connection', {
+            _name: instanceName, _company: companyId, _state: 'open', _logged_out: false,
+          });
         }
 
         return new Response(JSON.stringify(data), {
@@ -578,28 +582,22 @@ serve(async (req) => {
       }
 
       case 'restart_instance': {
-        // Reinício suave: recarrega o socket com a sessão salva — NÃO exige novo QR.
         const { instanceName, companyId } = params;
-        const rr = await fetch(`${baseUrl}/instance/restart/${instanceName}`, { method: 'POST', headers: apiHeaders });
-        const restartData = await parseJsonResponse(rr);
-        let state: string | null = null;
-        for (let i = 0; i < 6; i++) {
-          await delay(1500);
-          const st = await fetchConnectionState(instanceName).catch(() => null);
-          state = st?.instance?.state ?? null;
-          if (state === 'open') break;
+        // Existing authorization above validates the user's tenant access before the shared service-only claim.
+        if (typeof instanceName !== 'string' || !/^ct-[a-zA-Z0-9-]+$/.test(instanceName) || typeof companyId !== 'string') {
+          return jsonResponse(400, { error: 'Instância e empresa são obrigatórias.' });
         }
-        if (state === 'open') {
-          await ensureWebhook(instanceName);
-          await ensureSettings(instanceName);
-          if (companyId) await supabase.from('whatsapp_instances').update({ status: 'connected' }).eq('company_id', companyId);
-        }
-        return jsonResponse(200, { success: state === 'open', state, restartStatus: rr.status, data: restartData,
-          error: state === 'open' ? undefined : 'A conexão não voltou sozinha. Se persistir, use "Resetar e gerar QR".' });
+        const result = await recoverInstance(supabase, evolutionRequest(baseUrl, EVOLUTION_API_KEY),
+          instanceName, companyId, `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`, true);
+        return jsonResponse(200, result);
       }
 
       case 'disconnect': {
         const { instanceName, companyId } = params;
+        const { error: pauseError } = await supabase.rpc('whatsapp_observe_connection', {
+          _name: instanceName, _company: companyId, _state: 'manual_disconnect', _logged_out: false,
+        });
+        if (pauseError) return jsonResponse(503, { error: 'Não foi possível suspender a recuperação automática. Tente novamente.' });
         const res = await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
           method: 'DELETE',
           headers: apiHeaders,

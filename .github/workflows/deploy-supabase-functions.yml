@@ -7,6 +7,7 @@ on:
     paths:
       - 'supabase/functions/**'
       - '.github/workflows/deploy-supabase-functions.yml'
+      - 'deploy/*whatsapp*'
   workflow_dispatch:
 
 jobs:
@@ -33,11 +34,20 @@ jobs:
         run: |
           tar -C supabase/functions -czf /tmp/comandatech-functions.tar.gz .
           scp -i ~/.ssh/deploy_key /tmp/comandatech-functions.tar.gz root@${{ secrets.VPS_HOST }}:/tmp/comandatech-functions.tar.gz
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} 'mkdir -p /tmp/comandatech-whatsapp-cron'
+          scp -i ~/.ssh/deploy_key deploy/install-whatsapp-recovery-cron.sh deploy/whatsapp-auto-heal-cron.py root@${{ secrets.VPS_HOST }}:/tmp/comandatech-whatsapp-cron/
           ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e
             target=/opt/apps/comandatech-api/supabase/functions
             if [ ! -d "$target" ]; then
               echo "ERRO: $target nao existe na VPS; abortando sem mexer em nada"
+              exit 1
+            fi
+
+            echo "==> Verificando migracao WhatsApp antes de alterar as functions"
+            schema_ok="$(docker exec supabase-db-1 psql -U postgres -d postgres -Atc "SELECT to_regclass('public.whatsapp_recovery') IS NOT NULL AND to_regprocedure('public.whatsapp_claim_restart(text,uuid,boolean)') IS NOT NULL AND to_regprocedure('public.whatsapp_finish_restart(text,uuid,boolean,text)') IS NOT NULL AND to_regprocedure('public.whatsapp_observe_connection(text,uuid,text,boolean)') IS NOT NULL;")"
+            if [ "$schema_ok" != "t" ]; then
+              echo "ERRO: aprove primeiro o Deploy Supabase Migrations desta versao. Nada foi publicado."
               exit 1
             fi
 
@@ -79,5 +89,7 @@ jobs:
               exit 1
             fi
 
+            bash /tmp/comandatech-whatsapp-cron/install-whatsapp-recovery-cron.sh
+            rm -rf /tmp/comandatech-whatsapp-cron
             echo "==> Deploy de functions concluido (backup preservado em $backup)"
           ENDSSH

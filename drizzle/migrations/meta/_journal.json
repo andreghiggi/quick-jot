@@ -50,6 +50,13 @@
       "when": 1794418358183,
       "tag": "0006_nfe_safe_record_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795291516377,
+      "tag": "0007_whatsapp_recovery",
+      "breakpoints": true
     }
   ]
 }

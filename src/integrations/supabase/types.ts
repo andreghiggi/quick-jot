@@ -5260,6 +5260,74 @@ export type Database = {
           },
         ]
       }
+      whatsapp_recovery: {
+        Row: {
+          attempts: number
+          checked_at: string
+          company_id: string
+          detail: string | null
+          instance_name: string
+          last_restart_at: string | null
+          lease_token: string | null
+          lease_until: string | null
+          next_restart_at: string
+          phase: string
+        }
+        Insert: {
+          attempts?: number
+          checked_at?: string
+          company_id: string
+          detail?: string | null
+          instance_name: string
+          last_restart_at?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_restart_at?: string
+          phase?: string
+        }
+        Update: {
+          attempts?: number
+          checked_at?: string
+          company_id?: string
+          detail?: string | null
+          instance_name?: string
+          last_restart_at?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          next_restart_at?: string
+          phase?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_recovery_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_recovery_gate: {
+        Row: {
+          id: boolean
+          lease_token: string | null
+          lease_until: string | null
+          next_allowed_at: string
+        }
+        Insert: {
+          id?: boolean
+          lease_token?: string | null
+          lease_until?: string | null
+          next_allowed_at?: string
+        }
+        Update: {
+          id?: boolean
+          lease_token?: string | null
+          lease_until?: string | null
+          next_allowed_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -5372,6 +5440,27 @@ export type Database = {
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
+      }
+      whatsapp_claim_restart: {
+        Args: { _company: string; _manual?: boolean; _name: string }
+        Returns: string
+      }
+      whatsapp_finish_restart: {
+        Args: { _detail: string; _name: string; _open: boolean; _token: string }
+        Returns: undefined
+      }
+      whatsapp_next_restart: {
+        Args: { _after: string; _name: string }
+        Returns: string
+      }
+      whatsapp_observe_connection: {
+        Args: {
+          _company: string
+          _logged_out?: boolean
+          _name: string
+          _state: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

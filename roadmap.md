@@ -1,5 +1,13 @@
 # Roadmap — Retomada ComandaTech
 
+## WhatsApp — pacote de recuperação aprovado (21/11)
+- [x] Reciclagem a cada 4h escalonada, sem envio de mensagens de teste ou reset destrutivo.
+- [x] Recuperação em connection.update autenticado, com trava compartilhada, duas tentativas e bloqueio após logout/falha; reinícios simultâneos entre lojas impedidos.
+- [x] Extrair mensagens temporárias e legendas; cooldown 2h, tolerância de atraso 4h e palavras atuais preservadas.
+- [x] Exibir falhas de recuperação e necessidade de verificar QR sem afirmar recepção só pelo estado open.
+- [x] Migração aplicada na base de desenvolvimento e preparada para VPS; cron autenticado via deploy de functions, bloqueado antes da migração; testes unitários, handler simulado e SQL em banco descartável, sem publicação.
+- [ ] Validar recebimento e saudação reais após implantação na VPS — depende de deploy autorizado e mensagem real.
+
 ## Frente de Caixa — NFC-e obrigatória com TEF
 - [x] Ocultar pré-venda com TEF alocado e forçar fiscal no checkout/atalho e no registro da venda; 10 testes aprovados, build OK, sem alterar motor TEF, vendas existentes ou emitir notas.
 - [ ] Validar checkout autenticado da loja — sessão disponível é de revendedor e redireciona Frente de Caixa para Home; sem cobrança real ou transmissão fiscal e sem publicação.
