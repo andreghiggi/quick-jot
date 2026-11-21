@@ -37,6 +37,7 @@ import {
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { resolveDisplayStatus, type DisplayStatus } from '@/lib/whatsappHealthStatus';
 
 interface RecoveryRow {
   instance_name: string;
@@ -62,8 +63,14 @@ interface HealthRow {
 
 const SEVERITY: Record<HealthStatus, number> = { deaf: 0, state: 1, error: 2, disconnected: 3, ok: 4 };
 
-function statusBadge(status: HealthStatus) {
+function statusBadge(status: DisplayStatus) {
   switch (status) {
+    case 'idle':
+      return (
+        <Badge variant="outline" className="gap-1">
+          <CheckCircle2 className="w-3 h-3" /> Conectada · aguardando mensagens
+        </Badge>
+      );
     case 'deaf':
       return (
         <Badge variant="destructive" className="gap-1">
@@ -109,6 +116,8 @@ export default function WhatsAppHealth() {
   const [resetting, setResetting] = useState<string | null>(null);
   const [qr, setQr] = useState<{ row: HealthRow; code: string; connected: boolean } | null>(null);
   const [reconnected, setReconnected] = useState<Record<string, string>>({});
+  const [live, setLive] = useState<Record<string, { state: string | null; at: string }>>({});
+  const [refreshing, setRefreshing] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchRows = useCallback(async () => {
@@ -141,6 +150,33 @@ export default function WhatsAppHealth() {
     const interval = setInterval(fetchRows, 30000);
     return () => clearInterval(interval);
   }, [fetchRows]);
+
+  const refreshLive = async () => {
+    setRefreshing(true);
+    try {
+      await fetchRows();
+      const targets = rows.filter((r) => r.company_id);
+      const results = await Promise.all(
+        targets.map(async (r) => {
+          try {
+            const { data, error } = await supabase.functions.invoke('whatsapp-evolution', {
+              body: { action: 'get_status', instanceName: r.instance_name, companyId: r.company_id },
+            });
+            if (error) throw error;
+            return [r.instance_name, { state: data?.instance?.state ?? null, at: new Date().toISOString() }] as const;
+          } catch {
+            return [r.instance_name, { state: null, at: new Date().toISOString() }] as const;
+          }
+        }),
+      );
+      setLive(Object.fromEntries(results));
+      const failed = results.filter(([, v]) => !v.state).length;
+      if (failed) toast.warning(`Status atualizado; ${failed} loja(s) não responderam à verificação ao vivo.`);
+      else toast.success('Status atualizado ao vivo.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const stopPolling = () => {
     if (pollRef.current) {
@@ -247,8 +283,8 @@ export default function WhatsAppHealth() {
               {lastCheck ? `; última: ${format(new Date(lastCheck), 'dd/MM HH:mm', { locale: ptBR })}` : ''}.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchRows} className="gap-2">
-            <RefreshCw className="w-4 h-4" /> Atualizar
+          <Button variant="outline" size="sm" onClick={refreshLive} disabled={refreshing} className="gap-2">
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Verificando...' : 'Atualizar agora'}
           </Button>
         </div>
 
@@ -298,6 +334,7 @@ export default function WhatsAppHealth() {
                   {rows.map((row) => {
                     const justReconnected = reconnected[row.instance_name] === row.checked_at;
                     const rec = recovery[row.instance_name];
+                    const display = resolveDisplayStatus(row.status, live[row.instance_name]?.state, rec?.phase);
                     const recoveryAlert = rec && ['recovering', 'retry_pending', 'blocked', 'needs_qr'].includes(rec.phase);
                     return (
                       <TableRow key={row.instance_name}>
@@ -316,14 +353,22 @@ export default function WhatsAppHealth() {
                               <CheckCircle2 className="w-3 h-3" /> Reconectada agora
                             </Badge>
                           ) : (
-                            statusBadge(row.status)
+                            statusBadge(display)
+                          )}
+                          {live[row.instance_name] && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Ao vivo: {live[row.instance_name].state === 'open' ? 'conectada' : live[row.instance_name].state === 'close' ? 'desconectada' : live[row.instance_name].state || 'sem resposta'} · {format(new Date(live[row.instance_name].at), 'HH:mm:ss')}
+                            </div>
+                          )}
+                          {rec?.last_restart_at && (
+                            <div className="text-xs text-muted-foreground mt-1">Último reinício sem QR: {fmtDate(rec.last_restart_at)}</div>
                           )}
                           {rec?.detail && (
                             <div className="text-xs text-muted-foreground mt-1 max-w-xs">
                               {rec.detail} · {fmtDate(rec.checked_at)}
                             </div>
                           )}
-                          {row.detail && !justReconnected && (
+                          {row.detail && !justReconnected && display !== 'idle' && (
                             <div className="text-xs text-muted-foreground mt-1 max-w-xs">{row.detail}</div>
                           )}
                         </TableCell>
