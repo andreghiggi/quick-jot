@@ -4,6 +4,8 @@ import type { CustomerAddress, NewAddressInput } from '@/hooks/useCustomerAddres
 const norm = (value: string | null | undefined) => (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
 export const customerPhoneKey = (phone: string) => phone.replace(/\D/g, '');
 export const validCustomerPhone = (phone: string) => /^\d{10,11}$/.test(customerPhoneKey(phone));
+/** Checkout phone: DDD (11-99) + celular com 9 + 8 dígitos, ou fixo (2-5) + 7 dígitos. Bloqueia DDD digitado em dobro. */
+export const validCheckoutPhone = (phone: string) => /^[1-9][1-9](9\d{8}|[2-5]\d{7})$/.test(customerPhoneKey(phone));
 export function sameAddress(a: NewAddressInput, b: NewAddressInput): boolean {
   return (['address', 'number', 'complement', 'neighborhood', 'city', 'state'] as const).every(key => norm(a[key]) === norm(b[key]));
 }

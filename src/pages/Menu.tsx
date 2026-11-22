@@ -43,7 +43,7 @@ import { AddressCepInput } from '@/components/menu/AddressCepInput';
 import { AddressLabelInput } from '@/components/menu/AddressLabelInput';
 import { AddressNeighborhoodInput } from '@/components/menu/AddressNeighborhoodInput';
 import { normalizeNeighborhood } from '@/lib/addressFormRules';
-import { customerPhoneKey, validCustomerPhone, saveCustomerAddress } from '@/lib/customerAddress';
+import { customerPhoneKey, validCustomerPhone, validCheckoutPhone, saveCustomerAddress } from '@/lib/customerAddress';
 import { usePublicCoupons } from '@/hooks/usePublicCoupons';
 import { FloristGiftSection } from '@/components/menu/FloristGiftSection';
 import { FloristItemDestination } from '@/components/menu/FloristItemDestination';
@@ -1257,7 +1257,7 @@ export default function Menu() {
 
     // Collect all field errors at once
     const errors = new Set<string>();
-    if (!customerPhone.trim() || customerPhone.replace(/\D/g, '').length < 10) errors.add('customerPhone');
+    if (!validCheckoutPhone(customerPhone)) errors.add('customerPhone');
     if (!customerName.trim()) {
       errors.add('customerName');
     } else {
@@ -2606,6 +2606,9 @@ export default function Menu() {
                       placeholder="(00) 00000-0000"
                       className={cn('border-primary', fieldErrors.has('customerPhone') && 'border-destructive')}
                     />
+                    {fieldErrors.has('customerPhone') && (
+                      <p className="text-xs text-destructive mt-1">Confira o telefone: DDD + número com 9 dígitos, ex. (54) 99999-9999</p>
+                    )}
                   </div>
                   <div>
                     <Label className="font-bold">Nome Completo *</Label>

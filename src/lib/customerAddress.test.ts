@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { from, rows, writes } = vi.hoisted(() => ({ from: vi.fn(), rows: { value: [] as Record<string, unknown>[] }, writes: [] as Record<string, unknown>[] }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { from } }));
-import { customerPhoneKey, validCustomerPhone, sameAddress, parseCustomerAddress, saveCustomerAddress } from './customerAddress';
+import { customerPhoneKey, validCustomerPhone, validCheckoutPhone, sameAddress, parseCustomerAddress, saveCustomerAddress } from './customerAddress';
 
 const address = { label: 'Casa', address: 'Rua A', number: '10', complement: '', neighborhood: 'Centro', reference: 'Praça', city: 'Porto Alegre', state: 'RS' };
 beforeEach(() => {
@@ -53,5 +53,18 @@ describe('Customer identity and address rules', () => {
     await saveCustomerAddress('customer-b', 'company-a', { ...address, number: '20' });
     expect(writes).toHaveLength(1);
     expect(writes[0]).toMatchObject({ kind: 'insert', input: { number: '20', is_default: false } });
+  });
+});
+describe('validCheckoutPhone', () => {
+  it('aceita celular com 9 dígitos e fixo', () => {
+    expect(validCheckoutPhone('(54) 99689-3486')).toBe(true);
+    expect(validCheckoutPhone('(54) 3443-1234')).toBe(true);
+  });
+  it('recusa DDD digitado em dobro', () => {
+    expect(validCheckoutPhone('(54) 54996-8934')).toBe(false);
+  });
+  it('recusa celular sem o nono dígito ou incompleto', () => {
+    expect(validCheckoutPhone('5499689348')).toBe(false);
+    expect(validCheckoutPhone('549968')).toBe(false);
   });
 });

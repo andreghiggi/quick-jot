@@ -117,3 +117,16 @@ describe('persisted recovery orchestration', () => {
     expect(call).toHaveBeenLastCalledWith(`/settings/set/${name}`, 'POST', { alwaysOnline: false, rejectCall: true, readMessages: false, groupsIgnore: true });
   });
 });
+
+describe('saudações curtas', () => {
+  it('reconhece noite, tarde e dia isolados', () => {
+    expect(isGreeting('Noite')).toBe(true);
+    expect(isGreeting('tarde')).toBe(true);
+    expect(isGreeting('Dia!')).toBe(true);
+    expect(isGreeting('Oii boa noite')).toBe(true);
+  });
+  it('não dispara em frases comuns', () => {
+    expect(isGreeting('2x frango')).toBe(false);
+    expect(isGreeting('diamante')).toBe(false);
+  });
+});

@@ -2,7 +2,7 @@ export const REPLY_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 export const MESSAGE_MAX_AGE_MS = 4 * 60 * 60 * 1000;
 
 const GREETING_PATTERNS = [
-  /^(oie?|ola|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|helo|hi|opa|ou|ow|ei|hei|alo|boa|bao|buenas)\b/i,
+  /^(oie?|ola|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|helo|hi|opa|ou|ow|ei|hei|alo|boa|bao|buenas|noite|tarde|dia|bomdia|boatarde|boanoite)\b/i,
   /^(quero|queria|gostaria).*(pedir|cardapio|menu)/i,
   /^(tem|qual).*(cardapio|menu)/i,
   /\b(pedir|pedido|fazer pedido)\b/i,
