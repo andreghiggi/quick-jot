@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
         if (closed && row.phase === 'ready') await db.rpc('whatsapp_observe_connection', {
           _name: name, _company: row.company_id, _state: 'close', _logged_out: false,
         });
-        const due = Date.parse(row.next_restart_at) <= Date.now();
-        if (closed || row.phase !== 'ready' || due) {
+        // A timer or persisted retry is never evidence that an open session needs restart.
+        if (closed) {
           const result = await recoverInstance(db, call, name, row.company_id, webhookUrl);
           results[name] = result.skipped ? 'deferred' : result.success ? 'reconnected_not_receipt_verified' : 'recovery_failed';
           // One restart per invocation, plus global database lease across webhook/manual calls.

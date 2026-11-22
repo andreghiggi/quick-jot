@@ -45,6 +45,14 @@ export async function restartAndVerify(call: EvolutionRequest, name: string,
 }
 export async function recoverInstance(db: any, call: EvolutionRequest, name: string, companyId: string,
   webhookUrl: string, manual = false) {
+  // Recheck the provider even for a close webhook: that event may be delayed.
+  // Unknown/unavailable/connecting state must fail safe without claiming a restart.
+  if (!manual) {
+    const state = await call(`/instance/connectionState/${name}`);
+    if (state?.instance?.state !== 'close') return {
+      success: false, skipped: true, error: 'Reinício automático permitido somente para conexão confirmada como desconectada.',
+    };
+  }
   const { data: token, error } = await db.rpc('whatsapp_claim_restart', {
     _name: name, _company: companyId, _manual: manual,
   });
@@ -54,11 +62,18 @@ export async function recoverInstance(db: any, call: EvolutionRequest, name: str
   let configured = false;
   let detail = 'A conexão não voltou em 10 segundos; verificar a sessão/QR. Duas falhas bloqueiam novas tentativas automáticas.';
   try {
-    open = await restartAndVerify(call, name);
+    // The lease claim may race with a natural reconnect. Never restart it if it reopened.
+    const state = manual ? null : await call(`/instance/connectionState/${name}`);
+    if (!manual && state?.instance?.state === 'open') {
+      open = true;
+    } else {
+      if (!manual && state?.instance?.state !== 'close') throw new Error('Connection no longer confirmed closed');
+      open = await restartAndVerify(call, name);
+    }
     if (open) {
       await restoreConfiguration(call, name, webhookUrl);
       configured = true;
-      detail = 'Sessão reconectada e ajustes aplicados; aguarda mensagem real para confirmar recebimento.';
+      detail = 'Sessão conectada e ajustes aplicados; aguarda mensagem real para confirmar recebimento.';
     }
   } catch {
     detail = 'Falha ao reiniciar ou reconfigurar a conexão; verificar sessão/QR. Novas tentativas automáticas são limitadas.';

@@ -1,6 +1,18 @@
 export const REPLY_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 export const MESSAGE_MAX_AGE_MS = 4 * 60 * 60 * 1000;
 
+// Privacy LIDs are not phone numbers. Only a phone-address JID is safe for
+// sendText, tenant locks and cooldown history; never strip @lid into digits.
+export function resolveSenderPhone(key: unknown): string {
+  if (!key || typeof key !== 'object') return '';
+  const { remoteJid, remoteJidAlt } = key as Record<string, unknown>;
+  if (typeof remoteJid !== 'string') return '';
+  const jid = remoteJid.endsWith('@lid') ? remoteJidAlt : remoteJid;
+  if (typeof jid !== 'string') return '';
+  const match = /^(\d{7,15})(?::\d+)?@s\.whatsapp\.net$/.exec(jid);
+  return match?.[1] || '';
+}
+
 const GREETING_PATTERNS = [
   /^(oie?|ola|hey|eae|eai|e ai|fala|salve|bom dia|boa tarde|boa noite|helo|hi|opa|ou|ow|ei|hei|alo|boa|bao|buenas|noite|tarde|dia|bomdia|boatarde|boanoite)\b/i,
   /^(quero|queria|gostaria).*(pedir|cardapio|menu)/i,

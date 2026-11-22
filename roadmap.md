@@ -1,7 +1,13 @@
 # Roadmap — Retomada ComandaTech
 
+## WhatsApp — correções autorizadas (22/11)
+- [x] Impedir reinício automático de sessões open/connecting, inclusive com prazo vencido ou evento close antigo; manter reinício manual e recuperação de close com travas existentes, rechecando estado antes/depois da trava.
+- [x] Resolver remetente @lid pelo remoteJidAlt para envio, histórico e cooldown; nunca tratar LID como telefone.
+- [x] Validar regras e handlers isolados: 54 testes unitários e handlers de saudação/cron passaram; build OK, sem mensagens reais, reinícios ou publicação.
+- [ ] Confirmar saudação real na VPS — depende da implantação das funções e de mensagem real; nenhuma loja foi reiniciada nesta rodada.
+
 ## WhatsApp — pacote de recuperação aprovado (21/11)
-- [x] Reciclagem a cada 4h escalonada, sem envio de mensagens de teste ou reset destrutivo.
+- [x] Reciclagem a cada 4h escalonada originalmente implementada; substituída pela proteção de sessões conectadas aprovada em 22/11.
 - [x] Recuperação em connection.update autenticado, com trava compartilhada, duas tentativas e bloqueio após logout/falha; reinícios simultâneos entre lojas impedidos.
 - [x] Extrair mensagens temporárias e legendas; cooldown 2h, tolerância de atraso 4h e palavras atuais preservadas.
 - [x] Exibir falhas de recuperação e necessidade de verificar QR sem afirmar recepção só pelo estado open.

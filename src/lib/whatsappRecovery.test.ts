@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { extractMessageText, isGreeting, isLoggedOut, isStaleMessage, REPLY_COOLDOWN_MS } from '../../supabase/functions/_shared/whatsapp-message';
+import { extractMessageText, isGreeting, isLoggedOut, isStaleMessage, resolveSenderPhone, REPLY_COOLDOWN_MS } from '../../supabase/functions/_shared/whatsapp-message';
 import { restartAndVerify, recoverInstance, restoreConfiguration, type EvolutionRequest } from '../../supabase/functions/_shared/whatsapp-recovery';
 
 const name = 'ct-fixture';
@@ -76,10 +76,11 @@ describe('soft restart verification', () => {
 });
 
 describe('persisted recovery orchestration', () => {
-  it('a refused claim does not touch the provider or increment anything in the worker', async () => {
-    const db = database(null); const call = vi.fn();
+  it('a refused claim only reads connection state and never restarts', async () => {
+    const db = database(null); const call = vi.fn(async () => ({ instance: { state: 'close' } }));
     const result = await recoverInstance(db, call, name, company, webhook);
-    expect(result.skipped).toBe(true); expect(call).not.toHaveBeenCalled();
+    expect(result.skipped).toBe(true); expect(call).toHaveBeenCalledTimes(1);
+    expect(call).toHaveBeenCalledWith(`/instance/connectionState/${name}`);
     expect(db.rpc).toHaveBeenCalledTimes(1);
     expect(db.rpc).toHaveBeenCalledWith('whatsapp_claim_restart', { _name: name, _company: company, _manual: false });
   });
@@ -98,23 +99,70 @@ describe('persisted recovery orchestration', () => {
       if (path.includes('webhook/set')) throw new Error('Evolution HTTP 503');
       return { instance: { state: 'open' } };
     });
-    expect((await recoverInstance(db, call, name, company, webhook)).success).toBe(false);
+    expect((await recoverInstance(db, call, name, company, webhook, true)).success).toBe(false);
     expect(db.rpc).toHaveBeenLastCalledWith('whatsapp_finish_restart', expect.objectContaining({ _open: false }));
   });
   it('provider failure releases/persists the lease as unsuccessful', async () => {
     const db = database(); const call = vi.fn(async () => { throw new Error('Evolution HTTP 500'); });
-    expect((await recoverInstance(db, call, name, company, webhook)).success).toBe(false);
+    expect((await recoverInstance(db, call, name, company, webhook, true)).success).toBe(false);
     expect(db.rpc).toHaveBeenLastCalledWith('whatsapp_finish_restart', expect.objectContaining({ _token: 'lease-1', _open: false }));
   });
   it('does not report success if persisting the result fails', async () => {
     const db = database(); db.rpc.mockImplementation(async (fn: string) => ({ data: fn === 'whatsapp_claim_restart' ? 'lease-1' : null, error: fn === 'whatsapp_finish_restart' ? { message: 'unavailable' } as any : null }));
     const call: EvolutionRequest = async path => path.includes('settings/find') ? { alwaysOnline: false } : { instance: { state: 'open' } };
-    await expect(recoverInstance(db, call, name, company, webhook)).rejects.toThrow('persisted');
+    await expect(recoverInstance(db, call, name, company, webhook, true)).rejects.toThrow('persisted');
   });
   it('preserves existing settings when disabling forced online presence', async () => {
     const call = vi.fn(async (path: string) => path.includes('settings/find') ? { alwaysOnline: true, rejectCall: true, readMessages: false, groupsIgnore: true } : {});
     await restoreConfiguration(call, name, webhook);
     expect(call).toHaveBeenLastCalledWith(`/settings/set/${name}`, 'POST', { alwaysOnline: false, rejectCall: true, readMessages: false, groupsIgnore: true });
+  });
+});
+
+describe('automatic restart safety', () => {
+  it.each(['open', 'connecting', undefined])('does not claim or restart for provider state %s even after a delayed close event', async state => {
+    const db = database();
+    const call = vi.fn(async () => ({ instance: { state } }));
+    expect((await recoverInstance(db, call, name, company, webhook)).skipped).toBe(true);
+    expect(db.rpc).not.toHaveBeenCalled();
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(call).toHaveBeenCalledWith(`/instance/connectionState/${name}`);
+  });
+  it('does not claim or restart when connection verification is unavailable', async () => {
+    const db = database(); const call = vi.fn(async () => { throw new Error('Unavailable'); });
+    await expect(recoverInstance(db, call, name, company, webhook)).rejects.toThrow('Unavailable');
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+  it('preserves a session that reopens while the lease is claimed', async () => {
+    const db = database(); let reads = 0;
+    const call = vi.fn(async (path: string) => path.includes('connectionState')
+      ? { instance: { state: ++reads === 1 ? 'close' : 'open' } } : { alwaysOnline: false });
+    expect((await recoverInstance(db, call, name, company, webhook)).success).toBe(true);
+    expect(call.mock.calls.some(([path]) => path.includes('/restart/'))).toBe(false);
+    expect(db.rpc).toHaveBeenLastCalledWith('whatsapp_finish_restart', expect.objectContaining({ _open: true }));
+  });
+  it('still restarts a confirmed closed session under its tenant lease', async () => {
+    const db = database(); let reads = 0;
+    const call = vi.fn(async (path: string) => path.includes('connectionState')
+      ? { instance: { state: ++reads <= 2 ? 'close' : 'open' } } : { alwaysOnline: false });
+    expect((await recoverInstance(db, call, name, company, webhook)).success).toBe(true);
+    expect(call).toHaveBeenCalledWith(`/instance/restart/${name}`, 'POST');
+    expect(db.rpc).toHaveBeenCalledWith('whatsapp_claim_restart', { _name: name, _company: company, _manual: false });
+  });
+});
+
+describe('privacy sender identity', () => {
+  it('uses remoteJidAlt as the phone for a LID', () => {
+    expect(resolveSenderPhone({ remoteJid: '147656781332487@lid', remoteJidAlt: '555197170371@s.whatsapp.net' })).toBe('555197170371');
+  });
+  it('preserves regular phone JIDs even when the alternate identity is a LID', () => {
+    expect(resolveSenderPhone({ remoteJid: '555197170371@s.whatsapp.net', remoteJidAlt: '147656781332487@lid' })).toBe('555197170371');
+  });
+  it.each([undefined, '147656781332487@lid', '555197170371', 'invalid@s.whatsapp.net'])('never treats LID or invalid alternate %s as a phone', remoteJidAlt => {
+    expect(resolveSenderPhone({ remoteJid: '147656781332487@lid', remoteJidAlt })).toBe('');
+  });
+  it.each(['123@g.us', 'status@broadcast', '123@newsletter'])('does not resolve non-private destination %s through its alternate', remoteJid => {
+    expect(resolveSenderPhone({ remoteJid, remoteJidAlt: '555197170371@s.whatsapp.net' })).toBe('');
   });
 });
 

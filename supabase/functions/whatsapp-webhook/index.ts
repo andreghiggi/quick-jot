@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { extractMessageText, isGreeting, isStaleMessage, isLoggedOut, REPLY_COOLDOWN_MS } from '../_shared/whatsapp-message.ts';
+import { extractMessageText, isGreeting, isStaleMessage, isLoggedOut, resolveSenderPhone, REPLY_COOLDOWN_MS } from '../_shared/whatsapp-message.ts';
 import { evolutionRequest, recoverInstance, restoreConfiguration } from '../_shared/whatsapp-recovery.ts';
 
 // Keep the same words, with shared accent/repetition and wrapped-message handling.
@@ -201,7 +201,7 @@ serve(async (req) => {
     }
 
     const instanceName = body.instance;
-    const senderPhone = messageData.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
+    const senderPhone = resolveSenderPhone(messageData.key);
     if (!instanceName || !senderPhone) {
       return new Response(JSON.stringify({ ok: true, skipped: 'no_instance_or_phone' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

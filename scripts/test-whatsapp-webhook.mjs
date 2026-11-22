@@ -18,7 +18,7 @@ globalThis.Deno = { env: { get: key => env[key] } };
 await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
 function fixture({ closed = false, recentHours = null, sendOk = true } = {}) {
-  const sent = [], logged = [];
+  const sent = [], logged = [], locks = [], filters = [];
   globalThis.fetch = async (url, init) => {
     assert.equal(url, 'https://provider.invalid/message/sendText/ct-fixture');
     sent.push(JSON.parse(init.body));
@@ -27,12 +27,13 @@ function fixture({ closed = false, recentHours = null, sendOk = true } = {}) {
   const db = { rpc: async () => ({ data: null, error: null }), from(table) {
     let operation = 'select', insert = null;
     const query = {
-      select() { return query; }, eq() { return query; }, is() { return query; }, in() { return query; }, limit() { return query; },
+      select() { return query; }, eq(column, value) { filters.push({ table, column, value }); return query; }, is() { return query; }, in() { return query; }, limit() { return query; },
       gte() { return query; }, insert(value) { operation = 'insert'; insert = value; return query; }, delete() { operation = 'delete'; return query; },
       single() { return query; }, maybeSingle() { return query; },
       then(resolvePromise, reject) {
         let data = null;
         if (operation === 'insert' && table === 'whatsapp_messages') logged.push(insert);
+        else if (operation === 'insert' && table === 'whatsapp_auto_reply_locks') locks.push(insert);
         else if (operation === 'select') {
           if (table === 'whatsapp_instances') data = { company_id: 'fixture-company' };
           if (table === 'companies') data = { name: 'Loja de Teste', slug: 'fixture', subdomain: 'fixture' };
@@ -47,7 +48,7 @@ function fixture({ closed = false, recentHours = null, sendOk = true } = {}) {
     return query;
   } };
   globalThis.__whatsappDb = db;
-  return { sent, logged };
+  return { sent, logged, locks, filters };
 }
 function request(overrides = {}) {
   return new Request('https://database.invalid/webhook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: 'messages.upsert', instance: 'ct-fixture', data: { key: { remoteJid: '5551999999999@s.whatsapp.net', fromMe: false }, messageTimestamp: Math.floor(Date.now() / 1000), pushName: 'Cliente Teste', message: { ephemeralMessage: { message: { imageMessage: { caption: 'Olááá' } } } } }, ...overrides }) });
@@ -82,3 +83,25 @@ for (const closed of [false, true]) {
   assert.equal(response.status, 401);
 }
 console.log('Webhook integration: open/closed greetings, 2-hour cooldown, failed sends and unauthenticated recovery verified. No real messages sent.');
+
+{
+  const f = fixture();
+  const result = await (await globalThis.__whatsappHandler(request({ data: {
+    key: { remoteJid: '147656781332487@lid', remoteJidAlt: '555197170371@s.whatsapp.net', fromMe: false },
+    messageTimestamp: Math.floor(Date.now() / 1000), message: { conversation: 'Boa noite' },
+  } }))).json();
+  assert.equal(result.replied, true);
+  assert.equal(f.sent[0].number, '555197170371');
+  assert.equal(f.logged[0].phone, '555197170371');
+  assert.deepEqual(f.locks[0], { company_id: 'fixture-company', phone: '555197170371' });
+  assert.ok(f.filters.some(x => x.table === 'whatsapp_messages' && x.column === 'phone' && x.value === '555197170371'));
+}
+{
+  const f = fixture();
+  const result = await (await globalThis.__whatsappHandler(request({ data: {
+    key: { remoteJid: '147656781332487@lid', fromMe: false }, message: { conversation: 'Olá' },
+  } }))).json();
+  assert.equal(result.skipped, 'no_instance_or_phone');
+  assert.equal(f.sent.length, 0); assert.equal(f.locks.length, 0);
+}
+console.log('LID integration: send destination, persisted phone, tenant lock and cooldown identity verified; absent alternate never sends.');
