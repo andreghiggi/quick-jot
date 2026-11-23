@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { evolutionRequest, recoverInstance, restoreConfiguration } from '../_shared/whatsapp-recovery.ts';
+import { evoServerForCompany } from '../_shared/evolution-server.ts';
 
 Deno.serve(async (req) => {
   const json = (status: number, body: unknown) => new Response(JSON.stringify(body), {
@@ -22,7 +23,6 @@ Deno.serve(async (req) => {
     const { data: rows, error } = await db.from('whatsapp_recovery').select('*')
       .in('phase', ['ready', 'retry_pending', 'recovering']).order('next_restart_at');
     if (error) return json(503, { error: 'Recovery migration unavailable' });
-    const call = evolutionRequest(evoUrl, evoKey);
     const webhookUrl = `${dbUrl}/functions/v1/whatsapp-webhook`;
     // Restarts are serialized and staggered; full configuration repair stays at 10 minutes.
     const repair = Math.floor(Date.now() / 60000) % 10 === 0;
@@ -43,6 +43,10 @@ Deno.serve(async (req) => {
         .eq('company_id', row.company_id).eq('module_name', 'whatsapp').maybeSingle();
       if (!module?.enabled) continue;
       try {
+        // Cada empresa usa o servidor Evolution dela (a 2.4 só no piloto).
+        const server = await evoServerForCompany(db, row.company_id);
+        if (!server) { results[name] = 'server_not_configured'; continue; }
+        const call = evolutionRequest(server.url, server.key);
         const state = await call(`/instance/connectionState/${name}`);
         const closed = state?.instance?.state === 'close';
         if (closed && row.phase === 'ready') await db.rpc('whatsapp_observe_connection', {

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { evolutionRequest, recoverInstance } from '../_shared/whatsapp-recovery.ts';
+import { resolveEvoServer } from '../_shared/evolution-server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,8 +100,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-  const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
+  // Servidor padrão; abaixo é trocado pelo da empresa (Evolution 2.4 no piloto).
+  let EVOLUTION_API_URL: string = Deno.env.get('EVOLUTION_API_URL') ?? '';
+  let EVOLUTION_API_KEY: string = Deno.env.get('EVOLUTION_API_KEY') ?? '';
 
   if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
     return new Response(
@@ -119,6 +121,13 @@ serve(async (req) => {
 
     const denied = await authorizeRequest(req, supabase, action, params);
     if (denied) return denied;
+
+    // Escolhe o servidor Evolution da empresa. Empresa marcada como 2.4 sem as variáveis
+    // da 2.4 falha aqui, em vez de cair no servidor atual.
+    const evoServer = await resolveEvoServer(supabase, params);
+    if (!evoServer) return jsonResponse(500, { error: 'Evolution API not configured' });
+    EVOLUTION_API_URL = evoServer.url;
+    EVOLUTION_API_KEY = evoServer.key;
 
     const baseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
     const apiHeaders = { 'apikey': EVOLUTION_API_KEY };

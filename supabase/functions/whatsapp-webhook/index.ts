@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { extractMessageText, isGreeting, isStaleMessage, isLoggedOut, resolveSenderPhone, REPLY_COOLDOWN_MS } from '../_shared/whatsapp-message.ts';
 import { evolutionRequest, recoverInstance, restoreConfiguration } from '../_shared/whatsapp-recovery.ts';
+import { evoServerForCompany, evoServerForInstance, v24TokenMatches } from '../_shared/evolution-server.ts';
 
 // Keep the same words, with shared accent/repetition and wrapped-message handling.
 const PRODUCTION_URL = 'https://app.comandatech.com.br';
@@ -125,7 +126,16 @@ serve(async (req) => {
 
     if (body.event === 'connection.update') {
       // Connection events can trigger restarts, so require Evolution's shared API key.
-      if ((req.headers.get('apikey') || body.apikey) !== EVOLUTION_API_KEY) {
+      const incomingKey = req.headers.get('apikey') || body.apikey;
+      const evoServer = await evoServerForInstance(supabase, typeof body.instance === 'string' ? body.instance : null);
+      if (!evoServer) {
+        return new Response(JSON.stringify({ error: 'Not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      // Evolution atual: chave global. Evolution 2.4: token da própria instância.
+      const authenticated = evoServer.id === 'v24'
+        ? await v24TokenMatches(evoServer, body.instance, incomingKey)
+        : incomingKey === EVOLUTION_API_KEY;
+      if (!authenticated) {
         return new Response(JSON.stringify({ error: 'Evento não autenticado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
       const instanceName = body.instance;
@@ -146,7 +156,7 @@ serve(async (req) => {
           await supabase.from('whatsapp_instances').update({ status: state === 'open' ? 'connected' : 'disconnected' })
             .eq('instance_name', instanceName).eq('company_id', instance.company_id);
         }
-        const call = evolutionRequest(EVOLUTION_API_URL, EVOLUTION_API_KEY);
+        const call = evolutionRequest(evoServer.url, evoServer.key);
         const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
         const work = async () => {
           if (state === 'close' && !loggedOut) await recoverInstance(supabase, call, instanceName, instance.company_id, webhookUrl);
@@ -379,7 +389,9 @@ serve(async (req) => {
       // Timeout de segurança: sem isso, uma Evolution API lenta/travada prende
       // o worker do edge-runtime até o limite de wall-clock da plataforma matar
       // a execução à força (causa dos "early termination" vistos em produção).
-      const evolutionBaseUrl = EVOLUTION_API_URL.replace(/\/$/, '');
+      const replyServer = await evoServerForCompany(supabase, companyId);
+      if (!replyServer) throw new Error('Evolution API do servidor da empresa não configurada');
+      const evolutionBaseUrl = replyServer.url.replace(/\/$/, '');
       const sendController = new AbortController();
       const sendTimeout = setTimeout(() => sendController.abort(), 8000);
       let res: Response;
@@ -388,7 +400,7 @@ serve(async (req) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': EVOLUTION_API_KEY,
+            'apikey': replyServer.key,
           },
           body: JSON.stringify({ number: senderPhone, text: greetingMessage, linkPreview: false }),
           signal: sendController.signal,
