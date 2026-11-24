@@ -50,7 +50,8 @@ import { FloristItemDestination } from '@/components/menu/FloristItemDestination
 import { validateDestination, destinationKey, totalDeliveryFee, describeDestination, type FloristDestination } from '@/lib/floristDestination';
 import { validateGift, normalizePhone, GiftInput } from '@/lib/floristGift';
 import { DeliveryShift, fetchDeliveryShifts, getSlotsForDate } from '@/lib/floristShifts';
-import { DEFAULT_SAME_DAY, acceptsDeliveryToday, fetchSameDayConfig, pickupNotice, selectableSlots, type FloristSameDayConfig } from '@/lib/floristSameDay';
+import { acceptsDeliveryToday, fetchSameDayConfig, pickupNotice, selectableSlots } from '@/lib/floristSameDay';
+import { useFloristSameDay } from '@/hooks/useFloristSameDay';
 const todaySP = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
@@ -193,7 +194,7 @@ export default function Menu() {
   const [newAddressMode, setNewAddressMode] = useState(false);
   const [itemDestination, setItemDestination] = useState<Partial<FloristDestination>>({});
   const [deliveryShifts, setDeliveryShifts] = useState<DeliveryShift[]>([]);
-  const [sameDay, setSameDay] = useState<FloristSameDayConfig>(DEFAULT_SAME_DAY);
+  const { config: sameDay, now: sameDayNow } = useFloristSameDay(company?.id, isFlorist);
   const [showNewCustomerPopup, setShowNewCustomerPopup] = useState(false);
   const [newCustomerPromptedFor, setNewCustomerPromptedFor] = useState<string | null>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
@@ -423,11 +424,10 @@ export default function Menu() {
   useEffect(() => {
     if (!isFlorist || !company?.id) return;
     fetchDeliveryShifts(company.id).then(setDeliveryShifts);
-    fetchSameDayConfig(company.id).then(setSameDay).catch(() => undefined);
   }, [isFlorist, company?.id]);
 
   // Turnos do dia da semana, já sem os que a loja não consegue atender hoje.
-  const slotsFor = (date: string, config = sameDay) => selectableSlots(getSlotsForDate(deliveryShifts, date), date, config);
+  const slotsFor = (date: string, config = sameDay, now = sameDayNow) => selectableSlots(getSlotsForDate(deliveryShifts, date), date, config, now);
   const itemSlots = isFlorist && itemDestination.date ? slotsFor(itemDestination.date) : undefined;
   const slotUnavailable = isFlorist && itemDestination.mode === 'delivery' && !!itemDestination.date && !!itemDestination.slot
     && !(itemSlots ?? []).includes(itemDestination.slot);
@@ -436,7 +436,7 @@ export default function Menu() {
     : [];
   const noSlotsMessage = !itemDestination.date || itemDestination.date !== todaySP() || getSlotsForDate(deliveryShifts, itemDestination.date).length === 0
     ? undefined
-    : !acceptsDeliveryToday(sameDay)
+    : !acceptsDeliveryToday(sameDay, sameDayNow)
       ? 'Não estamos mais recebendo pedidos de entrega para hoje. Selecione retirada na loja ou agende a entrega para outro dia.'
       : 'Turnos de entrega esgotados para hoje. Selecione retirada na loja ou agende a entrega para amanhã.';
   const floristNeighborhoods = useMemo(
@@ -1425,10 +1425,9 @@ export default function Menu() {
       // Floricultura: o carrinho pode ter ficado aberto; confere de novo os turnos de entrega.
       if (isFlorist) {
         const config = await fetchSameDayConfig(company.id);
-        setSameDay(config);
         const expired = cart.find((c) => {
           const d = c.floristDestination;
-          return d?.mode === 'delivery' && !!d.date && !slotsFor(d.date, config).includes(d.slot || '');
+          return d?.mode === 'delivery' && !!d.date && !slotsFor(d.date, config, new Date()).includes(d.slot || '');
         });
         if (expired) {
           setIsSubmitting(false);

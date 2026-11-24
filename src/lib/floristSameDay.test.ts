@@ -3,6 +3,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
 import {
   DEFAULT_SAME_DAY, PICKUP_MINUTE_OPTIONS, acceptsDeliveryToday, formatDuration,
   parseSameDayConfig, pickupNotice, selectableSlots,
+  withDeliveryToday,
 } from './floristSameDay';
 import { getSlotsForDate } from './floristShifts';
 
@@ -37,6 +38,26 @@ describe('turnos de hora em hora', () => {
 });
 
 describe('entrega no mesmo dia', () => {
+  it('controle rápido encerra apenas as entregas de hoje, preservando os prazos', () => {
+    const closed = withDeliveryToday(cfg({ pickupMinutes: 90, leadMinutes: 180 }), false, at('16:00'));
+    expect(closed).toEqual({ pickupMinutes: 90, leadMinutes: 180, sameDayDelivery: true, closedDate: '2026-11-24' });
+    expect(selectableSlots(hourly, '2026-11-24', closed, at('08:00'))).toEqual([]);
+    expect(selectableSlots(hourly, '2026-11-25', closed, at('08:00'))).toEqual(hourly);
+  });
+  it('controle rápido reabre hoje sem mudar a antecedência e a retirada', () => {
+    const reopened = withDeliveryToday(cfg({ pickupMinutes: 120, leadMinutes: 60, closedDate: '2026-11-24' }), true, at('16:00'));
+    expect(reopened).toEqual({ pickupMinutes: 120, leadMinutes: 60, sameDayDelivery: true, closedDate: null });
+    expect(selectableSlots(hourly, '2026-11-24', reopened, at('16:00'))).toEqual(['17:00–18:00', '18:00–19:00']);
+  });
+  it('controle não sobrepõe a regra permanente de não entregar no mesmo dia', () => {
+    expect(() => withDeliveryToday(cfg({ sameDayDelivery: false }), true, at('16:00'))).toThrow();
+  });
+  it('encerramento pelo controle usa o dia local e expira à meia-noite de São Paulo', () => {
+    const closed = withDeliveryToday(cfg(), false, new Date('2026-11-25T02:59:00Z'));
+    expect(closed.closedDate).toBe('2026-11-24');
+    expect(acceptsDeliveryToday(closed, new Date('2026-11-25T02:59:00Z'))).toBe(false);
+    expect(acceptsDeliveryToday(closed, new Date('2026-11-25T03:00:00Z'))).toBe(true);
+  });
   it('pedido às 16h com 1h de antecedência: primeiro turno é 17h', () => {
     expect(selectableSlots(hourly, '2026-11-24', cfg({ leadMinutes: 60 }), at('16:00'))).toEqual(['17:00–18:00', '18:00–19:00']);
   });

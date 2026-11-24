@@ -1,5 +1,4 @@
 // Pedidos para o mesmo dia (retirada e entrega) — exibido SOMENTE no perfil floricultura.
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -7,38 +6,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Timer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
-  DEFAULT_SAME_DAY, LEAD_MINUTE_OPTIONS, PICKUP_MINUTE_OPTIONS, type FloristSameDayConfig,
-  fetchSameDayConfig, formatDuration, pickupNotice, saveSameDayConfig, spDate,
+  LEAD_MINUTE_OPTIONS, PICKUP_MINUTE_OPTIONS, type FloristSameDayConfig,
+  formatDuration, pickupNotice, spDate,
 } from '@/lib/floristSameDay';
+import { useFloristSameDay } from '@/hooks/useFloristSameDay';
 
 const NO_SAME_DAY = 'none';
 
 export function FloristSameDaySettings({ companyId }: { companyId?: string }) {
   const { toast } = useToast();
-  const [config, setConfig] = useState<FloristSameDayConfig>(DEFAULT_SAME_DAY);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!companyId) return;
-    setLoading(true);
-    fetchSameDayConfig(companyId)
-      .then((c) => { setConfig(c); setFailed(false); })
-      .catch(() => setFailed(true))
-      .finally(() => setLoading(false));
-  }, [companyId]);
+  const { config, now, loading, failed, saving, save: saveConfig, setDeliveryOpen } = useFloristSameDay(companyId);
 
   const save = async (patch: Partial<FloristSameDayConfig>, message: string) => {
     if (!companyId || saving) return;
-    setSaving(true);
     try {
-      setConfig(await saveSameDayConfig(companyId, { ...config, ...patch }));
+      await saveConfig(patch);
       toast({ title: message });
     } catch {
       toast({ title: 'Erro ao salvar', description: 'Tente novamente em instantes.', variant: 'destructive' });
-    } finally {
-      setSaving(false);
+    }
+  };
+
+  const closeToday = async (closed: boolean) => {
+    if (!companyId || saving) return;
+    try {
+      await setDeliveryOpen(!closed);
+      toast({ title: closed ? 'Entregas de hoje encerradas' : 'Entregas de hoje reabertas' });
+    } catch {
+      toast({ title: 'Erro ao salvar', description: 'Tente novamente em instantes.', variant: 'destructive' });
     }
   };
 
@@ -52,7 +47,7 @@ export function FloristSameDaySettings({ companyId }: { companyId?: string }) {
     );
   }
 
-  const closedToday = config.closedDate === spDate();
+  const closedToday = config.closedDate === spDate(now);
 
   return (
     <Card>
@@ -118,10 +113,7 @@ export function FloristSameDaySettings({ companyId }: { companyId?: string }) {
               id="florist-close-today"
               checked={closedToday}
               disabled={saving}
-              onCheckedChange={(checked) => save(
-                { closedDate: checked ? spDate() : null },
-                checked ? 'Entregas de hoje encerradas' : 'Entregas de hoje reabertas',
-              )}
+              onCheckedChange={(checked) => void closeToday(checked)}
             />
           </div>
         )}

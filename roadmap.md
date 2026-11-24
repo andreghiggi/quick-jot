@@ -132,3 +132,9 @@
 - [x] Antecedência mínima para entrega no mesmo dia, opção de não aceitar e encerramento das entregas de hoje (volta amanhã).
 - [x] Grade padrão de turnos de hora em hora (08h–19h); turnos personalizados preservados.
 - [ ] Validar em loja floricultura real após implantação autorizada na VPS.
+
+## Floricultura — acesso rápido às entregas de hoje (24/11)
+- [x] Motinho verde/vermelha ao lado de Loja Aberta no PDV e cabeçalhos; exclusiva do perfil floricultura, com descrição acessível.
+- [x] Compartilhar a configuração existente com Horários e catálogo; preservar retirada, prazos, agendamentos futuros e retorno no dia seguinte.
+- [x] 50 testes de regras/regressão/persistência; PDV real com dados isolados conferido em computador/celular: encerrar, recarregar, reabrir em Horários, filtrar turnos, atualizar outra sessão, falha de gravação e isolamento de restaurantes. Sem alterar lojas reais.
+- [ ] Validar operação real na floricultura da VPS — depende de implantação autorizada e acesso à loja.

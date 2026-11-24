@@ -62,6 +62,12 @@ export function acceptsDeliveryToday(config: FloristSameDayConfig, now = new Dat
   return config.sameDayDelivery && config.closedDate !== spDate(now);
 }
 
+/** The quick control changes today's closure only, never the permanent rule or leads. */
+export function withDeliveryToday(config: FloristSameDayConfig, open: boolean, now = new Date()): FloristSameDayConfig {
+  if (open && !config.sameDayDelivery) throw new Error('Entregas no mesmo dia estão desativadas nas configurações.');
+  return { ...config, closedDate: open ? null : spDate(now) };
+}
+
 const slotStart = (label: string): number => {
   const m = label.match(/(\d{1,2}):(\d{2})/);
   return m ? Number(m[1]) * 60 + Number(m[2]) : Number.MAX_SAFE_INTEGER;
@@ -97,4 +103,14 @@ export async function saveSameDayConfig(companyId: string, config: FloristSameDa
   }, { onConflict: 'key,company_id' }).select('value').single();
   if (error || !data) throw error || new Error('Gravação não confirmada');
   return parseSameDayConfig(data.value);
+}
+
+export async function patchSameDayConfig(companyId: string, patch: Partial<FloristSameDayConfig>): Promise<FloristSameDayConfig> {
+  const current = await fetchSameDayConfig(companyId);
+  return saveSameDayConfig(companyId, { ...current, ...patch });
+}
+
+export async function saveDeliveryToday(companyId: string, open: boolean): Promise<FloristSameDayConfig> {
+  const current = await fetchSameDayConfig(companyId);
+  return saveSameDayConfig(companyId, withDeliveryToday(current, open));
 }

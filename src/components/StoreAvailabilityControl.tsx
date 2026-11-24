@@ -2,6 +2,15 @@ import { Power, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBusinessHours } from '@/hooks/useBusinessHours';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { FloristDeliveryControl } from '@/components/FloristDeliveryControl';
+
+// Remount by tenant so a previous company's profile cannot expose this shortcut.
+function ProfileDeliveryControl({ companyId }: { companyId: string }) {
+  const { isFlorist, loading } = useCompanyProfile(companyId);
+  if (loading || !isFlorist) return null;
+  return <FloristDeliveryControl companyId={companyId} />;
+}
 
 export function StoreAvailabilityControl({ companyId }: { companyId?: string | null }) {
   const { user, roles, company } = useAuthContext();
@@ -10,6 +19,7 @@ export function StoreAvailabilityControl({ companyId }: { companyId?: string | n
   const open = isCurrentlyOpen();
   const busy = loading || availability.saving;
   return (
+    <div className="flex max-w-full items-center gap-1.5">
     <Button type="button" size="sm" variant={availabilityError ? 'outline' : open ? 'success' : 'destructive'}
       className="h-7 w-36 justify-start px-2 text-xs"
       disabled={busy}
@@ -20,5 +30,7 @@ export function StoreAvailabilityControl({ companyId }: { companyId?: string | n
       {busy ? <Loader2 className="animate-spin" /> : availabilityError ? <RefreshCw /> : <Power />}
       {busy ? 'Aguarde…' : availabilityError ? 'Consultar estado' : open ? 'Loja Aberta' : 'Loja Fechada'}
     </Button>
+    <ProfileDeliveryControl key={companyId} companyId={companyId} />
+    </div>
   );
 }
