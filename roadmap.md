@@ -126,3 +126,9 @@
 - [x] Popup de primeira compra; cupom oculto sem cupom ativo (só floricultura)
 - [ ] Comanda de produção física separada por destino — itens já saem marcados "DESTINO N"; separar o papel exige ajuste na impressora, liberado só com autorização (regra de impressão por loja)
 - [ ] Etapa 3: presente em destaque nos pedidos com botão Copiar
+
+## Floricultura — pedidos para o mesmo dia (24/11)
+- [x] Prazo de retirada selecionável (30 min a 6h) com aviso no catálogo.
+- [x] Antecedência mínima para entrega no mesmo dia, opção de não aceitar e encerramento das entregas de hoje (volta amanhã).
+- [x] Grade padrão de turnos de hora em hora (08h–19h); turnos personalizados preservados.
+- [ ] Validar em loja floricultura real após implantação autorizada na VPS.

@@ -18,6 +18,12 @@ const changelog: ChangelogEntry[] = [
     date: '24/11/2026',
     version: '1.76.0-beta',
     type: 'feature',
+    description: 'Perfil Floricultura: novo cartão Pedidos para o Mesmo Dia em Configurações → Horários. A loja escolhe o tempo de retirada (de 30 minutos a 6 horas) e o catálogo avisa o cliente ao escolher Retirada na loja. Também define a antecedência mínima para entrega no mesmo dia (ou não aceita), e pode encerrar as entregas de hoje com um clique, voltando sozinho amanhã. Turnos de entrega padrão passam a ser de hora em hora (08h às 19h); turnos já personalizados pela loja são mantidos. Restaurantes não foram alterados.',
+  },
+  {
+    date: '24/11/2026',
+    version: '1.76.0-beta',
+    type: 'feature',
     description: 'Floriculturas e restaurantes: controle Loja Aberta/Loja Fechada abaixo do nome no PDV e na dashboard. Um clique altera o atendimento só hoje; amanhã os horários normais voltam automaticamente. O fechamento bloqueia novos pedidos online e no QR da mesa e é respeitado pela saudação do WhatsApp, sem alterar caixa, pagamentos ou pedidos existentes.',
   },
   {

@@ -23,6 +23,7 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 import { FloristDeliveryShiftsSettings } from '@/components/settings/FloristDeliveryShiftsSettings';
+import { FloristSameDaySettings } from '@/components/settings/FloristSameDaySettings';
 import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import autoPrinterTemplate from '../../scripts/auto_printer.py?raw';
@@ -758,6 +759,7 @@ if errorlevel 1 (
         {/* Tab Horários */}
         <TabsContent value="horarios" className="space-y-6">
           <BusinessHoursSettings companyId={company?.id} />
+          {isFlorist && <FloristSameDaySettings companyId={company?.id} />}
           {isFlorist && <FloristDeliveryShiftsSettings companyId={company?.id} />}
         </TabsContent>
 

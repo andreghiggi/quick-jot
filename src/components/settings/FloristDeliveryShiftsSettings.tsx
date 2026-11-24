@@ -70,7 +70,7 @@ export function FloristDeliveryShiftsSettings({ companyId }: Props) {
     const list = days[day];
     const last = list[list.length - 1];
     const start = last ? last.endTime : '08:00';
-    const endHour = Math.min(Number(start.split(':')[0]) + 2, 23);
+    const endHour = Math.min(Number(start.split(':')[0]) + 1, 23);
     const end = `${String(endHour).padStart(2, '0')}:00`;
     patchDay(day, [...list, { dayOfWeek: day, label: shiftLabel(start, end), startTime: start, endTime: end, sortOrder: list.length }]);
   };
@@ -122,7 +122,7 @@ export function FloristDeliveryShiftsSettings({ companyId }: Props) {
         </CardTitle>
         <CardDescription>
           Defina os turnos de entrega de cada dia da semana. Dias desligados não oferecem entrega no catálogo.
-          Se nenhum dia tiver turno cadastrado, o catálogo usa a grade padrão de 2 em 2 horas.
+          Se nenhum dia tiver turno cadastrado, o catálogo usa a grade padrão de hora em hora (08h às 19h).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

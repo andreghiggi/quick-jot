@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DeliveryShift, getSlotsForDate, groupShiftsByDay, shiftLabel, slotStartMinutes } from './floristShifts';
-import { FLORIST_TIME_SLOTS } from './floristGift';
+import { DEFAULT_FLORIST_SHIFTS, DeliveryShift, getSlotsForDate, groupShiftsByDay, shiftLabel, slotStartMinutes } from './floristShifts';
 
 const shift = (dayOfWeek: number, startTime: string, endTime: string, sortOrder = 0): DeliveryShift => ({
   dayOfWeek,
@@ -13,7 +12,7 @@ const shift = (dayOfWeek: number, startTime: string, endTime: string, sortOrder 
 // 2026-11-03 = terça-feira (2); 2026-11-08 = domingo (0)
 describe('getSlotsForDate', () => {
   it('loja sem turnos cadastrados usa a grade padrão', () => {
-    expect(getSlotsForDate([], '2026-11-03')).toEqual([...FLORIST_TIME_SLOTS]);
+    expect(getSlotsForDate([], '2026-11-03')).toEqual(DEFAULT_FLORIST_SHIFTS.map((s) => s.label));
   });
 
   it('retorna os turnos personalizados do dia da semana da data', () => {

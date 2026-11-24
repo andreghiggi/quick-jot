@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { FLORIST_TIME_SLOTS, GIFT_CARD_MAX_CHARS } from "@/lib/floristGift";
+import { GIFT_CARD_MAX_CHARS } from "@/lib/floristGift";
 import type { FloristDestination } from "@/lib/floristDestination";
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,10 +24,12 @@ interface Props {
   neighborhoods: { name: string; fee: number }[];
   neighborhoodNames?: string[];
   pickupEnabled: boolean;
-  /** Turnos disponíveis para a data escolhida (padrão: grade fixa de 2h). */
+  /** Turnos que o cliente pode escolher na data (já filtrados pelas regras do mesmo dia). */
   slots?: string[];
-  /** true quando a loja cadastrou turnos próprios — dia sem turno bloqueia a entrega. */
-  customShifts?: boolean;
+  /** Aviso quando a data escolhida não tem turno disponível. */
+  noSlotsMessage?: string;
+  /** Aviso de prazo exibido ao escolher retirada na loja. */
+  pickupNotice?: string;
 }
 
 const Choice = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
@@ -43,7 +45,7 @@ const Choice = ({ active, onClick, children }: { active: boolean; onClick: () =>
   </Button>
 );
 
-export function FloristItemDestination({ value, onChange, today, neighborhoods, neighborhoodNames, pickupEnabled, slots, customShifts, companyId, buyerPhone }: Props) {
+export function FloristItemDestination({ value, onChange, today, neighborhoods, neighborhoodNames, pickupEnabled, slots, noSlotsMessage, pickupNotice, companyId, buyerPhone }: Props) {
   const names = neighborhoodNames ?? neighborhoods.map(n => n.name);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState(false);
@@ -83,8 +85,8 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
   const set = (patch: Partial<FloristDestination>) => onChange({ ...value, ...patch });
   const isGift = value.forWhom === "gift";
   const msgLen = (value.cardMessage ?? "").length;
-  const availableSlots = slots ?? [...FLORIST_TIME_SLOTS];
-  const dayWithoutShifts = !!customShifts && !!value.date && availableSlots.length === 0;
+  const availableSlots = slots ?? [];
+  const dayWithoutShifts = !!value.date && availableSlots.length === 0;
 
   return (
     <div className="space-y-4 rounded-xl border border-primary/40 p-4">
@@ -106,6 +108,12 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
             <Choice active={value.mode === "delivery"} onClick={() => set({ mode: "delivery" })}>🚚 Entrega</Choice>
           </div>
         </div>
+      )}
+
+      {value.mode === "pickup" && pickupNotice && (
+        <p role="status" className="rounded-lg border-2 border-primary bg-primary/10 p-3 text-sm font-bold">
+          {pickupNotice}
+        </p>
       )}
 
       {value.mode === "delivery" && (
@@ -136,7 +144,7 @@ export function FloristItemDestination({ value, onChange, today, neighborhoods, 
           </div>
           {dayWithoutShifts && (
             <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-2 text-sm font-medium text-destructive">
-              Não fazemos entregas neste dia da semana. Escolha outra data.
+              {noSlotsMessage || 'Não fazemos entregas neste dia da semana. Escolha outra data.'}
             </p>
           )}
 

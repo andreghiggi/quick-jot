@@ -50,6 +50,7 @@ import { FloristItemDestination } from '@/components/menu/FloristItemDestination
 import { validateDestination, destinationKey, totalDeliveryFee, describeDestination, type FloristDestination } from '@/lib/floristDestination';
 import { validateGift, normalizePhone, GiftInput } from '@/lib/floristGift';
 import { DeliveryShift, fetchDeliveryShifts, getSlotsForDate } from '@/lib/floristShifts';
+import { DEFAULT_SAME_DAY, acceptsDeliveryToday, fetchSameDayConfig, pickupNotice, selectableSlots, type FloristSameDayConfig } from '@/lib/floristSameDay';
 const todaySP = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
@@ -192,6 +193,7 @@ export default function Menu() {
   const [newAddressMode, setNewAddressMode] = useState(false);
   const [itemDestination, setItemDestination] = useState<Partial<FloristDestination>>({});
   const [deliveryShifts, setDeliveryShifts] = useState<DeliveryShift[]>([]);
+  const [sameDay, setSameDay] = useState<FloristSameDayConfig>(DEFAULT_SAME_DAY);
   const [showNewCustomerPopup, setShowNewCustomerPopup] = useState(false);
   const [newCustomerPromptedFor, setNewCustomerPromptedFor] = useState<string | null>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
@@ -421,10 +423,22 @@ export default function Menu() {
   useEffect(() => {
     if (!isFlorist || !company?.id) return;
     fetchDeliveryShifts(company.id).then(setDeliveryShifts);
+    fetchSameDayConfig(company.id).then(setSameDay).catch(() => undefined);
   }, [isFlorist, company?.id]);
 
-  const itemDestinationErrors = isFlorist && !comboFlow ? validateDestination(itemDestination, todaySP()) : [];
-  const itemSlots = isFlorist && itemDestination.date ? getSlotsForDate(deliveryShifts, itemDestination.date) : undefined;
+  // Turnos do dia da semana, já sem os que a loja não consegue atender hoje.
+  const slotsFor = (date: string, config = sameDay) => selectableSlots(getSlotsForDate(deliveryShifts, date), date, config);
+  const itemSlots = isFlorist && itemDestination.date ? slotsFor(itemDestination.date) : undefined;
+  const slotUnavailable = isFlorist && itemDestination.mode === 'delivery' && !!itemDestination.date && !!itemDestination.slot
+    && !(itemSlots ?? []).includes(itemDestination.slot);
+  const itemDestinationErrors = isFlorist && !comboFlow
+    ? [...validateDestination(itemDestination, todaySP()), ...(slotUnavailable ? ['Esse turno não está mais disponível. Escolha outro turno ou data.'] : [])]
+    : [];
+  const noSlotsMessage = !itemDestination.date || itemDestination.date !== todaySP() || getSlotsForDate(deliveryShifts, itemDestination.date).length === 0
+    ? undefined
+    : !acceptsDeliveryToday(sameDay)
+      ? 'Não estamos mais recebendo pedidos de entrega para hoje. Selecione retirada na loja ou agende a entrega para outro dia.'
+      : 'Turnos de entrega esgotados para hoje. Selecione retirada na loja ou agende a entrega para amanhã.';
   const floristNeighborhoods = useMemo(
     () => (isFlorist && settings.deliveryMode === 'neighborhood'
       ? getActiveNeighborhoods().map((n) => ({ name: n.neighborhoodName, fee: n.deliveryFee || 0 }))
@@ -1031,7 +1045,7 @@ export default function Menu() {
 
     let floristDestination: FloristDestination | undefined;
     if (isFlorist) {
-      const errs = validateDestination(itemDestination, todaySP());
+      const errs = itemDestinationErrors;
       if (errs.length > 0) { toast.error(errs[0]); return; }
       const d = { ...itemDestination } as FloristDestination;
       if (d.mode === 'delivery') {
@@ -1407,6 +1421,20 @@ export default function Menu() {
         setIsSubmitting(false);
         toast.error('Estabelecimento fechado no momento');
         return;
+      }
+      // Floricultura: o carrinho pode ter ficado aberto; confere de novo os turnos de entrega.
+      if (isFlorist) {
+        const config = await fetchSameDayConfig(company.id);
+        setSameDay(config);
+        const expired = cart.find((c) => {
+          const d = c.floristDestination;
+          return d?.mode === 'delivery' && !!d.date && !slotsFor(d.date, config).includes(d.slot || '');
+        });
+        if (expired) {
+          setIsSubmitting(false);
+          toast.error(`O turno de entrega de "${expired.product.name}" não está mais disponível. Remova o item e escolha outro turno ou data.`, { duration: 8000 });
+          return;
+        }
       }
       // Validação/sanitização dos dados do cliente antes de persistir
       const publicOrderSchema = z.object({
@@ -2447,7 +2475,8 @@ export default function Menu() {
                           neighborhoodNames={addressNeighborhoodNames}
                           pickupEnabled={settings.enablePickup !== false}
                           slots={itemSlots}
-                          customShifts={deliveryShifts.length > 0}
+                          noSlotsMessage={noSlotsMessage}
+                          pickupNotice={pickupNotice(sameDay)}
                         />
                       )}
                       <div>

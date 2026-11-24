@@ -1,7 +1,6 @@
 // Turnos de entrega por dia da semana — SOMENTE perfil floricultura.
-// Se a loja não cadastrou turnos personalizados, vale a grade padrão (FLORIST_TIME_SLOTS).
+// Se a loja não cadastrou turnos personalizados, vale a grade padrão de hora em hora (08h às 19h).
 import { supabase } from '@/integrations/supabase/client';
-import { FLORIST_TIME_SLOTS } from './floristGift';
 
 export interface DeliveryShift {
   id?: string;
@@ -15,12 +14,12 @@ export interface DeliveryShift {
 export const DAY_NAMES_SHORT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'] as const;
 
 /** Grade padrão usada quando a loja ainda não personalizou os turnos. */
-export const DEFAULT_FLORIST_SHIFTS: Omit<DeliveryShift, 'dayOfWeek'>[] = [
-  { label: '08:00–10:00', startTime: '08:00', endTime: '10:00', sortOrder: 0 },
-  { label: '10:00–12:00', startTime: '10:00', endTime: '12:00', sortOrder: 1 },
-  { label: '14:00–16:00', startTime: '14:00', endTime: '16:00', sortOrder: 2 },
-  { label: '16:00–18:00', startTime: '16:00', endTime: '18:00', sortOrder: 3 },
-];
+export const DEFAULT_FLORIST_SHIFTS: Omit<DeliveryShift, 'dayOfWeek'>[] = Array.from({ length: 11 }, (_, i) => {
+  const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
+  const startTime = hh(8 + i);
+  const endTime = hh(9 + i);
+  return { label: `${startTime}–${endTime}`, startTime, endTime, sortOrder: i };
+});
 
 export const shiftLabel = (startTime: string, endTime: string) => `${startTime}–${endTime}`;
 
@@ -42,7 +41,7 @@ export function groupShiftsByDay(shifts: DeliveryShift[]): Map<number, DeliveryS
  * - Loja com turnos cadastrados, mas nenhum no dia da semana da data → [] (sem entrega nesse dia).
  */
 export function getSlotsForDate(shifts: DeliveryShift[], dateStr: string): string[] {
-  if (shifts.length === 0) return [...FLORIST_TIME_SLOTS];
+  if (shifts.length === 0) return DEFAULT_FLORIST_SHIFTS.map((s) => s.label);
   const day = new Date(`${dateStr}T12:00:00`).getDay();
   return (groupShiftsByDay(shifts).get(day) ?? []).map((s) => s.label);
 }
