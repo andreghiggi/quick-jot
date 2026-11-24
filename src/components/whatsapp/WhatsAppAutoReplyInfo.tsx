@@ -17,8 +17,12 @@ const GREETING_EXAMPLES = [
 
 export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoReplyInfoProps) {
   const { company } = useAuthContext();
-  const { profileText } = useCompanyProfile(company?.id);
+  const { isFlorist, profileText } = useCompanyProfile(company?.id);
   const exampleUrl = menuUrl || (companySlug ? `${window.location.origin}/cardapio/${companySlug}` : 'https://seusite.com/cardapio/sua-loja');
+
+  const exampleMessage = isFlorist
+    ? `🌸 Olá! Bem-vindo(a) à *Sua Floricultura*! Que alegria ter você por aqui! 😊\n\nPara ver os produtos, preços e fazer seu pedido completo, é só clicar no link abaixo:\n👉 ${exampleUrl}\n\nLá você escolhe tudo do seu jeito, sem espera: entrega ou retirada, data, horário e cartão com mensagem. 💐\n\nSe surgir alguma dúvida, estamos por aqui! 😊`
+    : `Olá! 👋 Bem-vindo(a) ao *Sua Lancheria*!\n\nAcesse nosso cardápio digital e faça seu pedido:\n${exampleUrl}\n\nQualquer dúvida, estamos à disposição!`;
 
   return (
     <Card>
@@ -51,7 +55,7 @@ export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoRepl
             <div className="flex items-start gap-2">
               <MessageCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
               <p className="text-sm text-foreground whitespace-pre-line">
-                {profileText(`Olá! 👋 Bem-vindo(a) ao *Sua Lancheria*!\n\nAcesse nosso cardápio digital e faça seu pedido:\n${exampleUrl}\n\nQualquer dúvida, estamos à disposição!`)}
+                {exampleMessage}
               </p>
             </div>
           </div>
@@ -59,7 +63,7 @@ export function WhatsAppAutoReplyInfo({ companySlug, menuUrl }: WhatsAppAutoRepl
 
         <div className="p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            ✅ A resposta automática é enviada <strong>no máximo uma vez a cada 24 horas</strong> para o mesmo número. Mesmo que o cliente envie várias saudações seguidas ("oi", "boa noite", "tudo bem"), apenas a primeira gera resposta. Mensagens que não são saudação não geram resposta automática.
+            ✅ A resposta automática é enviada <strong>no máximo uma vez a cada 2 horas</strong> para o mesmo número. Mesmo que o cliente envie várias saudações seguidas ("oi", "boa noite", "tudo bem"), apenas a primeira gera resposta. Mensagens que não são saudação não geram resposta automática.
           </p>
         </div>
       </CardContent>
