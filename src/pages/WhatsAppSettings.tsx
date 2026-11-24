@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useWhatsApp } from '@/hooks/useWhatsApp';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { WhatsAppMessageTemplates } from '@/components/whatsapp/WhatsAppMessageTemplates';
 import { WhatsAppAutoReplyInfo } from '@/components/whatsapp/WhatsAppAutoReplyInfo';
@@ -30,6 +31,7 @@ export default function WhatsAppSettings() {
   const navigate = useNavigate();
   const { company } = useAuthContext();
   const { isModuleEnabled, toggleModule } = useCompanyModules({ companyId: company?.id });
+  const { isFlorist } = useCompanyProfile(company?.id);
   const { updateSetting } = useStoreSettings({ companyId: company?.id });
   const whatsappEnabled = isModuleEnabled('whatsapp');
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
@@ -343,7 +345,8 @@ export default function WhatsAppSettings() {
           </CardContent>
         </Card>
 
-        {/* Estimated Wait Time */}
+        {/* Estimated Wait Time — fluxo de restaurantes; floricultura usa cronograma por data/turno */}
+        {!isFlorist && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -374,6 +377,7 @@ export default function WhatsAppSettings() {
             </div>
           </CardContent>
         </Card>
+        )}
         {/* Message Templates */}
         <WhatsAppMessageTemplates googleReviewUrl={googleReviewUrl} companyId={company?.id} updateSetting={updateSetting} />
 
