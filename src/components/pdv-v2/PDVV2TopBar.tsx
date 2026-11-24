@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { loadCashClosingSales } from '@/utils/cashClosingSales';
 import { FrenteCaixaCashMovementDialog, type CashMovementType } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { brl as formatPrice } from './_format';
+import { StoreAvailabilityControl } from '@/components/StoreAvailabilityControl';
 
 interface PDVV2TopBarProps {
   storeName: string;
@@ -94,9 +95,12 @@ export function PDVV2TopBar({
   );
 
   return (
-    <div className="flex items-center justify-between gap-4 p-4 border-b bg-card">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <h1 className="text-xl font-bold truncate">{storeName}</h1>
+    <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b bg-card">
+      <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
+        <div className="flex min-w-0 max-w-full flex-col items-start gap-1">
+          <h1 className="max-w-full text-xl font-bold truncate">{storeName}</h1>
+          <StoreAvailabilityControl companyId={companyId} />
+        </div>
         {!cashStateUnknown && (
           <Badge
             className={

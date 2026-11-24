@@ -1,8 +1,9 @@
 import { buildFloralStages, type FloralOrder, type FloralStage } from './florist-fulfillment.ts';
+import { activeStoreOverride, effectiveStoreOpen, effectiveSchedulingToday } from './store-availability.ts';
 export interface FloralHours { day_of_week: number; is_open: boolean; always_open?: boolean; open_time: string | null; close_time: string | null; period_number?: number }
 const DAYS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
 const minute = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
-export function floralBusinessState(hours: FloralHours[], now = new Date()) {
+export function floralBusinessState(hours: FloralHours[], now = new Date(), availability?: unknown) {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
   const get = (type: string) => parts.find(p => p.type === type)?.value || '';
   const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(get('weekday'));
@@ -11,14 +12,16 @@ export function floralBusinessState(hours: FloralHours[], now = new Date()) {
     .sort((a,b) => (a.open_time || '').localeCompare(b.open_time || ''));
   const today = periods(dow);
   const always = hours.length === 0 || hours.some(h => h.always_open);
-  const isOpen = always || today.some(h => h.open_time && h.close_time && current >= minute(h.open_time) && current <= minute(h.close_time));
+  const override = activeStoreOverride(availability, now);
+  const isOpen = effectiveStoreOpen(always || today.some(h => h.open_time && h.close_time && current >= minute(h.open_time) && current <= minute(h.close_time)), availability, now);
   const formattedHours = always ? 'aberto 24 horas' : today.length ? today.map(h => `${h.open_time?.slice(0,5)} às ${h.close_time?.slice(0,5)}`).join(' e ') : 'fechado hoje';
   let returnTime = '';
-  for (let offset = 0; offset <= 7; offset++) {
+  for (let offset = override?.mode === 'closed' ? 1 : 0; offset <= 7; offset++) {
     const next = periods((dow + offset) % 7).find(h => h.open_time && (offset > 0 || minute(h.open_time) > current));
     if (next?.open_time) { returnTime = `${offset === 0 ? 'hoje' : offset === 1 ? 'amanhã' : DAYS[(dow+offset)%7]} às ${next.open_time.slice(0,5)}`; break; }
   }
-  return { isOpen, formattedHours, returnTime, canScheduleToday: today.some(h => h.open_time && minute(h.open_time) > current) };
+  if (override?.mode === 'closed' && always) returnTime = 'amanhã';
+  return { isOpen, formattedHours, returnTime, canScheduleToday: effectiveSchedulingToday(today.some(h => h.open_time && minute(h.open_time) > current), availability, now) };
 }
 
 export const FLORAL_TEMPLATES = [

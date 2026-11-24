@@ -23,6 +23,8 @@ import { parseItemNotes } from '@/utils/orderNotesDisplay';
 import { formatPrice, cn } from '@/lib/utils';
 import { generateProductionTicketHTML } from '@/utils/printProductionTicket';
 import { computeReadyOffsetMinutes } from '@/utils/estimatedReadyOffset';
+import { useStoreAvailability, fetchStoreAvailability } from '@/hooks/useStoreAvailability';
+import { effectiveStoreOpen } from '../../supabase/functions/_shared/store-availability';
 
 interface MesaInfo {
   number: number;
@@ -60,6 +62,8 @@ export default function MesaQR() {
 
   const { products } = useProducts({ companyId: companyId || undefined });
   const { settings } = useStoreSettings({ companyId: companyId || undefined });
+  const availability = useStoreAvailability(companyId);
+  const isOpen = !availability.loading && !availability.error && effectiveStoreOpen(true, availability.value, availability.now);
   const { categories: allCategories } = useCategories({ companyId: companyId || undefined });
   const { subcategories: allSubcategories } = useSubcategories({ companyId: companyId || undefined });
   // Hide subcategories disabled for the waiter/mesa module so their tiles
@@ -319,6 +323,10 @@ export default function MesaQR() {
     if (!companyId || !selectedMesa || cart.length === 0) return;
     setSubmitting(true);
     try {
+      if (!effectiveStoreOpen(true, await fetchStoreAvailability(companyId))) {
+        toast.error('Estabelecimento fechado no momento');
+        return;
+      }
       const items = cart.map(it => {
         const unit = cartItemTotal(it) / it.quantity;
         return {
@@ -764,8 +772,8 @@ export default function MesaQR() {
         floatingPhoto={(settings as any)?.floatingPhoto}
         cartItemsCount={cartCount}
         cartTotal={cartTotal}
-        isOpen={true}
-        formattedHours=""
+        isOpen={isOpen}
+        formattedHours={availability.override?.mode === 'closed' ? 'Fechada temporariamente hoje' : ''}
         schedulingEnabled={false}
         onProductSelect={(p) => setSelectedProduct(p)}
         onCartOpen={() => setCartOpen(true)}
@@ -881,9 +889,9 @@ export default function MesaQR() {
             <Button
               className="w-full h-12"
               onClick={confirmOrder}
-              disabled={submitting || cart.length === 0}
+              disabled={!isOpen || submitting || cart.length === 0}
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar pedido'}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : !isOpen ? 'Estabelecimento fechado' : 'Confirmar pedido'}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               O pagamento será feito ao garçom no fechamento da mesa

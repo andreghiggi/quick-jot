@@ -7,6 +7,7 @@
 // Roda com SERVICE_ROLE para validar dados (preço, mesa, módulo) sem expor o banco.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { effectiveStoreOpen, readStoreOverride } from '../_shared/store-availability.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -160,6 +161,11 @@ Deno.serve(async (req) => {
         .eq("module_name", "cardapio_mesa")
         .maybeSingle();
       if (!moduleRow?.enabled) return json({ error: "module_disabled" }, 403);
+
+      // Only exceptional closures affect this existing QR flow; never close a tab.
+      if (!effectiveStoreOpen(true, await readStoreOverride(admin, companyId))) {
+        return json({ error: 'store_closed', message: 'Estabelecimento fechado no momento' }, 409);
+      }
 
       // ---- Modo comanda individual (trava validada no servidor) ----
       const cardsActive = await comandaCardsActive(admin, companyId);

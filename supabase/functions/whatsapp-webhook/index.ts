@@ -6,6 +6,7 @@ import { evolutionRequest, recoverInstance, restoreConfiguration } from '../_sha
 import { evoServerForCompany, evoServerForInstance, v24TokenMatches } from '../_shared/evolution-server.ts';
 import { FLORAL_TEMPLATES, floralBusinessState, floralGreetingVariant, floralTemplate } from '../_shared/florist-messages.ts';
 import { floristProfileEnabled } from '../_shared/florist-notifications.ts';
+import { STORE_AVAILABILITY_KEY, activeStoreOverride, effectiveStoreOpen } from '../_shared/store-availability.ts';
 
 // Keep the same words, with shared accent/repetition and wrapped-message handling.
 const PRODUCTION_URL = 'https://app.comandatech.com.br';
@@ -283,7 +284,7 @@ serve(async (req) => {
         supabase.from('companies').select('name, slug, subdomain').eq('id', companyId).single(),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'whatsapp').maybeSingle(),
         supabase.from('business_hours').select('*').eq('company_id', companyId),
-        supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', ['site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling', 'whatsapp_msg_autoreply_closed_no_hours_today', 'accept_order_scheduling', ...FLORAL_TEMPLATES.map(t => t.settingKey)]),
+        supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', [STORE_AVAILABILITY_KEY, 'site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling', 'whatsapp_msg_autoreply_closed_no_hours_today', 'accept_order_scheduling', ...FLORAL_TEMPLATES.map(t => t.settingKey)]),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'agendamento').maybeSingle(),
         floristProfileEnabled(supabase, companyId),
       ]);
@@ -305,6 +306,9 @@ serve(async (req) => {
       settingsRes.data?.forEach((s: any) => {
         if (s.value) settingsMap[s.key] = s.value;
       });
+      if (settingsRes.error || hoursRes.error) throw new Error('Não foi possível consultar o funcionamento da loja');
+      const availability = settingsMap[STORE_AVAILABILITY_KEY];
+      const manuallyClosed = activeStoreOverride(availability)?.mode === 'closed';
 
       const baseUrl = sanitizeBaseUrl(settingsMap['site_url'] || Deno.env.get('SITE_URL') || null);
       // Prefere subdomínio da loja (ex: vanialanches.comandatech.com.br) para evitar
@@ -319,7 +323,7 @@ serve(async (req) => {
       const firstName = senderName.split(' ')[0];
 
       // Check if within business hours
-      let withinHours = isWithinBusinessHours(businessHours);
+      let withinHours = effectiveStoreOpen(isWithinBusinessHours(businessHours), availability);
       const hoursText = formatBusinessHours(businessHours);
       // Detect "closed today with no future period today"
       const todayHasAnyOpenPeriod = businessHours.some(
@@ -332,13 +336,13 @@ serve(async (req) => {
         const [oH, oM] = h.open_time.split(':').map(Number);
         return oH * 60 + oM > currentMin;
       });
-      const closedNoMoreToday = !withinHours && businessHours.length > 0 && !hasFutureOpenToday;
+      const closedNoMoreToday = manuallyClosed || (!withinHours && businessHours.length > 0 && !hasFutureOpenToday);
 
       let greetingMessage: string;
 
       if (isFlorist) {
         if (hoursRes.error || settingsRes.error) throw new Error('Não foi possível consultar os horários da floricultura');
-        const state = floralBusinessState(allBusinessHours);
+        const state = floralBusinessState(allBusinessHours, new Date(), availability);
         withinHours = state.isOpen;
         greetingMessage = floralTemplate(floralGreetingVariant(state, settingsMap.accept_order_scheduling === 'true'), {
           loja: company.name, nome: firstName, link_cardapio: menuUrl, horario: state.formattedHours, horario_retorno: state.returnTime,

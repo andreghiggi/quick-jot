@@ -55,6 +55,8 @@ import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
 import { refreshCartPrices } from '@/utils/cartPriceRefresh';
 import { getCompanyTerminology, getPublicMenuColor } from '@/lib/companyProfile';
+import { fetchStoreAvailability } from '@/hooks/useStoreAvailability';
+import { effectiveStoreOpen, effectiveSchedulingToday } from '../../supabase/functions/_shared/store-availability';
 
 interface Company {
   id: string;
@@ -139,7 +141,7 @@ export default function Menu() {
   const categories = useMemo(() => allCategories.filter(c => c.menuItem !== false), [allCategories]);
   const subcategories = useMemo(() => allSubcategories.filter(s => s.menuItem !== false), [allSubcategories]);
   const { neighborhoods, loading: neighborhoodsLoading, getActiveNeighborhoods } = useDeliveryNeighborhoods({ companyId: company?.id });
-  const { loading: hoursLoading, isCurrentlyOpen, willOpenLaterToday, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
+  const { loading: hoursLoading, availabilityError, isCurrentlyOpen, willOpenLaterToday, getFormattedHours, config: hoursConfig } = useBusinessHours({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
   const { combos } = useCombos({ companyId: company?.id });
   const { activePaymentMethods, loading: paymentMethodsLoading } = usePaymentMethods({ companyId: company?.id, channel: 'menu' });
@@ -152,7 +154,7 @@ export default function Menu() {
   // Se hoje está 100% fechado (ou já passou do último horário), agendamento é bloqueado.
   // Lojas com alwaysOpen continuam intocadas (isOpen=true cobre o caso).
   const schedulingEnabled = settings.acceptOrderScheduling && willOpenLaterToday();
-  const canOrder = isOpen || schedulingEnabled;
+  const canOrder = !hoursLoading && !availabilityError && (isOpen || schedulingEnabled);
   const formattedHours = getFormattedHours();
 
 
@@ -1398,6 +1400,14 @@ export default function Menu() {
     // Save order to database
     setIsSubmitting(true);
     try {
+      if (!company?.id) throw new Error('Loja não encontrada');
+      // Fresh read: an already-open cart must respect an operator's closure too.
+      const override = await fetchStoreAvailability(company.id);
+      if (!effectiveStoreOpen(isOpen, override) && !effectiveSchedulingToday(schedulingEnabled, override)) {
+        setIsSubmitting(false);
+        toast.error('Estabelecimento fechado no momento');
+        return;
+      }
       // Validação/sanitização dos dados do cliente antes de persistir
       const publicOrderSchema = z.object({
         customerName: z.string().trim().min(2, 'Nome inválido').max(100, 'Nome muito longo'),

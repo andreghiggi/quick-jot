@@ -16,7 +16,7 @@ const env = { EVOLUTION_API_URL: 'https://provider.invalid', EVOLUTION_API_KEY: 
 globalThis.Deno = { env: { get: key => env[key] } };
 await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
-function fixture({ closed = false, recentHours = null, sendOk = true, florist = false } = {}) {
+function fixture({ closed = false, recentHours = null, sendOk = true, florist = false, manualState = null } = {}) {
   const sent = [], logged = [], locks = [], filters = [];
   globalThis.fetch = async (url, init) => {
     assert.equal(url, 'https://provider.invalid/message/sendText/ct-fixture');
@@ -38,7 +38,7 @@ function fixture({ closed = false, recentHours = null, sendOk = true, florist = 
           if (table === 'companies') data = { name: 'Loja de Teste', slug: 'fixture', subdomain: 'fixture' };
           if (table === 'company_modules') data = { enabled: moduleName === 'floricultura' ? florist : true };
           if (table === 'business_hours') data = Array.from({ length: 7 }, (_, day_of_week) => ({ day_of_week, is_open: !closed, always_open: !closed, open_time: '00:00', close_time: '23:59' }));
-          if (table === 'store_settings') data = [];
+          if (table === 'store_settings') data = manualState ? [{ key:'store_availability_override', value:JSON.stringify({mode:manualState,date:new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'})}) }] : [];
           if (table === 'whatsapp_messages' && recentHours !== null && recentHours < 2) data = { id: 'recent-fixture' };
         }
         return Promise.resolve({ data, error: null }).then(resolvePromise, reject);
@@ -115,3 +115,13 @@ for (const closed of [false,true]) {
   assert.equal(f.logged[0].company_id,'fixture-company');
 }
 console.log('Floral greeting branch: open/closed, tenant identity and existing delivery path verified with fake provider.');
+for (const florist of [false,true]) {
+  for (const manualState of ['open','closed']) {
+    const f=fixture({florist,closed:manualState==='open',manualState});
+    const result=await (await globalThis.__whatsappHandler(request())).json();
+    assert.equal(result.replied,true);
+    assert.equal(result.outsideHours,manualState==='closed');
+    assert.equal(f.sent.length,1);
+  }
+}
+console.log('Manual availability: open/closed overrides honored by both restaurant and florist greetings. No real sends.');

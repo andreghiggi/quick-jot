@@ -1,5 +1,11 @@
 # Roadmap — Retomada ComandaTech
 
+## Controle rápido de loja aberta/fechada (24/11)
+- [x] Controle abaixo do nome no PDV e no cabeçalho da dashboard, por loja, sem alterar caixa ou horários semanais; retorno no dia seguinte confirmado pelo usuário.
+- [x] Estado excepcional compartilhado no catálogo/cardápio, QR de mesa e saudação WhatsApp; fechamento bloqueia novos pedidos, mantendo os existentes.
+- [x] 52 testes de helpers/regressão e handlers WhatsApp/QR passaram; componente real com persistência isolada validado no computador/celular, sem publicar ou alterar lojas reais.
+- [ ] Validar operação na VPS após implantação autorizada — depende de autorização de deploy.
+
 ## Floricultura — mensagens e remessas (24/11)
 - [x] Saudação e fora do horário conforme agendamento efetivamente permitido no catálogo, exclusivamente pelo perfil ativo; templates florais separados dos restaurantes.
 - [x] Persistir etapas pelos destinos já salvos/data/turno; retirada pronta não equivale a retirada concluída; próxima entrega segue visível na agenda.

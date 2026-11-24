@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { evoServerForCompany } from '../_shared/evolution-server.ts';
 import { dispatchFloralNotices, floristProfileEnabled } from '../_shared/florist-notifications.ts';
+import { readStoreOverride, effectiveStoreOpen, effectiveSchedulingToday } from '../_shared/store-availability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -210,15 +211,17 @@ serve(async (req) => {
             });
           }
 
+          const availability = await readStoreOverride(supabase, companyId);
+          isOpen = effectiveStoreOpen(isOpen, availability, now);
           // Só envia mensagem de agendamento se a loja AINDA vai abrir hoje.
           // Se hoje está 100% fechado (ou já passou do último horário), não envia
           // a mensagem de agendamento — o pedido não deveria nem chegar nesse estado
           // pois o frontend bloqueia, mas garantimos no backend também.
           const openHoursToday = hours.filter((h: any) => h.is_open && h.open_time && h.close_time);
-          const willOpenLater = !alwaysOpen && openHoursToday.some((h: any) => {
+          const willOpenLater = effectiveSchedulingToday(!alwaysOpen && openHoursToday.some((h: any) => {
             const [oH, oM] = h.open_time.split(':').map(Number);
             return (oH * 60 + oM) > currentMinutes;
-          });
+          }), availability, now);
 
           if (!isOpen && willOpenLater) {
             // Outside business hours → send scheduled confirmation to customer

@@ -3,6 +3,8 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/s
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
 import { FrenteCaixaFAB } from './FrenteCaixaFAB';
+import { StoreAvailabilityControl } from '@/components/StoreAvailabilityControl';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -12,6 +14,8 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title, subtitle, actions }: AppLayoutProps) {
+  const { company } = useAuthContext();
+  const showStoreControl = (!title || title === 'Dashboard' || title === 'Pedidos') && !!company;
   // Memoize sidebar to prevent re-renders on navigation
   const sidebar = useMemo(() => <AppSidebar />, []);
 
@@ -19,11 +23,12 @@ export function AppLayout({ children, title, subtitle, actions }: AppLayoutProps
     <SidebarProvider>
       {sidebar}
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4 bg-background/80 backdrop-blur-lg sticky top-0 z-40">
+        <header className="flex min-h-16 shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2 bg-background/80 backdrop-blur-lg sticky top-0 z-40">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex flex-col">
-            <span className="font-semibold">{title || 'Dashboard'}</span>
+          <div className="flex min-w-0 max-w-full flex-col gap-1">
+            <span className="truncate font-semibold">{showStoreControl ? company?.name : title || 'Dashboard'}</span>
+            {showStoreControl && <StoreAvailabilityControl companyId={company?.id} />}
             {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
           </div>
           {actions && (

@@ -15,6 +15,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '24/11/2026',
+    version: '1.76.0-beta',
+    type: 'feature',
+    description: 'Floriculturas e restaurantes: controle Loja Aberta/Loja Fechada abaixo do nome no PDV e na dashboard. Um clique altera o atendimento só hoje; amanhã os horários normais voltam automaticamente. O fechamento bloqueia novos pedidos online e no QR da mesa e é respeitado pela saudação do WhatsApp, sem alterar caixa, pagamentos ou pedidos existentes.',
+  },
+  {
     date: '11/11/2026',
     version: '1.76.0-beta',
     type: 'fix',

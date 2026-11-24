@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useStoreAvailability } from '@/hooks/useStoreAvailability';
+import { effectiveStoreOpen, effectiveSchedulingToday } from '../../supabase/functions/_shared/store-availability';
 
 export interface BusinessHourPeriod {
   id?: string;
@@ -49,15 +51,20 @@ interface UseBusinessHoursOptions {
 
 export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
   const { companyId } = options;
+  const availability = useStoreAvailability(companyId);
   const [config, setConfig] = useState<BusinessHoursConfig>({
     alwaysOpen: true,
     days: [],
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadedCompany, setLoadedCompany] = useState<string | null>(null);
+  const requestVersion = useRef(0);
 
   const fetchBusinessHours = useCallback(async () => {
+    const version = ++requestVersion.current;
     if (!companyId) {
+      setLoadedCompany(null);
       setLoading(false);
       return;
     }
@@ -70,6 +77,7 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
         .order('day_of_week')
         .order('period_number');
 
+      if (version !== requestVersion.current) return;
       if (error) throw error;
 
       if (!data || data.length === 0) {
@@ -90,7 +98,8 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
         }
         
         data.forEach((row) => {
-          const day = dayMap.get(row.day_of_week)!;
+          const day = dayMap.get(row.day_of_week);
+          if (!day) return;
           day.isOpen = row.is_open;
           if (row.open_time && row.close_time) {
             day.periods.push({
@@ -111,14 +120,20 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
         setConfig({ alwaysOpen, days });
       }
     } catch (error) {
+      if (version !== requestVersion.current) return;
+      setConfig({ alwaysOpen: false, days: [] });
       console.error('Error fetching business hours:', error);
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) {
+        setLoadedCompany(companyId);
+        setLoading(false);
+      }
     }
   }, [companyId]);
 
   useEffect(() => {
     fetchBusinessHours();
+    return () => { requestVersion.current++; };
   }, [fetchBusinessHours]);
 
   const saveBusinessHours = async (newConfig: BusinessHoursConfig): Promise<boolean> => {
@@ -179,7 +194,7 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
   };
 
   // Check if currently open (for menu display)
-  const isCurrentlyOpen = useCallback((): boolean => {
+  const isScheduledOpen = useCallback((): boolean => {
     if (config.alwaysOpen) return true;
 
     const now = new Date();
@@ -208,12 +223,18 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
     });
   }, [config]);
 
+  const isCurrentlyOpen = useCallback((): boolean => {
+    if (loading || loadedCompany !== companyId || availability.loading || availability.error) return false;
+    return effectiveStoreOpen(isScheduledOpen(), availability.value, availability.now);
+  }, [isScheduledOpen, companyId, loadedCompany, loading, availability.loading, availability.error, availability.value, availability.now]);
+
   // Check if the store has any future open period later today.
   // Used to decide whether scheduling should be offered when currently closed.
   // Rule: if alwaysOpen, considered open (no scheduling path). Otherwise,
   // returns true only if today (in America/Sao_Paulo) has at least one period
   // configured as open AND whose openTime is still in the future.
   const willOpenLaterToday = useCallback((): boolean => {
+    if (availability.loading || availability.error || !effectiveSchedulingToday(true, availability.value, availability.now)) return false;
     if (config.alwaysOpen) return false;
 
     const now = new Date();
@@ -239,10 +260,12 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
       const [oH, oM] = period.openTime.split(':').map(Number);
       return (oH * 60 + oM) > currentMinutes;
     });
-  }, [config]);
+  }, [config, availability.loading, availability.error, availability.value, availability.now]);
 
   // Get formatted hours for display
   const getFormattedHours = useCallback((): string => {
+    if (availability.override?.mode === 'closed') return 'Fechada temporariamente hoje';
+    if (availability.override?.mode === 'open') return 'Aberta excepcionalmente hoje';
     if (config.alwaysOpen) return 'Aberto 24h';
     
     const now = new Date();
@@ -263,11 +286,13 @@ export function useBusinessHours(options: UseBusinessHoursOptions = {}) {
       .join(' | ');
     
     return periodsText;
-  }, [config]);
+  }, [config, availability.override?.mode]);
 
   return {
     config,
-    loading,
+    loading: !!companyId && (loading || loadedCompany !== companyId || availability.loading),
+    availabilityError: availability.error,
+    availability,
     saving,
     setAlwaysOpen,
     saveBusinessHours,
