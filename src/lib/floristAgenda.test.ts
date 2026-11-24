@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { floristNextStatus, buildFloristAgenda, countScheduledToday, getFloristAgendaSlots } from './floristAgenda';
+import { floristNextStatus, buildFloristAgenda, countScheduledToday, getFloristAgendaSlots, getActiveFloristSchedules } from './floristAgenda';
 import type { Order } from '@/types/order';
 
 const mk = (id: string, status: Order['status'], notes: string, confirmed = true): Order => ({
@@ -78,5 +78,22 @@ describe('floricultura: agenda do dia', () => {
   });
   it('contagem do aviso diário separa entrega e retirada', () => {
     expect(countScheduledToday(orders, today)).toEqual({ total: 5, delivery: 4, pickup: 1 });
+  });
+});
+
+describe('agenda de remessas independentes',()=>{
+  const order:Order={...mk('multiplo','pending',ENTREGA('10/12/2026','09:00–12:00')),
+    items:[{id:'a',productId:'p',name:'Buquê 1',quantity:1,price:10,notes:ENTREGA('10/12/2026','09:00–12:00')},
+      {id:'b',productId:'p',name:'Buquê 2',quantity:1,price:10,notes:ENTREGA('11/12/2026','14:00–16:00').replace('DESTINO 1','DESTINO 2')}],
+    floristFulfillments:[{id:'destino-1',mode:'delivery',itemIds:['a'],status:'delivered'}, {id:'destino-2',mode:'delivery',itemIds:['b'],status:'pending'}]};
+  it('após primeira entrega mantém a segunda data na agenda',()=>{
+    expect(getActiveFloristSchedules(order)).toEqual([{mode:'delivery',date:'2026-12-11',slot:'14:00–16:00'}]);
+    expect(buildFloristAgenda([order],'2026-12-11',{date:'2026-12-11',slot:''}).scheduled.map(o=>o.id)).toEqual(['multiplo']);
+    expect(buildFloristAgenda([order],'2026-12-11',{date:'2026-12-10',slot:''}).scheduled).toEqual([]);
+  });
+  it('permite filtrar uma remessa futura antes de concluir a primeira',()=>{
+    const pending={...order,floristFulfillments:order.floristFulfillments?.map(s=>({...s,status:'pending' as const}))};
+    expect(buildFloristAgenda([pending],'2026-12-10',{date:'2026-12-11',slot:'14:00–16:00'}).scheduled.map(o=>o.id)).toEqual(['multiplo']);
+    expect(getFloristAgendaSlots([pending])).toEqual(['09:00–12:00','14:00–16:00']);
   });
 });

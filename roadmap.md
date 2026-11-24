@@ -1,5 +1,13 @@
 # Roadmap — Retomada ComandaTech
 
+## Floricultura — mensagens e remessas (24/11)
+- [x] Saudação e fora do horário conforme agendamento efetivamente permitido no catálogo, exclusivamente pelo perfil ativo; templates florais separados dos restaurantes.
+- [x] Persistir etapas pelos destinos já salvos/data/turno; retirada pronta não equivale a retirada concluída; próxima entrega segue visível na agenda.
+- [x] Ações por remessa e mensagens somente ao comprador; conclusão após todas as entregas/retiradas, com o short_code do painel.
+- [x] Travas atômicas, falhas visíveis, timeout incerto exige conferência e prevenção de repetição sem bloquear status pelo cooldown de saudação.
+- [x] Duas migrações de desenvolvimento aplicadas/verificadas e espelhos automáticos VPS; 58 testes puros, concorrência SQL e handlers isolados passaram; layout conferido desktop/mobile com dados controlados. Sem publicar ou enviar mensagens reais.
+- [ ] Validar entrega real na loja após implantação autorizada — depende de autorização e operação real.
+
 ## WhatsApp — correções autorizadas (22/11)
 - [x] Impedir reinício automático de sessões open/connecting, inclusive com prazo vencido ou evento close antigo; manter reinício manual e recuperação de close com travas existentes, rechecando estado antes/depois da trava.
 - [x] Resolver remetente @lid pelo remoteJidAlt para envio, histórico e cooldown; nunca tratar LID como telefone.

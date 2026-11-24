@@ -31,6 +31,7 @@ export interface Order {
   paidAmount?: number;
   paidItems?: unknown;
   splitInfo?: unknown;
+  floristFulfillments?: import('../../supabase/functions/_shared/florist-fulfillment').PersistedStage[];
 }
 
 export interface Product {

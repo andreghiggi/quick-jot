@@ -8,6 +8,7 @@ import { formatOrderItemWhatsApp } from '@/utils/formatOrderItemWhatsApp';
 import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 import { buildMenuLink } from '@/utils/menuLink';
 import { useAutoConfirmOrders } from '@/hooks/useAutoConfirmOrders';
+import { checkFloralProfile, floralOrderAction, type StageStatus } from '@/lib/floristFulfillment';
 
 interface UseOrdersOptions {
   companyId?: string | null;
@@ -51,6 +52,7 @@ function mapOrderRow(order: any, itemsData: any[]): Order {
     paidAmount: Number((order as any).paid_amount || 0),
     paidItems: (order as any).paid_items || undefined,
     splitInfo: (order as any).split_info || undefined,
+    floristFulfillments: order.florist_fulfillments || [],
     origin: (
       true &&
       ((order as any).origin === 'cardapio' || !(order as any).origin) &&
@@ -151,7 +153,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       const mappedOrders: Order[] = (ordersData || []).map((order) => mapOrderRow(order, itemsData));
 
       // Only update state if data actually changed to prevent unnecessary re-renders
-      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, notes: o.notes, confirmedAt: o.confirmedAt?.toISOString(), paymentStatus: o.paymentStatus, paidAmount: o.paidAmount, paidItems: o.paidItems, splitInfo: o.splitInfo })));
+      const ordersJson = JSON.stringify(mappedOrders.map(o => ({ id: o.id, status: o.status, total: o.total, items: o.items.length, notes: o.notes, confirmedAt: o.confirmedAt?.toISOString(), paymentStatus: o.paymentStatus, paidAmount: o.paidAmount, paidItems: o.paidItems, splitInfo: o.splitInfo, floristFulfillments: o.floristFulfillments })));
       if (ordersJson !== prevOrdersJsonRef.current) {
         prevOrdersJsonRef.current = ordersJson;
         setOrders(mappedOrders);
@@ -340,6 +342,10 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
   async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<boolean> {
     try {
+      if (companyId && await checkFloralProfile(companyId) && status !== 'canceled') {
+        toast.error('Atualize cada entrega ou retirada nas ações das remessas.');
+        return false;
+      }
       // Optimistically update local state first for instant feedback
       setOrders(prevOrders => 
         prevOrders.map(order => 
@@ -570,6 +576,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
   async function sendConfirmationWhatsApp(orderId: string, opts?: { auto?: boolean }): Promise<boolean> {
     try {
       const order = ordersRef.current.find((o) => o.id === orderId);
+      if (order && companyId && await checkFloralProfile(companyId)) {
+        const result = await floralOrderAction({companyId,orderId,action:'confirm'});
+        await fetchOrders();
+        const pending = result.notices.some(n => !['accepted','skipped'].includes(n.status));
+        if (pending) toast.warning('Pedido confirmado; há mensagem pendente. Confira o WhatsApp no pedido.');
+        else toast.success('Pedido confirmado; mensagem aceita pelo serviço de WhatsApp.');
+        return true;
+      }
       if (!order?.customerPhone || !companyId) {
         if (!opts?.auto) toast.error('Pedido sem telefone ou empresa não identificada');
         return false;
@@ -826,6 +840,22 @@ export function useOrders(options: UseOrdersOptions = {}) {
     );
   }
 
+  async function advanceFloristStage(orderId: string, stageId: string, target: StageStatus): Promise<boolean> {
+    if (!companyId) return false;
+    try {
+      const result = await floralOrderAction({companyId,orderId,action:'advance',stageId,target});
+      if (result.result?.status === 'delivered') await registerOrderToCashRegister(orderId);
+      await fetchOrders();
+      if (result.notices.some(n => !['accepted','skipped'].includes(n.status))) toast.warning('Etapa salva; há mensagem pendente no WhatsApp.');
+      else toast.success('Etapa atualizada.');
+      return true;
+    } catch (error) {
+      await fetchOrders();
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar a remessa');
+      return false;
+    }
+  }
+
   useAutoConfirmOrders({ companyId, orders, confirm: (id) => sendConfirmationWhatsApp(id, { auto: true }) });
 
   return {
@@ -833,6 +863,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
     loading,
     addOrder,
     updateOrderStatus,
+    advanceFloristStage,
     applyLocalOrderStatus,
     sendConfirmationWhatsApp,
     deleteOrder,

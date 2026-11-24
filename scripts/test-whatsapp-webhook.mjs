@@ -7,8 +7,7 @@ import { pathToFileURL } from 'node:url';
 const sourcePath = resolve('supabase/functions/whatsapp-webhook/index.ts');
 let source = await readFile(sourcePath, 'utf8');
 source = source.replace(/^import .*https:.*\n/gm, '').replace(/^import .*npm:.*\n/gm, '');
-source = source.replaceAll("'../_shared/whatsapp-message.ts'", JSON.stringify(pathToFileURL(resolve('supabase/functions/_shared/whatsapp-message.ts')).href));
-source = source.replaceAll("'../_shared/whatsapp-recovery.ts'", JSON.stringify(pathToFileURL(resolve('supabase/functions/_shared/whatsapp-recovery.ts')).href));
+source = source.replace(/'\.\.\/_shared\/([^']+)'/g, (_match,file) => JSON.stringify(pathToFileURL(resolve('supabase/functions/_shared',file)).href));
 source = `const serve = handler => { globalThis.__whatsappHandler = handler; };
 const createClient = () => globalThis.__whatsappDb;
 const corsHeaders = {'Access-Control-Allow-Origin':'*'};\n${source}`;
@@ -17,7 +16,7 @@ const env = { EVOLUTION_API_URL: 'https://provider.invalid', EVOLUTION_API_KEY: 
 globalThis.Deno = { env: { get: key => env[key] } };
 await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
-function fixture({ closed = false, recentHours = null, sendOk = true } = {}) {
+function fixture({ closed = false, recentHours = null, sendOk = true, florist = false } = {}) {
   const sent = [], logged = [], locks = [], filters = [];
   globalThis.fetch = async (url, init) => {
     assert.equal(url, 'https://provider.invalid/message/sendText/ct-fixture');
@@ -25,9 +24,9 @@ function fixture({ closed = false, recentHours = null, sendOk = true } = {}) {
     return new Response(JSON.stringify({ status: sendOk ? 'sent' : 'failed' }), { status: sendOk ? 200 : 500 });
   };
   const db = { rpc: async () => ({ data: null, error: null }), from(table) {
-    let operation = 'select', insert = null;
+    let operation = 'select', insert = null, moduleName = null;
     const query = {
-      select() { return query; }, eq(column, value) { filters.push({ table, column, value }); return query; }, is() { return query; }, in() { return query; }, limit() { return query; },
+      select() { return query; }, eq(column, value) { if(column==='module_name') moduleName=value; filters.push({ table, column, value }); return query; }, is() { return query; }, in() { return query; }, limit() { return query; },
       gte() { return query; }, insert(value) { operation = 'insert'; insert = value; return query; }, delete() { operation = 'delete'; return query; },
       single() { return query; }, maybeSingle() { return query; },
       then(resolvePromise, reject) {
@@ -37,7 +36,7 @@ function fixture({ closed = false, recentHours = null, sendOk = true } = {}) {
         else if (operation === 'select') {
           if (table === 'whatsapp_instances') data = { company_id: 'fixture-company' };
           if (table === 'companies') data = { name: 'Loja de Teste', slug: 'fixture', subdomain: 'fixture' };
-          if (table === 'company_modules') data = { enabled: true };
+          if (table === 'company_modules') data = { enabled: moduleName === 'floricultura' ? florist : true };
           if (table === 'business_hours') data = Array.from({ length: 7 }, (_, day_of_week) => ({ day_of_week, is_open: !closed, always_open: !closed, open_time: '00:00', close_time: '23:59' }));
           if (table === 'store_settings') data = [];
           if (table === 'whatsapp_messages' && recentHours !== null && recentHours < 2) data = { id: 'recent-fixture' };
@@ -105,3 +104,14 @@ console.log('Webhook integration: open/closed greetings, 2-hour cooldown, failed
   assert.equal(f.sent.length, 0); assert.equal(f.locks.length, 0);
 }
 console.log('LID integration: send destination, persisted phone, tenant lock and cooldown identity verified; absent alternate never sends.');
+
+for (const closed of [false,true]) {
+  const f=fixture({florist:true,closed});
+  const result=await (await globalThis.__whatsappHandler(request())).json();
+  assert.equal(result.replied,true);
+  assert.equal(result.outsideHours,closed);
+  assert.equal(f.sent.length,1);
+  assert.equal(f.sent[0].number,'5551999999999');
+  assert.equal(f.logged[0].company_id,'fixture-company');
+}
+console.log('Floral greeting branch: open/closed, tenant identity and existing delivery path verified with fake provider.');

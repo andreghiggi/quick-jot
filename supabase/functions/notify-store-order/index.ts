@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { evoServerForCompany } from '../_shared/evolution-server.ts';
+import { dispatchFloralNotices, floristProfileEnabled } from '../_shared/florist-notifications.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +37,19 @@ serve(async (req) => {
         JSON.stringify({ error: 'companyId and orderId are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (await floristProfileEnabled(supabase, companyId)) {
+      // Public catalog can only acknowledge a persisted recent order in the same tenant.
+      // Acceptance is a separate staff action; never claim payment approval here.
+      const { data: floralOrder, error } = await supabase.from('orders').select('id,status,confirmed_at,created_at')
+        .eq('company_id', companyId).eq('id', orderId).gte('created_at', new Date(Date.now()-10*60*1000).toISOString()).single();
+      if (error || !floralOrder) return new Response(JSON.stringify({error:'Pedido não encontrado'}),{status:404,headers:{...corsHeaders,'Content-Type':'application/json'}});
+      if (floralOrder.status !== 'pending' || floralOrder.confirmed_at) return new Response(JSON.stringify({ok:true,skipped:'already_processed'}),{headers:{...corsHeaders,'Content-Type':'application/json'}});
+      const { error: queuedError } = await supabase.from('florist_notifications').upsert({company_id:companyId,order_id:orderId,event:'received'}, {onConflict:'company_id,order_id,stage_id,event',ignoreDuplicates:true});
+      if (queuedError) throw new Error('Não foi possível registrar a mensagem floral');
+      const notices = await dispatchFloralNotices(supabase,companyId,orderId);
+      return new Response(JSON.stringify({ok:true,notices}),{headers:{...corsHeaders,'Content-Type':'application/json'}});
     }
 
     // Check if whatsapp module is enabled

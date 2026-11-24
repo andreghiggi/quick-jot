@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { corsHeaders } from 'npm:@supabase/supabase-js@2.119.2/cors';
 import { extractMessageText, isGreeting, isStaleMessage, isLoggedOut, resolveSenderPhone, REPLY_COOLDOWN_MS } from '../_shared/whatsapp-message.ts';
 import { evolutionRequest, recoverInstance, restoreConfiguration } from '../_shared/whatsapp-recovery.ts';
 import { evoServerForCompany, evoServerForInstance, v24TokenMatches } from '../_shared/evolution-server.ts';
+import { FLORAL_TEMPLATES, floralBusinessState, floralGreetingVariant, floralTemplate } from '../_shared/florist-messages.ts';
+import { floristProfileEnabled } from '../_shared/florist-notifications.ts';
 
 // Keep the same words, with shared accent/repetition and wrapped-message handling.
 const PRODUCTION_URL = 'https://app.comandatech.com.br';
@@ -277,12 +279,13 @@ serve(async (req) => {
       // Get company + module check + business hours + settings in parallel
       const { dayOfWeek } = getSaoPauloTime();
 
-      const [companyRes, moduleRes, hoursRes, settingsRes, schedulingModuleRes] = await Promise.all([
+      const [companyRes, moduleRes, hoursRes, settingsRes, schedulingModuleRes, isFlorist] = await Promise.all([
         supabase.from('companies').select('name, slug, subdomain').eq('id', companyId).single(),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'whatsapp').maybeSingle(),
         supabase.from('business_hours').select('*').eq('company_id', companyId),
-        supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', ['site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling', 'whatsapp_msg_autoreply_closed_no_hours_today']),
+        supabase.from('store_settings').select('key, value').eq('company_id', companyId).in('key', ['site_url', 'whatsapp_msg_autoreply_closed', 'whatsapp_msg_autoreply_closed_scheduling', 'whatsapp_msg_autoreply_closed_no_hours_today', 'accept_order_scheduling', ...FLORAL_TEMPLATES.map(t => t.settingKey)]),
         supabase.from('company_modules').select('enabled').eq('company_id', companyId).eq('module_name', 'agendamento').maybeSingle(),
+        floristProfileEnabled(supabase, companyId),
       ]);
 
       if (!companyRes.data || !moduleRes.data?.enabled) {
@@ -316,7 +319,7 @@ serve(async (req) => {
       const firstName = senderName.split(' ')[0];
 
       // Check if within business hours
-      const withinHours = isWithinBusinessHours(businessHours);
+      let withinHours = isWithinBusinessHours(businessHours);
       const hoursText = formatBusinessHours(businessHours);
       // Detect "closed today with no future period today"
       const todayHasAnyOpenPeriod = businessHours.some(
@@ -333,7 +336,14 @@ serve(async (req) => {
 
       let greetingMessage: string;
 
-      if (closedNoMoreToday) {
+      if (isFlorist) {
+        if (hoursRes.error || settingsRes.error) throw new Error('Não foi possível consultar os horários da floricultura');
+        const state = floralBusinessState(allBusinessHours);
+        withinHours = state.isOpen;
+        greetingMessage = floralTemplate(floralGreetingVariant(state, settingsMap.accept_order_scheduling === 'true'), {
+          loja: company.name, nome: firstName, link_cardapio: menuUrl, horario: state.formattedHours, horario_retorno: state.returnTime,
+        }, settingsMap);
+      } else if (closedNoMoreToday) {
         // Closed today (no more open periods today) — show next open day
         const next = getNextOpenDay(allBusinessHours, dayOfWeek);
         const customTemplate = settingsMap['whatsapp_msg_autoreply_closed_no_hours_today'];

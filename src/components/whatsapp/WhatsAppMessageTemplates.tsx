@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Pencil, Save, X, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { FLORAL_TEMPLATES, FLORAL_VARIABLES } from '../../../supabase/functions/_shared/florist-messages';
 
 interface WhatsAppMessageTemplatesProps {
   googleReviewUrl?: string;
@@ -219,7 +220,9 @@ function ProtectedVariableEditor({ value, onChange, variables }: { value: string
 }
 
 export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSetting }: WhatsAppMessageTemplatesProps) {
-  const { profileText } = useCompanyProfile(companyId);
+  const { profileText, isFlorist } = useCompanyProfile(companyId);
+  const templateConfigs = isFlorist ? FLORAL_TEMPLATES.map(t=>({...t,color:'bg-primary/10 text-primary',hint:''})) : TEMPLATE_CONFIGS;
+  const variables = isFlorist ? FLORAL_VARIABLES : SYSTEM_VARIABLES;
   const [customMessages, setCustomMessages] = useState<Record<string, string>>({});
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -238,7 +241,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
           .from('store_settings')
           .select('key, value')
           .eq('company_id', companyId)
-          .in('key', TEMPLATE_CONFIGS.map(t => t.settingKey));
+          .in('key', templateConfigs.map(t => t.settingKey));
 
         const map: Record<string, string> = {};
         data?.forEach(s => {
@@ -252,7 +255,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
       }
     };
     loadMessages();
-  }, [companyId]);
+  }, [companyId, isFlorist]);
 
   function getDisplayMessage(config: typeof TEMPLATE_CONFIGS[0]) {
     return customMessages[config.settingKey] || profileText(config.defaultMsg);
@@ -305,7 +308,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
   function renderMessageWithHighlights(msg: string) {
     const parts = msg.split(/({{[^}]+}})/g);
     return parts.map((part, i) => {
-      if (SYSTEM_VARIABLES.includes(part)) {
+      if (variables.includes(part)) {
         return (
           <Badge key={i} variant="secondary" className="mx-0.5 text-xs font-mono px-1.5 py-0">
             {part}
@@ -335,11 +338,11 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground mb-4">
+        {!isFlorist && <p className="text-sm text-muted-foreground mb-4">
           Personalize as mensagens enviadas automaticamente ao cliente quando o status do pedido muda. Clique no ícone de edição para alterar.
-        </p>
+        </p>}
 
-        {TEMPLATE_CONFIGS.map((config) => (
+        {templateConfigs.map((config) => (
           <div key={config.settingKey} className="border rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
               <Badge className={config.color}>{config.status}</Badge>
@@ -357,14 +360,14 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
                 <ProtectedVariableEditor
                   value={editValue}
                   onChange={setEditValue}
-                  variables={SYSTEM_VARIABLES}
+                  variables={variables}
                 />
-                <p className="text-xs text-muted-foreground">
+                {!isFlorist && <p className="text-xs text-muted-foreground">
                   {profileText(config.hint)} As variáveis destacadas não podem ser removidas. Clique em uma variável abaixo para adicioná-la.
-                </p>
+                </p>}
                 <div className="flex gap-2 flex-wrap">
-                  {SYSTEM_VARIABLES.map(v => (
-                    <button
+                  {variables.map(v => (
+                    <Button variant="secondary" size="sm"
                       key={v}
                       type="button"
                       className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded font-mono hover:bg-secondary/80 transition-colors"
@@ -373,7 +376,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
                       }}
                     >
                       {v}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -394,7 +397,7 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-foreground leading-relaxed">
+              <p className="whitespace-pre-wrap break-words text-sm text-foreground leading-relaxed">
                 {renderMessageWithHighlights(getDisplayMessage(config))}
               </p>
             )}
@@ -405,11 +408,11 @@ export function WhatsAppMessageTemplates({ googleReviewUrl, companyId, updateSet
           </div>
         ))}
 
-        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+        {!isFlorist && <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
             <strong>Variáveis disponíveis:</strong> {'{{nome}}'} = primeiro nome do cliente, {'{{num}}'} = código do pedido, {'{{loja}}'} = nome do estabelecimento, {'{{tempo}}'} = tempo estimado de preparo, {'{{endereco}}'} = endereço da loja, {'{{link_cardapio}}'} = link do {profileText("cardápio")} público, {'{{chave_pix}}'} = chave PIX cadastrada, {'{{google_review}}'} = link de avaliação Google, {'{{horario}}'} = horário de atendimento do dia. As variáveis são substituídas automaticamente ao enviar.
           </p>
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );

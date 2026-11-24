@@ -1853,6 +1853,66 @@ export type Database = {
         }
         Relationships: []
       }
+      florist_notifications: {
+        Row: {
+          accepted_at: string | null
+          attempts: number
+          company_id: string
+          created_at: string
+          detail: string | null
+          event: string
+          id: string
+          lease_token: string | null
+          lease_until: string | null
+          order_id: string
+          stage_id: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          attempts?: number
+          company_id: string
+          created_at?: string
+          detail?: string | null
+          event: string
+          id?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          order_id: string
+          stage_id?: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          detail?: string | null
+          event?: string
+          id?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          order_id?: string
+          stage_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "florist_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "florist_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_count_items: {
         Row: {
           approved: boolean
@@ -2685,6 +2745,8 @@ export type Database = {
           daily_number: number | null
           delivery_address: string | null
           discount_amount: number
+          florist_fulfillments: Json
+          florist_items_snapshot: Json | null
           followup_sent: boolean
           id: string
           notes: string | null
@@ -2712,6 +2774,8 @@ export type Database = {
           daily_number?: number | null
           delivery_address?: string | null
           discount_amount?: number
+          florist_fulfillments?: Json
+          florist_items_snapshot?: Json | null
           followup_sent?: boolean
           id?: string
           notes?: string | null
@@ -2739,6 +2803,8 @@ export type Database = {
           daily_number?: number | null
           delivery_address?: string | null
           discount_amount?: number
+          florist_fulfillments?: Json
+          florist_items_snapshot?: Json | null
           followup_sent?: boolean
           id?: string
           notes?: string | null
@@ -5372,6 +5438,24 @@ export type Database = {
       expire_comanda_charges: { Args: never; Returns: number }
       finalize_comanda_charge: {
         Args: { _charge_id: string; _sale_id: string }
+        Returns: Json
+      }
+      florist_can_manage: { Args: { _company: string }; Returns: boolean }
+      florist_claim_notice: {
+        Args: { _company: string; _order: string }
+        Returns: Json
+      }
+      florist_finish_notice: {
+        Args: { _detail?: string; _id: string; _status: string; _token: string }
+        Returns: undefined
+      }
+      florist_transition: {
+        Args: {
+          _company: string
+          _order: string
+          _stage?: string
+          _target?: string
+        }
         Returns: Json
       }
       generate_clean_subdomain: { Args: { _input: string }; Returns: string }

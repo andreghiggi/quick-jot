@@ -37,6 +37,7 @@ import { OrderEditDialog } from '@/components/OrderEditDialog';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { floristNextStatus } from '@/lib/floristAgenda';
+import { FloristOrderStages } from '@/components/florist/FloristOrderStages';
 
 interface OrderCardProps {
   order: Order;
@@ -710,6 +711,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const orderOrigin = order.origin || 'cardapio';
   const showEditButton =
     editFeatureAllowed &&
+    !(isFlorist && (order.floristFulfillments?.length || 0) > 0) &&
     !isCancelled &&
     (orderOrigin === 'cardapio' || orderOrigin === 'balcao') &&
     (order.status === 'pending' || order.status === 'preparing') &&
@@ -995,6 +997,10 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
         })()}
       </div>
 
+      {isFlorist && <FloristOrderStages order={order}
+        disableCompletion={disableAdvance || (showChargeButton && !alreadyCharged)}
+        disableReason={disableAdvanceReason || 'Conclua a cobrança antes de finalizar a retirada.'} />}
+
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <div className="shrink-0">
           <span className="text-sm text-muted-foreground">Total</span>
@@ -1156,7 +1162,7 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
               {confirmed ? 'Confirmado' : 'Confirmar'}
             </Button>
           )}
-          {!isCancelled && config.next && !hideAdvance &&
+          {!isFlorist && !isCancelled && config.next && !hideAdvance &&
            /* Se o pedido precisa ser cobrado primeiro, só mostra "Entregar" após cobrança */
            !(showChargeButton && !alreadyCharged) && (
             <Button 

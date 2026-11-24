@@ -57,6 +57,20 @@
       "when": 1795291516377,
       "tag": "0007_whatsapp_recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795540341153,
+      "tag": "0008_florist_fulfillments_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795540637931,
+      "tag": "0009_florist_notice_order",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@
 // Usado SOMENTE quando o perfil floricultura está ativo na loja.
 import type { Order, OrderStatus } from '@/types/order';
 import { parseDestinationFromNotes } from './floristDestination';
+import { buildFloralStages, isStageComplete } from '../../supabase/functions/_shared/florist-fulfillment';
 
 export interface FloristSchedule {
   mode: 'delivery' | 'pickup';
@@ -31,6 +32,13 @@ export function getOrderSchedule(order: Pick<Order, 'items' | 'createdAt'>): Flo
     if (first.date) return { mode: 'delivery', date: first.date, slot: first.slot || '' };
   }
   return { mode: 'pickup', date: toSPDate(new Date(order.createdAt)), slot: '' };
+}
+
+/** Active persisted stages keep a later delivery visible after the first one finishes. */
+export function getActiveFloristSchedules(order: Order): FloristSchedule[] {
+  if (!order.floristFulfillments?.length) return [getOrderSchedule(order)];
+  return buildFloralStages({items:order.items,createdAt:order.createdAt,customerName:order.customerName,deliveryAddress:order.deliveryAddress,stages:order.floristFulfillments})
+    .filter(s=>!isStageComplete(s)).map(s=>({mode:s.mode,date:s.date,slot:s.slot}));
 }
 
 /** Próximo status do botão de avanço no perfil floricultura (sem "Preparar"). */
@@ -71,9 +79,10 @@ export function getFloristAgendaSlots(orders: Order[], date = ''): string[] {
   const slots = new Map<string, string>();
   for (const order of orders) {
     if (isCancelled(order) || order.status === 'delivered' || (!order.confirmedAt && order.status === 'pending')) continue;
-    const schedule = getOrderSchedule(order);
-    if ((date && schedule.date !== date) || !schedule.slot) continue;
-    slots.set(normalizeFloristSlot(schedule.slot), schedule.slot);
+    for (const schedule of getActiveFloristSchedules(order)) {
+      if ((date && schedule.date !== date) || !schedule.slot) continue;
+      slots.set(normalizeFloristSlot(schedule.slot), schedule.slot);
+    }
   }
   return [...slots.values()].sort((a, b) => slotStart(a) - slotStart(b));
 }
@@ -93,10 +102,12 @@ export function buildFloristAgenda(orders: Order[], today: string, filters?: Flo
       if (toSPDate(new Date(o.createdAt)) === today) received.push(o);
       continue;
     }
-    const s = getOrderSchedule(o);
-    const matchesDate = filters ? !filters.date || s.date === filters.date : s.date <= today;
-    const matchesSlot = !filters?.slot || normalizeFloristSlot(s.slot) === normalizeFloristSlot(filters.slot);
-    if (matchesDate && matchesSlot) scheduled.push({ o, s });
+    const matches = getActiveFloristSchedules(o).filter(s =>
+      (filters ? !filters.date || s.date === filters.date : s.date <= today) &&
+      (!filters?.slot || normalizeFloristSlot(s.slot) === normalizeFloristSlot(filters.slot))
+    ).sort((a,b)=>a.date.localeCompare(b.date)||slotStart(a.slot)-slotStart(b.slot));
+    const s = matches[0];
+    if (s) scheduled.push({ o, s });
   }
   scheduled.sort((a, b) =>
     a.s.date.localeCompare(b.s.date) ||
