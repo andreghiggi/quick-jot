@@ -95,13 +95,14 @@ export function PDVV2TopBar({
   );
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b bg-card">
-      <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
+    <div className="flex flex-wrap items-start justify-between gap-3 p-4 border-b bg-card">
+      <div className="flex flex-wrap items-start gap-4 flex-1 min-w-0">
         <div className="flex min-w-0 max-w-full flex-col items-start gap-1">
-          <h1 className="max-w-full text-xl font-bold truncate">{storeName}</h1>
+          <h1 className="max-w-full text-xl font-bold leading-9 truncate">{storeName}</h1>
           <StoreAvailabilityControl companyId={companyId} />
         </div>
         {!cashStateUnknown && (
+          <div className="flex h-9 items-center">
           <Badge
             className={
               cashOpen
@@ -111,9 +112,10 @@ export function PDVV2TopBar({
           >
             Caixa {cashOpen ? 'Aberto' : 'Fechado'}
           </Badge>
+          </div>
         )}
         {!cashStateUnknown && cashOpen && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex h-9 items-center gap-2 text-sm">
             <span className="text-muted-foreground">Em caixa:</span>
             <span className="font-semibold tabular-nums">
               {showCashAmount ? formatPrice(cashAmount) : 'R$ ••••'}
@@ -125,7 +127,7 @@ export function PDVV2TopBar({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex min-h-9 items-center gap-2">
         {!cashStateUnknown && cashOpen && (
           <>
             <Button variant="outline" size="sm" onClick={onCloseCash}>
