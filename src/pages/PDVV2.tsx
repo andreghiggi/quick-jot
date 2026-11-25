@@ -1778,6 +1778,7 @@ export default function PDVV2() {
         showAddItem={!advancedComandaCharge || (!i9PartialItemIds.length && !i9SplitInfo)}
         tefStatus={tefStatus}
         chargeTefBeforePopups={chargeTefBeforePopups}
+        autoFinalizeAfterPrechargedTef
         onConfirm={advancedComandaCharge ? confirmImportTabI9WithFractions : async (p) => { await confirmImportTab(p); }}
         onSplitPayments={(draft) => {
           // Fecha o checkout single-payment e abre o multi-pagamento
@@ -1824,6 +1825,7 @@ export default function PDVV2() {
           showAddItem={false}
           tefStatus={tefStatus}
           chargeTefBeforePopups={chargeTefBeforePopups}
+          autoFinalizeAfterPrechargedTef
           onConfirm={confirmComandaCharge}
         />
       )}
