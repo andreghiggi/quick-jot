@@ -108,6 +108,7 @@ import { resolveFrenteCaixaFiscalMode } from '@/lib/frenteCaixaFiscalRules';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { FrenteCaixaCashIndicator } from '@/components/frente-caixa/FrenteCaixaCashIndicator';
+import { nonFiscalPrintAction, printNonFiscalSale } from '@/utils/frenteCaixaNonFiscalPrint';
 
 interface CartLine {
   id: string; // local uuid
@@ -1249,16 +1250,23 @@ export default function FrenteCaixa() {
           })()
         : null;
 
-      // Fase A.2: ação ao salvar a venda (impressão do cupom).
-      const mode = pdvSettings.print_on_finish_mode;
-      if (mode === 'auto') {
-        // TODO Fase B: chamar a impressão real do cupom da Frente de Caixa.
-        toast.success('Cupom enviado para impressão.');
-      } else if (mode === 'ask') {
-        const ok = window.confirm('Imprimir cupom desta venda?');
-        if (ok) {
-          // TODO Fase B: chamar a impressão real do cupom da Frente de Caixa.
-          toast.success('Cupom enviado para impressão.');
+      // Não fiscal: enfileira papel real apenas no piloto; NFC-e/crediário
+      // continuam em seus fluxos próprios, sem impressão duplicada.
+      const printAction = nonFiscalPrintAction(company?.id || '', fiscalMode, pdvSettings.print_on_finish_mode, isCreditSale);
+      if (company?.id && printAction && (printAction === 'auto' || window.confirm('Imprimir cupom desta venda?'))) {
+        try {
+          await printNonFiscalSale({
+            companyId: company.id, saleId, storeName: company.name || storeSettings.storeName || 'Loja',
+            customerName: params.customerName, paperSize: storeSettings.printerPaperSize === '58mm' ? '58mm' : '80mm',
+            items: lines.map(l => ({ name: l.product_name, quantity: l.quantity,
+              unitPrice: Math.max(0, (l.effective_unit_price * l.quantity - l.line_discount + l.line_surcharge) / Math.max(l.quantity, 0.0001)) })),
+            discount: params.discount || 0, surcharge: params.surcharge || 0, total: params.finalTotal,
+            payments: params.mpLines.map(line => ({ name: line.payment_name, amount: line.amount })), issuedAt: new Date(),
+          });
+          toast.success('Comprovante não fiscal enviado para impressão.');
+        } catch (error) {
+          console.error('[FrenteCaixa] impressão não fiscal', error);
+          toast.error('Venda registrada, mas o comprovante não foi enviado à impressora. Não cobre novamente.');
         }
       }
 

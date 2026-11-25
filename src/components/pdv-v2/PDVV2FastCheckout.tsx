@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { ShoppingCart, Search, Minus, Plus, CreditCard, Banknote, QrCode, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,9 @@ import { PDVV2NFCePostSaleDialog } from '@/components/pdv-v2/PDVV2NFCePostSaleDi
 import { runTefPayment, type TefOptions } from '@/utils/pdvV2Tef';
 import { emitirNFCe, type NFCeRecord, type NFCeItem, type NFCeTefData } from '@/services/nfceService';
 import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
+import { hasActiveTefPaymentMethod, shouldChargeTefBeforePopups } from '@/utils/tefChargeFlow';
+import { isIntegratedTef, settleBeforeFiscal } from '@/utils/checkoutSettlement';
+import { persistFastSale, type FastSaleDraft } from '@/utils/fastCheckoutPersistence';
 
 
 
@@ -60,6 +63,16 @@ export function PDVV2FastCheckout({ companyId }: Props) {
 
   // Amore Mio: fluxo padrão de cobrança
   const [payOpen, setPayOpen] = useState(false);
+  const [initialPaymentMethodId, setInitialPaymentMethodId] = useState<string | undefined>();
+  const submitGuard = useRef(false);
+  const pendingSale = useRef<{
+    draft: FastSaleDraft;
+    opts: Parameters<typeof finishSale>[0];
+    tefData?: NFCeTefData;
+  } | null>(null);
+  const chargeTefBeforePopups = shouldChargeTefBeforePopups({
+    companyId, fiscalEnabled, hasTefPaymentMethod: hasActiveTefPaymentMethod(pdvPaymentMethods),
+  });
   const [tefStatus, setTefStatus] = useState('');
   const [nfceRecord, setNfceRecord] = useState<NFCeRecord | null>(null);
   const [nfceDialogOpen, setNfceDialogOpen] = useState(false);
@@ -68,6 +81,18 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   // Amore Mio: produto sem preço cadastrado
   const [pendingPriceProduct, setPendingPriceProduct] = useState<any | null>(null);
   const [priceInput, setPriceInput] = useState('');
+  const pendingStorageKey = `fast_sale_pending_${companyId}_${currentRegister?.id || ''}`;
+  useEffect(() => {
+    if (!currentRegister || pendingSale.current) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(pendingStorageKey) || 'null');
+      if (saved?.draft?.sale?.company_id !== companyId || saved?.draft?.sale?.cash_register_id !== currentRegister.id || !Array.isArray(saved.draft.items)) return;
+      pendingSale.current = saved;
+      setCart(saved.draft.items.map((item: FastSaleDraft['items'][number]) => ({ ...item })));
+      toast.info('Venda pendente retomada. Finalize para registrar sem passar o cartão novamente.');
+    } catch { /* unavailable or invalid */ }
+  }, [pendingStorageKey, currentRegister, companyId]);
+
 
   const activeProducts = useMemo(
     () => products.filter((p) => p.active && p.pdvItem !== false),
@@ -125,6 +150,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   }, [isAmoreMio, activeProducts, payOpen, nfceDialogOpen, pendingPriceProduct]);
 
   async function handleAddProduct(p: any, priceOverride?: number) {
+    if (submitGuard.current || pendingSale.current) return;
     // Amore Mio: produto cadastrado sem preço → pedir valor antes de adicionar
     const basePrice = priceOverride ?? p.price;
     if (isAmoreMio && priceOverride == null && (!p.price || Number(p.price) <= 0)) {
@@ -175,6 +201,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
   }
 
   function updateQty(id: string, delta: number) {
+    if (submitGuard.current || pendingSale.current) return;
     setCart(prev => prev.map(item => 
       item.id === id ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item
     ).filter(item => item.quantity > 0));
@@ -213,7 +240,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
           : undefined;
 
       await emitirNFCe(companyId, saleId, {
-        external_id: `FAST-${saleId.substring(0, 8)}-${Date.now()}`,
+        external_id: `FAST-${saleId}`,
         itens: nfceItems,
         valor_desconto: discount || 0,
         valor_frete: 0,
@@ -225,6 +252,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
         .from('nfce_records')
         .select('*')
         .eq('sale_id', saleId)
+        .eq('company_id', companyId)
         .maybeSingle();
 
       if (rec) {
@@ -249,124 +277,90 @@ export function PDVV2FastCheckout({ companyId }: Props) {
     tefOptions?: TefOptions;
     tefIntegration?: 'tef_pinpad' | 'tef_smartpos';
     customerDocument?: string;
+    prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string };
   }) {
-    if (cart.length === 0) return;
-    if (!currentRegister) {
-      toast.error('Abra o caixa antes de vender');
-      return;
+    if (submitGuard.current || (cart.length === 0 && !pendingSale.current)) return false;
+    if (!currentRegister || !user) { toast.error('Abra o caixa antes de vender'); return false; }
+    if (pendingSale.current && (pendingSale.current.draft.sale.company_id !== companyId ||
+        pendingSale.current.draft.sale.cash_register_id !== currentRegister.id)) {
+      toast.error('Há uma venda pendente em outro caixa. Retome o caixa original; não cobre novamente.'); return false;
     }
-    if (!user) return;
-
-    const discount = opts.discount || 0;
-    const finalTotal = opts.finalTotal ?? subtotal;
-
+    submitGuard.current = true;
     setIsSubmitting(true);
+    let registered = false;
     try {
-      // 1. TEF (quando a forma de pagamento for integração maquininha) — aborta se falhar
-      let tefData: NFCeTefData | undefined;
-      let tefNotesFragment = '';
-      if (opts.tefIntegration && opts.tefOptions) {
-        const result = await runTefPayment({
-          companyId,
-          integration: opts.tefIntegration,
-          amount: finalTotal,
-          options: opts.tefOptions,
-          description: 'Venda Rápida',
-          onStatus: setTefStatus,
-        });
-        setTefStatus('');
-        if (!result.success) return;
-        tefData = result.tefData;
-        tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
+      if (!pendingSale.current) {
+        let tefData = opts.prechargedTef?.tefData;
+        let tefNotesFragment = opts.prechargedTef?.notesFragment || '';
+        if (!opts.prechargedTef && opts.tefIntegration && opts.tefOptions) {
+          const result = await runTefPayment({
+            companyId, integration: opts.tefIntegration, amount: opts.finalTotal ?? subtotal,
+            options: opts.tefOptions, description: 'Venda Rápida', onStatus: setTefStatus,
+            tefFirstFlow: chargeTefBeforePopups,
+          });
+          if (!result.success) return false;
+          tefData = result.tefData; tefNotesFragment = result.notesFragment || '';
+        }
+        const saleId = crypto.randomUUID();
+        pendingSale.current = {
+          opts, tefData,
+          draft: {
+            sale: {
+              id: saleId, company_id: companyId, cash_register_id: currentRegister.id,
+              payment_method_id: opts.methodId, total: subtotal, discount: opts.discount || 0,
+              final_total: opts.finalTotal ?? subtotal,
+              notes: `[VENDA RÁPIDA]${tefNotesFragment ? ` | ${tefNotesFragment}` : ''}`, created_by: user.id,
+            },
+            items: cart.map(item => ({
+              id: crypto.randomUUID(), sale_id: saleId, product_id: item.product_id,
+              product_name: item.product_name, quantity: item.quantity, unit_price: item.unit_price,
+              total_price: item.unit_price * item.quantity,
+            })),
+          },
+        };
       }
-
-      // 2. Registrar a venda no caixa (pdv_sales)
-      const saleData = {
-        company_id: companyId,
-        cash_register_id: currentRegister.id,
-        payment_method_id: opts.methodId,
-        total: subtotal,
-        discount,
-        final_total: finalTotal,
-        notes: `[VENDA RÁPIDA]${tefNotesFragment}`,
-        created_by: user.id,
-      };
-
-      const { data: sale, error: saleError } = await supabase
-        .from('pdv_sales')
-        .insert(saleData as any)
-        .select()
-        .single();
-
-      if (saleError) throw saleError;
-
-      // 3. Registrar itens da venda
-      const saleItems = cart.map(item => ({
-        sale_id: sale.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.unit_price * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase.from('pdv_sale_items').insert(saleItems);
-      if (itemsError) throw itemsError;
-
-      // 4. Venda Rápida NÃO gera pedido nem comanda de produção.
-      //    É uma venda pura de caixa: aparece apenas no Relatório de Vendas.
-      const shouldPrint = opts.printDocument !== false;
-      const wantsNfce = (opts.tefIntegration ? true : opts.documentMode === 'sale_with_nfce')
-        && fiscalEnabled;
-
-      // 5. NFC-e (fluxo padrão do PDV)
-      if (wantsNfce) {
-        await emitNfceForSale({
-          saleId: sale.id,
-          items: cart.map((it) => ({
-            product_id: it.product_id,
-            product_name: it.product_name,
-            quantity: it.quantity,
-            unit_price: it.unit_price,
-          })),
-          discount,
-          shouldPrint,
-          tefData,
-          customerDocument: opts.customerDocument,
+      const pending = pendingSale.current;
+      try { localStorage.setItem(pendingStorageKey, JSON.stringify(pending)); } catch { /* retain ref */ }
+      await settleBeforeFiscal(async () => {
+        const saleId = await persistFastSale(pending.draft);
+        registered = true;
+        pendingSale.current = null;
+        try { localStorage.removeItem(pendingStorageKey); } catch { /* unavailable */ }
+        setCart([]); setPayOpen(false); setInitialPaymentMethodId(undefined);
+        toast.success('Venda rápida finalizada!');
+        window.dispatchEvent(new Event('pdv:fast-sale-completed'));
+        return saleId;
+      }, async saleId => {
+        const wantsNfce = pending.opts.tefIntegration || pending.tefData ||
+          (pending.opts.documentMode === 'sale_with_nfce' && fiscalEnabled);
+        if (wantsNfce) await emitNfceForSale({
+          saleId, items: pending.draft.items, discount: pending.draft.sale.discount,
+          shouldPrint: pending.opts.printDocument !== false, tefData: pending.tefData,
+          customerDocument: pending.opts.customerDocument,
         });
-      }
-
-      setCart([]);
-      setPayOpen(false);
-
-      // Acionar gaveta de caixa se habilitada
-      if (storeSettings.drawerEnabled) {
-        openCashDrawer(companyId, {
-          enabled: true,
-          model: storeSettings.drawerModel,
-          pin: storeSettings.drawerPin,
-          pulse: storeSettings.drawerPulse
-        });
-      }
-
-      toast.success('Venda rápida finalizada!');
-      // Notifica o PDV para atualizar caixa e faturamento em tempo real.
-      window.dispatchEvent(new Event('pdv:fast-sale-completed'));
+      });
+      if (storeSettings.drawerEnabled) openCashDrawer(companyId, {
+        enabled: true, model: storeSettings.drawerModel, pin: storeSettings.drawerPin, pulse: storeSettings.drawerPulse,
+      });
+      return true;
     } catch (e) {
-      console.error(e);
-      toast.error('Erro ao finalizar venda');
+      console.error('[FastCheckout] finalizar venda', e);
+      toast.error(registered
+        ? 'Venda registrada. Confira a NFC-e no monitor; não cobre novamente.'
+        : 'Falha ao registrar venda. Tente finalizar novamente: o pagamento aprovado e a venda serão reutilizados. Não passe o cartão de novo.');
+      return registered;
     } finally {
-      setTefStatus('');
-      setIsSubmitting(false);
+      setTefStatus(''); setIsSubmitting(false); submitGuard.current = false;
     }
   }
 
-  /** Fluxo antigo (demais lojas): botão por forma de pagamento finaliza direto. */
-  async function handleFinish(methodName: string) {
-    const method = pdvPaymentMethods.find(m => m.name.toLowerCase().includes(methodName.toLowerCase()));
-    if (!method) {
-      toast.error(`Forma de pagamento "${methodName}" não encontrada no PDV`);
-      return;
+  async function handleFinish(methodId: string) {
+    const method = pdvPaymentMethods.find(m => m.id === methodId);
+    if (!method) { toast.error('Forma de pagamento não encontrada no PDV'); return; }
+    if (pendingSale.current) { await finishSale(pendingSale.current.opts); return; }
+    if (isIntegratedTef(method.integration_type)) {
+      if (!fiscalEnabled) { toast.error('Ative e configure o módulo fiscal antes de cobrar pelo TEF.'); return; }
+      setInitialPaymentMethodId(method.id); setPayOpen(true); return;
     }
     await finishSale({ methodId: method.id, methodName: method.name });
   }
@@ -442,7 +436,10 @@ export function PDVV2FastCheckout({ companyId }: Props) {
             <Button
               className="h-12 w-full font-bold"
               disabled={cart.length === 0 || isSubmitting}
-              onClick={() => setPayOpen(true)}
+              onClick={() => {
+                if (pendingSale.current) void finishSale(pendingSale.current.opts);
+                else setPayOpen(true);
+              }}
             >
               <Wallet className="w-4 h-4 mr-2" />
               FINALIZAR VENDA
@@ -466,7 +463,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
                     )}
                     variant={isCash ? "default" : "secondary"}
                     disabled={cart.length === 0 || isSubmitting}
-                    onClick={() => handleFinish(method.name)}
+                    onClick={() => handleFinish(method.id)}
                   >
                     <Icon className="w-4 h-4 mr-3" />
                     {method.name.toUpperCase()}
@@ -478,8 +475,8 @@ export function PDVV2FastCheckout({ companyId }: Props) {
         </div>
       </CardContent>
 
-      {/* Amore Mio: diálogo padrão de cobrança do PDV */}
-      {isAmoreMio && (
+      {/* TEF usa o mesmo diálogo de cobrança, sem converter cartões manuais. */}
+      {
         <>
           <PDVV2PaymentDialog
             open={payOpen}
@@ -488,12 +485,15 @@ export function PDVV2FastCheckout({ companyId }: Props) {
             total={subtotal}
             title="Venda Rápida"
             channel="pdv"
+            initialPaymentMethodId={initialPaymentMethodId}
+            chargeTefBeforePopups={chargeTefBeforePopups}
+            autoFinalizeAfterPrechargedTef
             showDocumentMode
             skipReceiptPrompt
             tefStatus={tefStatus}
             printLayout={storeSettings.printLayout as any}
             onConfirm={async (params) => {
-              await finishSale({
+              const registered = await finishSale({
                 methodId: params.paymentMethodId,
                 methodName: params.paymentName,
                 discount: params.discount,
@@ -503,7 +503,9 @@ export function PDVV2FastCheckout({ companyId }: Props) {
                 tefOptions: params.tefOptions,
                 tefIntegration: params.tefIntegration,
                 customerDocument: params.customerDocument,
+                prechargedTef: params.prechargedTef,
               });
+              if (!registered) throw new Error('Registro pendente. Tente confirmar novamente sem passar o cartão.');
             }}
           />
 
@@ -542,7 +544,7 @@ export function PDVV2FastCheckout({ companyId }: Props) {
             </DialogContent>
           </Dialog>
         </>
-      )}
+      }
     </Card>
   );
 }

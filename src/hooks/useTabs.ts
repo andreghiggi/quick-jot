@@ -521,44 +521,53 @@ export function useTabs(options: UseTabsOptions = {}) {
   }
 
   async function closeTab(tabId: string): Promise<boolean> {
+    if (!companyId) return false;
     try {
       let tab: { table_id?: string | null; comanda_number?: number | null } | undefined =
         tabs.find(t => t.id === tabId);
       // Sem referência em memória: busca no banco para não deixar a mesa ocupada.
       if (!tab) {
-        const { data } = await supabase
+        const { data, error: readError } = await supabase
           .from('tabs')
           .select('table_id, comanda_number')
           .eq('id', tabId)
+          .eq('company_id', companyId)
           .maybeSingle();
+        if (readError || !data) throw readError || new Error('Comanda não encontrada na loja atual.');
         tab = (data as any) || undefined;
       }
       
-      const { error } = await supabase
+      const { data: closedRows, error } = await supabase
         .from('tabs')
         .update({ 
           status: 'closed',
           closed_at: new Date().toISOString()
         })
-        .eq('id', tabId);
+        .eq('id', tabId)
+        .eq('company_id', companyId)
+        .select('id');
 
-      if (error) throw error;
+      if (error || !closedRows?.length) throw error || new Error('Fechamento não confirmado.');
 
       // Modo cartão: a mesa só fica livre quando a última comanda dela fechar.
       let freeTable = !!tab?.table_id;
-      if (tab?.table_id && tab.comanda_number != null) {
-        const { count } = await supabase
+      if (tab?.table_id) {
+        const { count, error: countError } = await supabase
           .from('tabs')
           .select('id', { count: 'exact', head: true })
           .eq('table_id', tab.table_id)
+          .eq('company_id', companyId)
           .eq('status', 'open');
-        freeTable = (count || 0) === 0;
+        if (countError || count === null) throw countError || new Error('Não foi possível conferir outras comandas da mesa.');
+        freeTable = count === 0;
       }
       if (tab?.table_id && freeTable) {
-        await supabase
+        const { error: tableError } = await supabase
           .from('tables')
           .update({ status: 'available' })
-          .eq('id', tab.table_id);
+          .eq('id', tab.table_id)
+          .eq('company_id', companyId);
+        if (tableError) throw tableError;
       }
 
       await fetchTabs();

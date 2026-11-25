@@ -289,14 +289,11 @@ export function PDVV2SequentialPaymentDialog({
 
   async function markCompleted() {
     if (!openChargeId) return;
-    try {
-      await (supabase as any)
+      const { error } = await (supabase as any)
         .from('pdv_v2_open_charges')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', openChargeId);
-    } catch (e) {
-      console.error('[PDVV2Sequential] mark completed error', e);
-    }
+        .eq('id', openChargeId).eq('company_id', companyId).eq('cash_register_id', cashRegisterId);
+      if (error) throw new Error('Venda paga e registrada, mas o registro da cobrança permanece pendente. Não cobre novamente.');
   }
 
   async function markCanceled() {
@@ -332,6 +329,7 @@ export function PDVV2SequentialPaymentDialog({
       toast.error('Dividir formas exige pelo menos duas cobranças. Informe um valor menor que o restante na primeira cobrança.');
       return;
     }
+    if (isTef && !fiscalEnabled) { toast.error('Ative e configure o módulo fiscal antes de cobrar pelo TEF.'); return; }
 
     chargeGuardRef.current = true;
     setCharging(true);
@@ -405,7 +403,7 @@ export function PDVV2SequentialPaymentDialog({
       }));
       // Regra: se houver TEF aprovado → NFC-e obrigatória (auto). Senão,
       // respeita a escolha do operador. Sem módulo fiscal → nunca emite.
-      const wantsNfce = fiscalEnabled && (hasTefApproved || documentMode === 'sale_with_nfce');
+      const wantsNfce = hasTefApproved || (fiscalEnabled && documentMode === 'sale_with_nfce');
       
       // Acionar gaveta de caixa se habilitada
       if (storeSettings.drawerEnabled && companyId) {

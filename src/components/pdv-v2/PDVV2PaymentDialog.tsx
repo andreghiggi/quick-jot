@@ -89,6 +89,8 @@ interface PDVV2PaymentDialogProps {
   showAddItem?: boolean;
   /** Canal das formas de pagamento. Default: 'pdv' */
   channel?: PaymentChannel;
+  /** A shortcut can preselect its exact configured payment without label matching. */
+  initialPaymentMethodId?: string;
   /** Restringir a apenas formas em dinheiro (oculta TEF e demais) */
   cashOnly?: boolean;
   /** I9: filtra formas por modalidade do pedido (delivery/pickup). Ignorado em outras lojas. */
@@ -194,6 +196,7 @@ export function PDVV2PaymentDialog({
   skipReceiptPrompt = false,
   showAddItem = false,
   channel = 'pdv',
+  initialPaymentMethodId,
   cashOnly = false,
   deliveryFilter,
   tefStatus,
@@ -368,16 +371,26 @@ export function PDVV2PaymentDialog({
   const effectiveDocumentMode: DocumentMode = isTef ? 'sale_with_nfce' : documentMode;
   const isCash = !!selectedMethod && /dinheiro/i.test(selectedMethod.name);
 
+  const initialSelectionApplied = useRef(false);
+  useEffect(() => {
+    if (!open) { initialSelectionApplied.current = false; return; }
+    if (!initialSelectionApplied.current && initialPaymentMethodId && activePaymentMethods.some(m => m.id === initialPaymentMethodId)) {
+      initialSelectionApplied.current = true;
+      setPaymentMethodId(initialPaymentMethodId);
+    }
+  }, [open, initialPaymentMethodId, activePaymentMethods]);
+
   useEffect(() => {
     if (open && activePaymentMethods.length > 0 && !paymentMethodId) {
       const tefMethod = activePaymentMethods.find(
         (m) => m.integration_type === 'tef_pinpad' || m.integration_type === 'tef_smartpos',
       );
       const defaultId =
-        companyId === BON_APPETIT_ID && tefMethod ? tefMethod.id : activePaymentMethods[0].id;
+        activePaymentMethods.find(m => m.id === initialPaymentMethodId)?.id ||
+        (companyId === BON_APPETIT_ID && tefMethod ? tefMethod.id : activePaymentMethods[0].id);
       setPaymentMethodId(defaultId);
     }
-  }, [open, activePaymentMethods, paymentMethodId, companyId]);
+  }, [open, activePaymentMethods, paymentMethodId, companyId, initialPaymentMethodId]);
 
   useEffect(() => {
     if (!open) {

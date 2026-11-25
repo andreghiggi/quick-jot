@@ -62,6 +62,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { toast } from 'sonner';
 import { openCashDrawer } from '@/utils/cashDrawer';
 import { notifyExpressOrderCreated } from '@/utils/expressWhatsappNotify';
+import { expressCheckoutPolicy } from '@/utils/checkoutSettlement';
 
 interface PedidoExpressDialogProps {
   open: boolean;
@@ -467,6 +468,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   // camada extra que bloqueia chamadas reentrantes na mesma "tick" do React,
   // antes do setState ter chance de atualizar).
   const handleSubmitGuardRef = useRef(false);
+  const approvedDirectTefRef = useRef<{ tefData: NFCeTefData; note: string } | null>(null);
+  const submittedOrderRef = useRef<Awaited<ReturnType<typeof addOrder>>>(null);
+  const submittedSaleRef = useRef<string | null>(null);
   const handleSplitPartialGuardRef = useRef(false);
 
   const activeProducts = getActiveProducts();
@@ -981,9 +985,23 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     // Só ocorre no fluxo direto da etapa 5 (sem override do PDVV2PaymentDialog).
     const integType = (selectedPM as any)?.integration_type as string | undefined;
     const isTefPayment = !override && (integType === 'tef_pinpad' || integType === 'tef_smartpos') && !!company?.id;
-    let tefNote = '';
+    let tefNote = approvedDirectTefRef.current?.note || '';
+    let directTefData = approvedDirectTefRef.current?.tefData;
+    const needsCash = isTefPayment || !!override?.finalizeNow || !!override?.tefIntegration ||
+      !!override?.prechargedTef || override?.documentMode === 'sale_with_nfce';
+    const { data: { user: checkoutUser } } = needsCash
+      ? await supabase.auth.getUser() : { data: { user: null } };
+    if (needsCash && (!currentRegister || !checkoutUser || !company?.id)) {
+      toast.error('Abra o caixa e confira seu acesso antes de cobrar. Nenhum novo pagamento foi iniciado.');
+      return;
+    }
+    if ((isTefPayment || override?.tefIntegration) && !fiscalEnabled &&
+        !approvedDirectTefRef.current && !override?.prechargedTef) {
+      toast.error('Ative e configure o módulo fiscal antes de cobrar pelo TEF.');
+      return;
+    }
 
-    if (isTefPayment) {
+    if (isTefPayment && company?.id && !approvedDirectTefRef.current) {
       const tefPaymentType: 'credit' | 'debit' | 'pix' = tefCardType;
       const installmentCount = tefCardType === 'debit' || tefCardType === 'pix'
         ? 1
@@ -999,7 +1017,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         if (integType === 'tef_pinpad') {
           // ===== PinPad WebService Flow (CRT → polling → CNF) =====
           setTefStatus('Enviando para PinPad...');
-          const createResult = await sendPinpadPayment(company!.id, {
+          const createResult = await sendPinpadPayment(company?.id || '', {
             amount: effectiveTotal,
             paymentType: tefPaymentType,
             installments: installmentCount,
@@ -1027,7 +1045,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               return;
             }
             await new Promise((r) => setTimeout(r, 1000));
-            const statusResult = await pollPinpadStatus(company!.id, createResult.hash);
+            const statusResult = await pollPinpadStatus(company?.id || '', createResult.hash);
 
             if (statusResult.status === 'processing') {
               setTefStatus('Processando pagamento no PinPad...');
@@ -1036,7 +1054,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               setTefStatus('Pagamento aprovado!');
               toast.success(`TEF aprovado! NSU: ${statusResult.nsu}`);
 
-              await confirmPinpadTransaction(company!.id, {
+              await confirmPinpadTransaction(company?.id || '', {
                 identificacao: crtIdentificacao,
                 rede: statusResult.acquirer,
                 nsu: statusResult.nsu,
@@ -1045,7 +1063,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
               // Auto-print v1 (allow-list interna; respeita store_settings.tef_auto_print_vias)
               imprimirComprovanteTefAutomatico({
-                companyId: company!.id,
+                companyId: company?.id || '',
                 receiptLines: statusResult.receiptLines,
               }).catch((e) => console.error('[PedidoExpress] auto-print TEF falhou:', e));
 
@@ -1062,6 +1080,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               // 023-000 da venda original — persistido para reuso no CNC (estorno).
               const ctrlTag = statusResult.controlNumber ? ` | [TEF023]${statusResult.controlNumber}[/TEF023]` : '';
               tefNote = `TEF PinPad: NSU ${statusResult.nsu} | Aut ${statusResult.authorizationCode || '-'} | ${statusResult.cardBrand || '-'} | ${statusResult.acquirer || '-'}${installLabel}${receiptData}${ctrlTag}`;
+              directTefData = {
+                nsu: statusResult.nsu || '', autorizacao: statusResult.authorizationCode || '',
+                bandeira: statusResult.cardBrand || '', adquirente: statusResult.acquirer,
+                tipo_pagamento: tefPaymentType, valor: effectiveTotal,
+              };
+              approvedDirectTefRef.current = { tefData: directTefData, note: tefNote };
             } else if (['declined', 'cancelled', 'error'].includes(statusResult.status)) {
               tefCompleted = true;
               toast.error(`TEF: ${statusResult.errorMessage || statusResult.operatorMessage || 'Pagamento não aprovado'}`);
@@ -1083,7 +1107,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           // ===== SmartPOS (PINPDV) Flow =====
           const tefIdentifier = `express-${Date.now()}`;
           setTefStatus('Enviando para maquininha...');
-          const createResult = await sendPaymentToMultiplusCard(company!.id, {
+          const createResult = await sendPaymentToMultiplusCard(company?.id || '', {
             amount: effectiveTotal,
             paymentType: tefPaymentType === 'pix' ? 'credit' : tefPaymentType,
             installments: installmentCount,
@@ -1103,7 +1127,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
           let tefCompleted = false;
           for (let i = 0; i < 60 && !tefCompleted; i++) {
             if (tefCancelRef.current) {
-              await abortMultiplusCardSale(company!.id, tefIdentifier).catch(() => {});
+              await abortMultiplusCardSale(company?.id || '', tefIdentifier).catch(() => {});
               toast.info('Operação TEF cancelada pelo operador.');
               setTefProcessing(false);
               setTefStatus('');
@@ -1111,11 +1135,17 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               return;
             }
             await new Promise((r) => setTimeout(r, 2000));
-            const status = await checkMultiplusCardTransactionStatus(company!.id, tefIdentifier);
+            const status = await checkMultiplusCardTransactionStatus(company?.id || '', tefIdentifier);
             if (status.status === 'approved') {
               tefCompleted = true;
               toast.success(`TEF aprovado! NSU: ${status.nsu}`);
               tefNote = `TEF SmartPOS: NSU ${status.nsu || '-'} | Aut ${status.authorizationCode || '-'} | ${status.cardBrand || '-'} | ${status.acquirer || '-'}`;
+              directTefData = {
+                nsu: status.nsu || '', autorizacao: status.authorizationCode || '',
+                bandeira: status.cardBrand || '', adquirente: status.acquirer,
+                tipo_pagamento: tefPaymentType === 'pix' ? 'credit' : tefPaymentType, valor: effectiveTotal,
+              };
+              approvedDirectTefRef.current = { tefData: directTefData, note: tefNote };
             } else if (['declined', 'cancelled', 'error'].includes(status.status)) {
               tefCompleted = true;
               toast.error(`TEF: ${status.errorMessage || 'Pagamento não aprovado'}`);
@@ -1243,7 +1273,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     const amoreFinalizeStatus: 'delivered' | 'preparing' =
       customerName.trim() === 'Cliente Loja' ? 'delivered' : 'preparing';
 
-    const created = await addOrder({
+    const created = submittedOrderRef.current || await addOrder({
       customerName: customerName.trim(),
       customerPhone: phoneDigits || undefined,
       deliveryAddress: fullAddress || undefined,
@@ -1257,6 +1287,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     });
 
     if (created) {
+      submittedOrderRef.current = created;
       const createdShortCode = created.shortCode;
       const createdOrderCode = created.orderCode || 'EXPRESS';
       const createdDailyNumber = created.dailyNumber ?? 0;
@@ -1268,22 +1299,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         void notifyExpressOrderCreated(company.id, created.id);
       }
 
-      // ===== NFC-e (I9 "Finalizar Pedido" com Venda + NFC-e) =====
-      // Cria pdv_sale e dispara emissão. Pop-up de status abre ao final.
-      const wantsNfce =
-        !!override &&
-        (override.tefIntegration ||
-          override.prechargedTef?.tefData ||
-          override.documentMode === 'sale_with_nfce') &&
-        fiscalEnabled &&
-        !!company?.id;
-      if (wantsNfce && !currentRegister) {
-        toast.error(
-          'Caixa precisa estar aberto para emitir NFC-e. Feche e reabra o caixa no app, depois emita a nota manualmente.',
-        );
-      } else if (wantsNfce && currentRegister) {
+      const checkoutPolicy = expressCheckoutPolicy({
+        approvedTef: !!(directTefData || overrideTefData), finalizeNow: override?.finalizeNow,
+        documentMode: override?.documentMode, fiscalEnabled,
+      });
+      const wantsNfce = checkoutPolicy.emitNfce;
+      if (checkoutPolicy.recordSale && currentRegister && checkoutUser && company?.id) {
         try {
-          setIsEmittingNfce(true);
+          setIsEmittingNfce(wantsNfce);
           const saleItems = cart.map((item) => ({
             product_id: item.product.id || null,
             product_name: item.product.name,
@@ -1302,19 +1325,19 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               unit_price: ex.unit_price,
             });
           });
-          const { data: { user: authUser } } = await supabase.auth.getUser();
-          const saleId = authUser
-            ? await addSale(
-                saleItems,
-                override!.paymentMethodId,
-                authUser.id,
-                override!.discount || 0,
-                customerName.trim(),
-                `[EXPRESS] Pagamento: ${paymentName}${overrideTefNote}`,
-              )
-            : null;
-
-          if (saleId) {
+          const saleId = submittedSaleRef.current || await addSale(
+            saleItems, selectedPM?.id || null, checkoutUser.id, override?.discount || 0,
+            customerName.trim(),
+            `[EXPRESS] Pagamento: ${paymentName}${tefNote ? ` | ${tefNote}` : ''}${overrideTefNote}`,
+            created.id,
+          );
+          if (!saleId) {
+            toast.error('Pedido já criado e pagamento aprovado preservado. Tente registrar novamente; não passe o cartão de novo.');
+            return;
+          }
+          const firstRegistration = !submittedSaleRef.current;
+          submittedSaleRef.current = saleId;
+          if (wantsNfce && firstRegistration) {
             const nfceItems: NFCeItem[] = saleItems.map((it) => {
               const product = it.product_id ? products.find((p) => p.id === it.product_id) : null;
               const taxRule = product?.taxRuleId
@@ -1329,7 +1352,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
               };
             });
-            const externalId = `EXPRESS-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+            const externalId = `EXPRESS-${saleId}`;
             const cleanDoc = (override?.customerDocument || '').replace(/\D/g, '');
             const destinatario =
               cleanDoc.length === 11
@@ -1337,14 +1360,14 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 : cleanDoc.length === 14
                 ? { cnpj: cleanDoc, nome: customerName || undefined }
                 : undefined;
-            await emitirNFCe(company!.id, saleId, {
+            await emitirNFCe(company?.id || '', saleId, {
               external_id: externalId,
               itens: nfceItems,
               valor_desconto: override?.discount || 0,
               valor_frete: 0,
               observacoes: customerName ? `Cliente: ${customerName}` : undefined,
               destinatario,
-              tef: overrideTefData,
+              tef: overrideTefData || directTefData,
             } as any);
             toast.success('NFC-e enviada para processamento!');
 
@@ -1352,6 +1375,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               .from('nfce_records')
               .select('*')
               .eq('sale_id', saleId)
+              .eq('company_id', company.id)
               .maybeSingle();
             if (rec) {
               setNfceRecord(rec as unknown as NFCeRecord);
@@ -1380,7 +1404,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
         // Quando NFC-e foi solicitada, o pop-up pós-venda controla a impressão do DANFE.
         // Recibo simples só é gerado para "Somente Venda" + opção "Imprimir".
         const shouldPrintReceipt =
-          override?.documentMode !== 'sale_with_nfce' && override?.printDocument !== false;
+          !wantsNfce && override?.printDocument !== false;
         if (shouldPrintReceipt) {
         try {
           const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
@@ -1718,6 +1742,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     }
     setIsSubmitting(false);
     } finally {
+      setIsSubmitting(false);
       handleSubmitGuardRef.current = false;
     }
   }
@@ -2533,6 +2558,9 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
 
 
   function resetForm() {
+    approvedDirectTefRef.current = null;
+    submittedOrderRef.current = null;
+    submittedSaleRef.current = null;
     setAmoreChargeResult(null);
     setStep(1);
     setCustomerPhone('');

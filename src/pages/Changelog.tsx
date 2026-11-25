@@ -17,6 +17,12 @@ const changelog: ChangelogEntry[] = [
   {
     date: '24/11/2026',
     version: '1.76.0-beta',
+    type: 'fix',
+    description: 'Cobranças: mesas quitadas em várias formas, por pessoas ou por itens são finalizadas antes de aguardar a NFC-e. Pedido Express registra no caixa o TEF aprovado também na confirmação direta. Venda Rápida respeita a integração cadastrada, reutiliza o pagamento aprovado e limpa o carrinho após registrar a venda. Tentativas de gravação preservam os identificadores para não duplicar venda ou itens. Frente de Caixa: impressão real do comprovante não fiscal em piloto exclusivo da Lancheria da I9, sem duplicar DANFE ou comprovante de crediário. Motor TEF homologado preservado; validação física pendente.',
+  },
+  {
+    date: '24/11/2026',
+    version: '1.76.0-beta',
     type: 'improvement',
     description: 'Floricultura: botão de motinho ao lado de Loja Aberta no PDV e no cabeçalho dos pedidos. Verde indica entregas de hoje liberadas; vermelho, encerradas. Um clique encerra ou reabre as entregas de hoje, mantendo retirada, prazos e agendamentos futuros. Sincronizado com Configurações → Horários e catálogo; amanhã a regra habitual volta automaticamente. Restaurantes não foram alterados.',
   },

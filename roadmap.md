@@ -1,5 +1,13 @@
 # Roadmap — Retomada ComandaTech
 
+## Cobrança e finalização — pacote autorizado (24/11)
+- [x] Fechar mesas quitadas (várias formas, pessoas e itens) antes de aguardar NFC-e/impressão; manter saldos pendentes abertos, confirmar outras comandas antes de liberar mesa e retomar venda/baixas incertas sem recobrança.
+- [x] Venda Rápida: encaminhar somente integrações TEF cadastradas à cobrança, reutilizar aprovação e finalizar carrinho antes do retorno fiscal.
+- [x] Pedido Express: registrar cobrança TEF direta no caixa e emitir NFC-e sem depender do diálogo de finalização.
+- [x] Frente de Caixa: substituir aviso fictício por impressão real não fiscal, isolada na Lancheria da I9 (piloto escolhido).
+- [x] Regressões dos handlers reais e helpers; Venda Rápida real conferida no computador/celular com serviços simulados, sem cobranças, notas ou impressão física. Sessão disponível é de revendedor e não acessa checkout real da loja. Sem publicar.
+- [ ] Validar cobrança e impressão físicas na VPS — depende de implantação autorizada e equipamentos da loja.
+
 ## Controle rápido de loja aberta/fechada (24/11)
 - [x] Controle abaixo do nome no PDV e no cabeçalho da dashboard, por loja, sem alterar caixa ou horários semanais; retorno no dia seguinte confirmado pelo usuário.
 - [x] Estado excepcional compartilhado no catálogo/cardápio, QR de mesa e saudação WhatsApp; fechamento bloqueia novos pedidos, mantendo os existentes.

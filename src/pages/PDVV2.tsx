@@ -68,6 +68,7 @@ import { recordSalePayments } from '@/utils/recordSalePayments';
 import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
 import { cn } from '@/lib/utils';
 import { canCloseItemPayment, paymentCents, splitSettlementComplete, type SplitTabPaymentDraft } from '@/utils/tabPaymentRules';
+import { applyTabPaymentMutations, type TabPaymentMutations } from '@/utils/tabPaymentMutations';
 function isDelivery(o: Order) {
   return !!o.deliveryAddress && o.deliveryAddress.trim().length > 0;
 }
@@ -218,6 +219,13 @@ export default function PDVV2() {
   const [multiPayDraft, setMultiPayDraft] = useState<SplitTabPaymentDraft | null>(null);
   const multiPayGuardRef = useRef(false);
   const multiPaySaleRef = useRef<string | null>(null);
+  const paidImportRef = useRef<{ key: string; saleId: string; tefData?: NFCeTefData; notes: string } | null>(null);
+  const pendingI9PaymentRef = useRef<{
+    saleId: string; companyId: string; registerId: string; tabId: string;
+    params: Parameters<typeof confirmImportTabI9>[0]; fullTab?: (typeof openTabs)[number];
+    splitData?: { perPerson: number; remaining: number; total: number } | null;
+    tefData?: NFCeTefData; notes: string; plan: TabPaymentMutations;
+  } | null>(null);
   const multiPayTotal = multiPayTab
     ? Math.max(0, multiPayTab.total + (multiPayDraft?.extraItems || []).reduce((sum, item) => sum + item.quantity * item.unit_price, 0) - (multiPayDraft?.discount || 0))
     : 0;
@@ -520,7 +528,7 @@ export default function PDVV2() {
         };
       });
 
-      const externalId = `PDVV2-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+      const externalId = `PDVV2-${saleId}`;
       const cleanDoc = (customerDocument || '').replace(/\D/g, '');
       const destinatario = cleanDoc.length === 11
         ? { cpf: cleanDoc, nome: customerName || undefined }
@@ -547,6 +555,7 @@ export default function PDVV2() {
         .from('nfce_records')
         .select('*')
         .eq('sale_id', saleId)
+        .eq('company_id', companyId)
         .maybeSingle();
 
       if (rec) {
@@ -584,7 +593,7 @@ export default function PDVV2() {
     tefIntegration,
     customerDocument,
     prechargedTef,
-  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string; prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string } }) {
+  }: { paymentMethodId: string; paymentName: string; discount: number; finalTotal: number; documentMode: 'sale_only' | 'sale_with_nfce'; extraItems: { id?: string; product_id: string | null; product_name: string; quantity: number; unit_price: number }[]; printDocument?: boolean; tefOptions?: TefOptions; tefIntegration?: 'tef_pinpad' | 'tef_smartpos'; customerDocument?: string; prechargedTef?: { tefData?: NFCeTefData; notesFragment?: string } }) {
     if (confirmImportTabGuardRef.current) return;
     confirmImportTabGuardRef.current = true;
     try {
@@ -613,10 +622,18 @@ export default function PDVV2() {
       fullTab.customer_name ||
       (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
 
+    const paidKey = `pdvv2_paid_tab_${companyId}_${currentRegister.id}_${fullTab.id}`;
+    let retained = paidImportRef.current?.key === paidKey ? paidImportRef.current : null;
+    try {
+      const saved = JSON.parse(localStorage.getItem(paidKey) || 'null');
+      if (!retained && saved?.key === paidKey && saved?.saleId) retained = saved;
+    } catch { /* memory fallback */ }
     // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
     let tefData: NFCeTefData | undefined;
     let tefNotesFragment = '';
-    if (prechargedTef?.tefData) {
+    if (retained) {
+      tefData = retained.tefData; tefNotesFragment = retained.notes;
+    } else if (prechargedTef?.tefData) {
       tefData = prechargedTef.tefData;
       tefNotesFragment = prechargedTef.notesFragment ? ` | ${prechargedTef.notesFragment}` : '';
     } else if (tefIntegration && tefOptions) {
@@ -635,7 +652,7 @@ export default function PDVV2() {
       tefNotesFragment = result.notesFragment ? ` | ${result.notesFragment}` : '';
     }
 
-    const saleId = await addSale(
+    const saleId = retained?.saleId || await addSale(
       items,
       paymentMethodId,
       user.id,
@@ -644,20 +661,17 @@ export default function PDVV2() {
       `Comanda #${fullTab.tab_number} | Pagamento: ${paymentName}${tefNotesFragment}`
     );
     if (saleId) {
+      paidImportRef.current = { key: paidKey, saleId, tefData, notes: tefNotesFragment };
+      try { localStorage.setItem(paidKey, JSON.stringify(paidImportRef.current)); } catch { /* retain ref */ }
+      const closed = await closeTab(fullTab.id);
+      if (closed) {
+        toast.success('Comanda importada e fechada!'); setImportingTab(null);
+      } else toast.error('Venda paga e registrada, mas a mesa permanece aberta. Confirme novamente sem cobrar.');
       // NFC-e: TEF força emissão (regra V1). Caso contrário, segue documentMode.
-      const wantsNfce = (tefIntegration ? true : documentMode === 'sale_with_nfce') && fiscalEnabled && companyId;
+      const wantsNfce = tefIntegration || tefData || (documentMode === 'sale_with_nfce' && fiscalEnabled);
       // Imprime se: I9 escolheu "Imprimir" no pop-up, ou demais lojas (comportamento original)
       const shouldPrint = printDocument !== false;
       if (wantsNfce) {
-        // Venda já gravada: fecha a comanda e libera a mesa IMEDIATAMENTE,
-        // sem depender do operador fechar o pop-up da NFC-e (F5/troca de aba
-        // perdiam o fechamento e a mesa ficava aberta).
-        try {
-          await closeTab(fullTab.id);
-          toast.success('Comanda importada e fechada!');
-        } catch (e) {
-          console.error('[PDVV2] falha ao fechar comanda após venda', e);
-        }
         setPendingPostSale(null);
         await emitNFCeAndOpenDialog({
           saleId,
@@ -672,7 +686,7 @@ export default function PDVV2() {
           tefData,
           customerDocument,
         });
-        setImportingTab(null);
+        if (!closed) throw new Error('Venda registrada; tente fechar sem passar o cartão novamente.');
         return saleId;
       } else if (shouldPrint) {
         const paperSize = (settings.printerPaperSize as '58mm' | '80mm') || '80mm';
@@ -680,8 +694,9 @@ export default function PDVV2() {
           ...fullTab.items.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price, notes: i.notes || undefined })),
           ...extraItems.map((i) => ({ name: i.product_name, quantity: i.quantity, price: i.unit_price })),
         ];
-        await printOnlyReceipt({
+        try { await printOnlyReceipt({
           companyId,
+          sourceOrderId: saleId,
           orderCode: `M${fullTab.tab_number}`,
           dailyNumber: fullTab.tab_number,
           customerName: customer,
@@ -690,11 +705,9 @@ export default function PDVV2() {
           notes: `Pagamento: ${paymentName}${discount > 0 ? ` | Desconto: R$ ${discount.toFixed(2)}` : ''}${documentMode === 'sale_with_nfce' ? ' | NFC-e' : ''}`,
           paperSize,
           printLayout: settings.printLayout,
-        });
+        }); } catch (error) { toast.error('Venda registrada, mas o recibo não foi enviado à impressora. Não cobre novamente.'); }
       }
-      await closeTab(fullTab.id);
-      toast.success('Comanda importada e fechada!');
-      setImportingTab(null);
+      if (!closed) throw new Error('Venda registrada; tente fechar sem passar o cartão novamente.');
     }
     return saleId;
     } finally {
@@ -708,8 +721,8 @@ export default function PDVV2() {
    * Espelha o padrão do Pedido Express:
    *  1) runMultiPayment (tudo-ou-nada com rollback automático)
    *  2) addSale UMA vez (primary)
-   *  3) NFC-e com pagamentos_split (se módulo fiscal)
-   *  4) closeTab
+   *  3) closeTab após quitação, antes do transporte fiscal
+   *  4) NFC-e com pagamentos_split (se módulo fiscal)
    * O link "Dividir em várias formas" só aparece quando i9Mode === '' e
    * sem activeSplit (PDVV2PaymentDialog já cuida disso).
    */
@@ -740,10 +753,24 @@ export default function PDVV2() {
     if (paymentCents(currentTotal) !== paymentCents(multiPayTab.total)) {
       throw new Error('Os itens da mesa mudaram durante a cobrança. A mesa permanece aberta; confira o saldo antes de concluir.');
     }
+    const settledKey = `pdvv2_multi_sale_${companyId}_${currentRegister.id}_${fullTab.id}`;
+    let retainedSaleId = multiPaySaleRef.current;
+    try { retainedSaleId ||= localStorage.getItem(settledKey); } catch { /* unavailable */ }
     multiPayGuardRef.current = true;
     setMultiPayProcessing(true);
     setMultiPayStatus('Iniciando cobranças…');
     try {
+      // A failed closure/F5 resumes settlement, never the payment or sale insert.
+      if (retainedSaleId) {
+        const { data: retained, error } = await supabase.from('pdv_sales').select('id')
+          .eq('id', retainedSaleId).eq('company_id', companyId)
+          .eq('cash_register_id', currentRegister.id).single();
+        if (error || !retained) throw new Error('Não foi possível conferir a venda já paga. Não cobre novamente.');
+        if (!await closeTab(fullTab.id)) throw new Error('Venda já paga. Não foi possível fechar a mesa; tente finalizar sem cobrar novamente.');
+        setMultiPayOpen(false); setMultiPayTab(null); setMultiPayDraft(null); setImportingTab(null);
+        toast.success('Venda já registrada; mesa fechada sem nova cobrança. Confira a nota no Monitor NFC-e.');
+        return;
+      }
       const customer =
         fullTab.customer_name ||
         (fullTab.table?.number ? `Mesa ${fullTab.table.number}` : `Comanda ${fullTab.tab_number}`);
@@ -776,8 +803,15 @@ export default function PDVV2() {
       );
       if (!saleId) throw new Error('Não foi possível registrar a venda. A mesa permanece aberta.');
       multiPaySaleRef.current = saleId;
+      try { localStorage.setItem(settledKey, saleId); } catch { /* keep ref */ }
       // Registra o split de formas para o relatório de fechamento.
       if (!existingSaleId) await recordSalePayments(saleId, companyId, mp.lines);
+
+      const closed = await closeTab(fullTab.id);
+      if (closed) {
+        toast.success('Comanda cobrada (multi-pagamento) e fechada!');
+        setMultiPayOpen(false); setMultiPayTab(null); setMultiPayDraft(null); setImportingTab(null);
+      } else toast.error('Venda registrada, mas a mesa não foi fechada. Não cobre novamente.');
 
       // NFC-e com pagamentos_split — só quando solicitado pelo dialog
       // (hasTef OU usuário escolheu "Venda com NFC-e").
@@ -799,7 +833,7 @@ export default function PDVV2() {
               ...buildNfceFiscalFields({ product, taxRule, mercadoEnabled }),
             };
           });
-          const externalId = `TAB-MULTI-${currentRegister.id.substring(0, 8)}-${Date.now()}`;
+          const externalId = `TAB-MULTI-${saleId}`;
           await emitirNFCe(companyId, saleId, {
             external_id: externalId,
             itens: nfceItems,
@@ -813,6 +847,7 @@ export default function PDVV2() {
             .from('nfce_records')
             .select('*')
             .eq('sale_id', saleId)
+            .eq('company_id', companyId)
             .maybeSingle();
           if (rec) {
             setNfceRecord(rec as unknown as NFCeRecord);
@@ -826,14 +861,8 @@ export default function PDVV2() {
           setIsEmittingNfce(false);
         }
       }
+      if (!closed) throw new Error('Venda registrada; tente finalizar a mesa novamente, sem cobrar de novo.');
 
-      const closed = await closeTab(fullTab.id);
-      if (!closed) throw new Error('Venda registrada, mas a mesa não foi fechada. Tente finalizar novamente, sem cobrar de novo.');
-      toast.success('Comanda cobrada (multi-pagamento) e fechada!');
-      setMultiPayOpen(false);
-      setMultiPayTab(null);
-      setMultiPayDraft(null);
-      setImportingTab(null);
     } catch (err: any) {
       console.error('[PDVV2][TAB-MULTI] error:', err);
       toast.error(err?.message || 'Erro na cobrança em várias formas.');
@@ -925,10 +954,30 @@ export default function PDVV2() {
       return;
     }
     const resolvedTabId = i9OriginalTabId || importingTab.id;
-    const fullTab = openTabs.find((t) => t.id === resolvedTabId);
+    const pendingKey = `pdvv2_partial_paid_${companyId}_${currentRegister.id}_${resolvedTabId}`;
+    let retained = pendingI9PaymentRef.current;
+    if (retained?.tabId !== resolvedTabId || retained.companyId !== companyId || retained.registerId !== currentRegister.id) retained = null;
+    try {
+      const stored = JSON.parse(localStorage.getItem(pendingKey) || 'null');
+      if (!retained && stored?.tabId === resolvedTabId && stored?.companyId === companyId && stored?.registerId === currentRegister.id) retained = stored;
+    } catch { /* retain in memory */ }
+    pendingI9PaymentRef.current = retained;
+    if (retained) params = retained.params;
+    const fullTab = retained?.fullTab || openTabs.find((t) => t.id === resolvedTabId);
+    const retainPlan = (saleId: string, plan: TabPaymentMutations, tefData: NFCeTefData | undefined, notes: string) => {
+      const pending = retained || { saleId, companyId, registerId: currentRegister.id, tabId: resolvedTabId,
+        params, fullTab, splitData, tefData, notes, plan };
+      pendingI9PaymentRef.current = pending;
+      try { localStorage.setItem(pendingKey, JSON.stringify(pending)); } catch { /* retained ref */ }
+      return pending;
+    };
+    const clearPlan = () => {
+      pendingI9PaymentRef.current = null;
+      try { localStorage.removeItem(pendingKey); } catch { /* unavailable */ }
+    };
 
     // Split mode — resolve from params.splitInfo (first person) or i9SplitInfo (subsequent)
-    let splitData = i9SplitInfo;
+    let splitData = retained?.splitData || i9SplitInfo;
     if (!splitData && params.splitInfo) {
       // First person: initialize from onConfirm params (no timing issue)
       splitData = {
@@ -939,9 +988,9 @@ export default function PDVV2() {
       setI9OriginalTabId(importingTab.id);
       setI9SplitInfo(splitData);
       saveSplitProgress(importingTab.id, splitData);
-    } else if (!splitData && importingTab?._splitPerson !== undefined) {
+    } else if (!splitData && importingTab?._splitPerson !== undefined && importingTab._splitPerPerson !== undefined && importingTab._splitTotal !== undefined) {
       // Fallback from enriched importingTab
-      splitData = { perPerson: importingTab._splitPerPerson!, remaining: importingTab._splitTotal! - importingTab._splitPerson!, total: importingTab._splitTotal! };
+      splitData = { perPerson: importingTab._splitPerPerson, remaining: importingTab._splitTotal - importingTab._splitPerson, total: importingTab._splitTotal };
       setI9SplitInfo(splitData);
     }
 
@@ -974,7 +1023,9 @@ export default function PDVV2() {
       // ===== TEF: roda ANTES de criar a venda (igual PDV V1). Aborta se falhar.
       let tefData: NFCeTefData | undefined;
       let tefNotesFragment = '';
-      if (params.prechargedTef?.tefData) {
+      if (retained) {
+        tefData = retained.tefData; tefNotesFragment = retained.notes;
+      } else if (params.prechargedTef?.tefData) {
         tefData = params.prechargedTef.tefData;
         tefNotesFragment = params.prechargedTef.notesFragment ? ` | ${params.prechargedTef.notesFragment}` : '';
       } else if (params.tefIntegration && params.tefOptions) {
@@ -994,71 +1045,39 @@ export default function PDVV2() {
       }
 
       const saleNotes = `Comanda #${tabNumber} | ${personLabel}: ${params.paymentName}${tefNotesFragment}`;
-      const saleId = await addSale(items, params.paymentMethodId, user.id, 0, customer, saleNotes);
+      const saleId = retained?.saleId || await addSale(items, params.paymentMethodId, user.id, 0, customer, saleNotes);
       if (saleId) {
-        // Persiste no tab para que o residual fique correto se a comanda
-        // for reimportada antes de todas as pessoas pagarem:
-        //  - extras adicionados durante o checkout passam a fazer parte da comanda
-        //  - um item de crédito (valor negativo) registra o quanto já foi pago
-        try {
-          const isFirstSplitPerson = !!params.splitInfo;
-          if (isFirstSplitPerson && params.extraItems?.length) {
-            const extraRows = params.extraItems.map((ex) => ({
-              tab_id: resolvedTabId,
-              product_id: ex.product_id,
-              product_name: ex.product_name,
-              unit_price: ex.unit_price,
-              quantity: ex.quantity,
-              total_price: ex.unit_price * ex.quantity,
-              notes: (ex as any).notes || null,
-              created_by: user.id,
-              paid: false,
-            }));
-            await supabase.from('tab_items').insert(extraRows as any);
+        const extraRows = !!params.splitInfo ? (params.extraItems || []).map(ex => ({
+          id: crypto.randomUUID(), tab_id: resolvedTabId, product_id: ex.product_id,
+          product_name: ex.product_name, unit_price: ex.unit_price, quantity: ex.quantity,
+          total_price: ex.unit_price * ex.quantity, created_by: user.id, notes: null, paid: false,
+        })) : [];
+        const pending = retainPlan(saleId, { tabId: resolvedTabId, companyId, updates: [], inserts: [
+          ...extraRows, { id: saleId, tab_id: resolvedTabId, product_id: null,
+            product_name: `[Pago: ${personLabel}]`, unit_price: -chargeAmount, quantity: 1,
+            total_price: -chargeAmount, created_by: user.id, paid: false },
+        ] }, tefData, tefNotesFragment);
+        try { await applyTabPaymentMutations(pending.plan); }
+        catch (error) {
+          if (params.tefIntegration || tefData || (params.documentMode === 'sale_with_nfce' && fiscalEnabled)) {
+            await emitNFCeAndOpenDialog({ saleId, items, discount: 0, customerName: fullTab?.customer_name || null,
+              shouldPrint: params.printDocument !== false, tefData, customerDocument: params.customerDocument });
           }
-          await supabase.from('tab_items').insert({
-            tab_id: resolvedTabId,
-            product_id: null,
-            product_name: `[Pago: ${personLabel}]`,
-            unit_price: -chargeAmount,
-            quantity: 1,
-            total_price: -chargeAmount,
-            created_by: user.id,
-            paid: false,
-          } as any);
-        } catch (persistErr) {
-          console.error('[PDVV2] Erro ao persistir divisão na comanda:', persistErr);
+          throw new Error('Pagamento já aprovado. A baixa da parcela falhou; confirme novamente sem passar o cartão.');
         }
+        clearPlan();
         await refetchTabs();
-
-        // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
-        const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
-        if (wantsNfce) {
-          // Observação automática para NFC-e parcial de comanda (todas lojas com PDV V2)
-          const isLast = (splitData.remaining - parts) <= 0;
-          const personRangeText = parts > 1
-            ? `pessoas ${startPerson} a ${endPerson} de ${splitData.total}`
-            : `pessoa ${startPerson} de ${splitData.total}`;
-          const partialObs = isLast
-            ? `Pagamento final da Comanda #${tabNumber} (${personRangeText}). Comanda quitada.`
-            : `Pagamento parcial da Comanda #${tabNumber} - ${personRangeText}. Saldo restante segue em aberto na comanda.`;
-          await emitNFCeAndOpenDialog({
-            saleId,
-            items,
-            discount: 0,
-            customerName: fullTab?.customer_name || null,
-            shouldPrint: params.printDocument !== false,
-            tefData,
-            customerDocument: params.customerDocument,
-            extraObservacoes: partialObs,
-          });
-        }
 
         const newRemaining = splitData.remaining - parts;
         saveSplitProgress(resolvedTabId, newRemaining > 0 ? { ...splitData, remaining: newRemaining } : null);
         if (newRemaining <= 0) {
-          await closeTab(resolvedTabId);
-          toast.success(parts > 1
+          const { data: persisted, error: readError } = await supabase.from('tabs')
+            .select('id, items:tab_items(total_price)')
+            .eq('id', resolvedTabId).eq('company_id', companyId).single();
+          const residual = persisted?.items.reduce((sum, item) => sum + paymentCents(Number(item.total_price)), 0);
+          const closed = !readError && residual !== undefined && residual <= 0 && await closeTab(resolvedTabId);
+          if (!closed) toast.error('Pagamento registrado, mas a mesa permanece aberta. Confira o saldo; não cobre a mesma parcela novamente.');
+          else toast.success(parts > 1
             ? `Últimas ${parts} pessoas cobradas — comanda fechada!`
             : 'Última pessoa cobrada — comanda fechada!');
           setI9SplitInfo(null);
@@ -1085,6 +1104,30 @@ export default function PDVV2() {
             i9SplitTransitionRef.current = false;
           }, 100);
         }
+
+        // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
+        const wantsNfce = params.tefIntegration || tefData || (params.documentMode === 'sale_with_nfce' && fiscalEnabled);
+        if (wantsNfce) {
+          // Observação automática para NFC-e parcial de comanda (todas lojas com PDV V2)
+          const isLast = (splitData.remaining - parts) <= 0;
+          const personRangeText = parts > 1
+            ? `pessoas ${startPerson} a ${endPerson} de ${splitData.total}`
+            : `pessoa ${startPerson} de ${splitData.total}`;
+          const partialObs = isLast
+            ? `Pagamento final da Comanda #${tabNumber} (${personRangeText}). Comanda quitada.`
+            : `Pagamento parcial da Comanda #${tabNumber} - ${personRangeText}. Saldo restante segue em aberto na comanda.`;
+          await emitNFCeAndOpenDialog({
+            saleId,
+            items,
+            discount: 0,
+            customerName: fullTab?.customer_name || null,
+            shouldPrint: params.printDocument !== false,
+            tefData,
+            customerDocument: params.customerDocument,
+            extraObservacoes: partialObs,
+          });
+        }
+
       }
       return;
     }
@@ -1129,7 +1172,9 @@ export default function PDVV2() {
       // ===== TEF: roda ANTES de criar a venda. Aborta se falhar.
       let tefData: NFCeTefData | undefined;
       let tefNotesFragment = '';
-      if (params.prechargedTef?.tefData) {
+      if (retained) {
+        tefData = retained.tefData; tefNotesFragment = retained.notes;
+      } else if (params.prechargedTef?.tefData) {
         tefData = params.prechargedTef.tefData;
         tefNotesFragment = params.prechargedTef.notesFragment ? ` | ${params.prechargedTef.notesFragment}` : '';
       } else if (params.tefIntegration && params.tefOptions) {
@@ -1149,89 +1194,81 @@ export default function PDVV2() {
       }
 
       const saleNotes = `Comanda #${tabNumber} | Pagamento parcial: ${params.paymentName}${tefNotesFragment}`;
-      const saleId = await addSale(saleItems, params.paymentMethodId, user.id, 0, customer, saleNotes);
+      const saleId = retained?.saleId || await addSale(saleItems, params.paymentMethodId, user.id, 0, customer, saleNotes);
 
       if (saleId) {
-        // DB: mark items as paid (full or partial qty split)
-        const fullPayIds: string[] = [];
-        const partialPays: Array<{ id: string; paidQty: number }> = [];
+        const plan: TabPaymentMutations = { tabId: fullTab.id, companyId, updates: [], inserts: [] };
         for (const pi of params.itemsInfo || []) {
-          const tabItem = fullTab.items.find((i) => i.id === pi.id);
+          const tabItem = fullTab.items.find(i => i.id === pi.id);
           if (!tabItem) continue;
-          if (pi.paidQty >= tabItem.quantity) {
-            fullPayIds.push(pi.id);
-          } else {
-            partialPays.push(pi);
+          if (pi.paidQty >= tabItem.quantity) plan.updates.push({ id: pi.id, values: { paid: true } });
+          else {
+            const remainingQty = Math.round((tabItem.quantity - pi.paidQty) * 1000) / 1000;
+            const paidQty = Math.round(pi.paidQty * 1000) / 1000;
+            plan.updates.push({ id: pi.id, values: { quantity: remainingQty, total_price: Math.round(remainingQty * tabItem.unit_price * 100) / 100 } });
+            plan.inserts.push({ id: crypto.randomUUID(), tab_id: fullTab.id, product_id: tabItem.product_id,
+              product_name: tabItem.product_name, unit_price: tabItem.unit_price, quantity: paidQty,
+              total_price: Math.round(paidQty * tabItem.unit_price * 100) / 100, created_by: user.id,
+              notes: tabItem.notes, paid: true });
           }
         }
-        if (fullPayIds.length > 0) {
-          await supabase.from('tab_items').update({ paid: true } as any).in('id', fullPayIds);
+        for (const ex of params.extraItems || []) {
+          const selected = selectedExtraItemsInfo.find(i => i.id === ex.id)?.paidQty || 0;
+          const paidQty = Math.min(selected, ex.quantity);
+          for (const row of [{ quantity: paidQty, paid: true }, { quantity: ex.quantity - paidQty, paid: false }]) {
+            if (row.quantity > 0) plan.inserts.push({ id: crypto.randomUUID(), tab_id: fullTab.id,
+              product_id: ex.product_id, product_name: ex.product_name, unit_price: ex.unit_price,
+              quantity: row.quantity, total_price: Math.round(row.quantity * ex.unit_price * 100) / 100,
+              created_by: user.id, notes: null, paid: row.paid });
+          }
         }
-        for (const pp of partialPays) {
-          const tabItem = fullTab.items.find((i) => i.id === pp.id);
-          if (!tabItem) continue;
-          // Frações (rachar item): arredondar quantidades em 3 casas e totais em 2
-          // para evitar dízimas em colunas numeric.
-          const remainingQty = Math.round((tabItem.quantity - pp.paidQty) * 1000) / 1000;
-          const remainingTotal = Math.round(remainingQty * tabItem.unit_price * 100) / 100;
-          const paidQtyRounded = Math.round(pp.paidQty * 1000) / 1000;
-          const paidTotal = Math.round(paidQtyRounded * tabItem.unit_price * 100) / 100;
-          await supabase.from('tab_items').update({
-            quantity: remainingQty,
-            total_price: remainingTotal,
-          } as any).eq('id', pp.id);
-          await supabase.from('tab_items').insert({
-            tab_id: tabItem.tab_id,
-            product_id: tabItem.product_id,
-            product_name: tabItem.product_name,
-            unit_price: tabItem.unit_price,
-            quantity: paidQtyRounded,
-            total_price: paidTotal,
-            created_by: tabItem.created_by,
-            notes: tabItem.notes,
-            paid: true,
-          } as any);
+        const pending = retainPlan(saleId, plan, tefData, tefNotesFragment);
+        try { await applyTabPaymentMutations(pending.plan); }
+        catch (error) {
+          if (params.tefIntegration || tefData || (params.documentMode === 'sale_with_nfce' && fiscalEnabled)) {
+            await emitNFCeAndOpenDialog({ saleId, items: saleItems, discount: 0, customerName: fullTab.customer_name || null,
+              shouldPrint: params.printDocument !== false, tefData, customerDocument: params.customerDocument });
+          }
+          throw new Error('Pagamento já aprovado. A baixa dos itens falhou; confirme novamente sem passar o cartão.');
         }
-        if (params.extraItems?.length) {
-          const selectedExtraQtyById = new Map(selectedExtraItemsInfo.map((i) => [i.id, i.paidQty]));
-          const extraRows = params.extraItems.flatMap((ex: any) => {
-            const paidQty = Math.min(selectedExtraQtyById.get(ex.id) || 0, ex.quantity);
-            const rows = [] as any[];
-            if (paidQty > 0) {
-              rows.push({
-                tab_id: fullTab.id,
-                product_id: ex.product_id,
-                product_name: ex.product_name,
-                unit_price: ex.unit_price,
-                quantity: paidQty,
-                total_price: paidQty * ex.unit_price,
-                notes: ex.notes || null,
-                created_by: user.id,
-                paid: true,
-              });
-            }
-            const remainingQty = ex.quantity - paidQty;
-            if (remainingQty > 0) {
-              rows.push({
-                tab_id: fullTab.id,
-                product_id: ex.product_id,
-                product_name: ex.product_name,
-                unit_price: ex.unit_price,
-                quantity: remainingQty,
-                total_price: remainingQty * ex.unit_price,
-                notes: ex.notes || null,
-                created_by: user.id,
-                paid: false,
-              });
-            }
-            return rows;
-          });
-          if (extraRows.length > 0) await supabase.from('tab_items').insert(extraRows as any);
-        }
+        clearPlan();
         await refetchTabs();
 
+        // Check if all items are now paid
+        // Only consider fully-paid items (not partial qty) as done
+        const hasUnpaidExtraRemainder = (params.extraItems || []).some((ex: any) => {
+          const paidQty = selectedExtraItemsInfo.find((i) => i.id === ex.id)?.paidQty || 0;
+          return paidQty < ex.quantity;
+        });
+        // Confirm persisted state, not the stale checkout snapshot: new items and
+        // failed updates must never release the table after a partial payment.
+        const { data: persistedTab, error: persistedTabError } = await supabase
+          .from('tabs')
+          .select('id, items:tab_items(paid, quantity, unit_price, total_price)')
+          .eq('id', fullTab.id)
+          .eq('company_id', companyId)
+          .single();
+        const allPaid = !persistedTabError && !!persistedTab &&
+          canCloseItemPayment(persistedTab.items || []) && !hasUnpaidExtraRemainder;
+        if (allPaid) {
+          const closed = await closeTab(fullTab.id);
+          if (!closed) toast.error('Pagamento registrado, mas a mesa permanece aberta. Não cobre novamente.');
+          else toast.success('Todos os itens pagos — comanda fechada!');
+          setImportingTab(null);
+        } else {
+          toast.success('Pagamento parcial registrado! Selecione os próximos itens.');
+          // Loop back: reopen dialog for remaining items
+          const savedTab = { ...importingTab, id: resolvedTabId };
+          i9SplitTransitionRef.current = true;
+          setImportingTab(null);
+          setTimeout(() => {
+            setImportingTab(savedTab);
+            i9SplitTransitionRef.current = false;
+          }, 100);
+        }
+
         // NFC-e: TEF força emissão. Caso contrário, segue documentMode.
-        const wantsNfce = (params.tefIntegration ? true : params.documentMode === 'sale_with_nfce') && fiscalEnabled;
+        const wantsNfce = params.tefIntegration || tefData || (params.documentMode === 'sale_with_nfce' && fiscalEnabled);
         if (wantsNfce) {
           // Observação automática para NFC-e parcial de comanda (todas lojas com PDV V2)
           // Pré-cálculo de "todos pagos" para decidir se é a última nota da comanda
@@ -1265,38 +1302,6 @@ export default function PDVV2() {
           });
         }
 
-        // Check if all items are now paid
-        // Only consider fully-paid items (not partial qty) as done
-        const hasUnpaidExtraRemainder = (params.extraItems || []).some((ex: any) => {
-          const paidQty = selectedExtraItemsInfo.find((i) => i.id === ex.id)?.paidQty || 0;
-          return paidQty < ex.quantity;
-        });
-        // Confirm persisted state, not the stale checkout snapshot: new items and
-        // failed updates must never release the table after a partial payment.
-        const { data: persistedTab, error: persistedTabError } = await supabase
-          .from('tabs')
-          .select('id, items:tab_items(paid, quantity, unit_price, total_price)')
-          .eq('id', fullTab.id)
-          .eq('company_id', companyId)
-          .single();
-        const allPaid = !persistedTabError && !!persistedTab &&
-          canCloseItemPayment(persistedTab.items || []) && !hasUnpaidExtraRemainder;
-        if (allPaid) {
-          const closed = await closeTab(fullTab.id);
-          if (!closed) { toast.error('Pagamento registrado, mas a mesa permanece aberta. Não cobre novamente.'); return; }
-          toast.success('Todos os itens pagos — comanda fechada!');
-          setImportingTab(null);
-        } else {
-          toast.success('Pagamento parcial registrado! Selecione os próximos itens.');
-          // Loop back: reopen dialog for remaining items
-          const savedTab = { ...importingTab, id: resolvedTabId };
-          i9SplitTransitionRef.current = true;
-          setImportingTab(null);
-          setTimeout(() => {
-            setImportingTab(savedTab);
-            i9SplitTransitionRef.current = false;
-          }, 100);
-        }
       }
       return;
     }

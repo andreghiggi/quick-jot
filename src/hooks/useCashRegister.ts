@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getExpectedCashDrawer, loadCashClosingSales } from '@/utils/cashClosingSales';
+import { persistFastSale, type FastSaleDraft } from '@/utils/fastCheckoutPersistence';
 
 export interface CashRegister {
   id: string;
@@ -353,7 +354,8 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     fiscalMode?: 'fiscal' | 'nao_fiscal',
     sourceModule?: 'pdv' | 'mercado',
     /** Uso interno: evita loop infinito no botão "Tentar registrar de novo". */
-    _isRetry?: boolean
+    _isRetry?: boolean,
+    _retainedDraft?: FastSaleDraft,
   ): Promise<string | null> {
     if (!currentRegister || !companyId) {
       toast.error('Nenhum caixa aberto!');
@@ -361,79 +363,51 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
     }
 
     const pendingKey = `pending_sale_${companyId}`;
+    const total = items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+    const insertData = {
+      company_id: companyId, cash_register_id: currentRegister.id,
+      payment_method_id: paymentMethodId, total, discount, final_total: total - discount,
+      customer_name: customerName || null, notes: notes || null, created_by: userId,
+      ...(orderId ? { order_id: orderId } : {}),
+      ...(fiscalMode ? { fiscal_mode: fiscalMode } : {}),
+      ...(sourceModule ? { source_module: sourceModule } : {}),
+    };
+    const fingerprint = JSON.stringify({ insertData, items });
+    let draft = _retainedDraft;
     try {
-      const total = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-      const finalTotal = total - discount;
-
-      // Create sale
-      const insertData: any = {
-        company_id: companyId,
-        cash_register_id: currentRegister.id,
-        payment_method_id: paymentMethodId,
-        total,
-        discount,
-        final_total: finalTotal,
-        customer_name: customerName || null,
-        notes: notes || null,
-        created_by: userId,
+      const stored = JSON.parse(localStorage.getItem(pendingKey) || 'null');
+      if (!draft && stored?.fingerprint === fingerprint) draft = stored.draft;
+    } catch { /* storage unavailable */ }
+    if (!draft) {
+      const saleId = crypto.randomUUID();
+      draft = {
+        sale: { ...insertData, id: saleId },
+        items: items.map(item => ({ ...item, id: crypto.randomUUID(), sale_id: saleId,
+          total_price: item.unit_price * item.quantity })),
       };
-      if (orderId) {
-        insertData.order_id = orderId;
+    }
+    const retainedDraft = draft;
+    try {
+      if (retainedDraft.sale.company_id !== companyId || retainedDraft.sale.cash_register_id !== currentRegister.id) {
+        throw new Error('Venda pendente pertence a outro caixa. Não cobre novamente.');
       }
-      if (fiscalMode) {
-        insertData.fiscal_mode = fiscalMode;
-      }
-      if (sourceModule) {
-        insertData.source_module = sourceModule;
-      }
-
-      // Guarda a venda como pendente até confirmar a gravação: se a tela for
-      // fechada ou recarregada no meio, ela pode ser retomada.
       try {
-        localStorage.setItem(
-          pendingKey,
-          JSON.stringify({ insertData, items, at: new Date().toISOString() }),
-        );
-      } catch { /* storage indisponível — segue a venda */ }
-
-      // Tenta gravar até 3 vezes: falhas rápidas de rede deixam de virar erro na tela.
-      let saleData: any = null;
-      let saleError: any = null;
+        localStorage.setItem(pendingKey, JSON.stringify({ insertData, items, draft: retainedDraft, fingerprint, at: new Date().toISOString() }));
+      } catch { /* same IDs retained in retry closure */ }
+      let saleId: string | null = null;
+      let saleError: unknown;
       for (let attempt = 1; attempt <= 3; attempt++) {
-        const res = await supabase.from('pdv_sales').insert(insertData).select().single();
-        if (!res.error) { saleData = res.data; saleError = null; break; }
-        saleError = res.error;
-        console.error(`[addSale] tentativa ${attempt}/3 falhou:`, res.error);
-        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 800));
+        try { saleId = await persistFastSale(retainedDraft); break; }
+        catch (error) {
+          saleError = error;
+          if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 800));
+        }
       }
-
-      if (saleError || !saleData) throw saleError || new Error('Venda não retornada pelo servidor');
-
-      // Create sale items
-      const saleItems = items.map(item => ({
-        sale_id: saleData.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.unit_price * item.quantity
-      }));
-
-      let itemsError: any = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        const res = await supabase.from('pdv_sale_items').insert(saleItems);
-        if (!res.error) { itemsError = null; break; }
-        itemsError = res.error;
-        console.error(`[addSale/itens] tentativa ${attempt}/3 falhou:`, res.error);
-        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 800));
-      }
-
-      if (itemsError) throw itemsError;
-
+      if (!saleId) throw saleError || new Error('Venda não confirmada pelo servidor');
       try { localStorage.removeItem(pendingKey); } catch { /* ignore */ }
       await fetchSales(currentRegister.id);
       toast.success('Venda registrada!');
-      return saleData.id;
+      return saleId;
     } catch (error: any) {
       console.error('Error adding sale:', error);
       const detail =
@@ -458,6 +432,7 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
                   fiscalMode,
                   sourceModule,
                   true,
+                  retainedDraft,
                 );
               },
             },
