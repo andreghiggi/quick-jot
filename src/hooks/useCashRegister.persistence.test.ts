@@ -16,6 +16,17 @@ function setup() {
 }
 const items = [{ product_id: 'xis', product_name: 'Mesa 4', quantity: 1, unit_price: 80 }];
 describe('gravação centralizada — resposta incerta não duplica R$80', () => {
+  it('descarta campos auxiliares ao criar o rascunho sem alterar IDs ou valores', async () => {
+    const flow = setup();
+    const selectedItems = [{ ...items[0], source_index: 0, _origIdx: 3, category: 'Lanches', notes: 'Sem tomate', taxRuleId: 'tax' }];
+    await expect(flow.run(selectedItems, 'cash', 'operator')).resolves.toBe('stable-0');
+    expect(flow.persist.mock.calls[0][0].items).toEqual([{
+      id: 'stable-1', sale_id: 'stable-0', product_id: 'xis', product_name: 'Mesa 4',
+      quantity: 1, unit_price: 80, total_price: 80,
+    }]);
+    expect(flow.persist.mock.calls[0][0].sale).toMatchObject({ payment_method_id: 'cash', final_total: 80 });
+    expect(selectedItems[0].source_index).toBe(0);
+  });
   it('três tentativas usam os mesmos IDs da venda e dos itens', async () => {
     const flow = setup();
     flow.persist.mockRejectedValueOnce(new Error('response lost')).mockRejectedValueOnce(new Error('items response lost'));

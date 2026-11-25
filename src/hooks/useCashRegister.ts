@@ -382,8 +382,15 @@ export function useCashRegister(options: UseCashRegisterOptions = {}) {
       const saleId = crypto.randomUUID();
       draft = {
         sale: { ...insertData, id: saleId },
-        items: items.map(item => ({ ...item, id: crypto.randomUUID(), sale_id: saleId,
-          total_price: item.unit_price * item.quantity })),
+        items: items.map(item => ({
+          id: crypto.randomUUID(),
+          sale_id: saleId,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.unit_price * item.quantity,
+        })),
       };
     }
     const retainedDraft = draft;

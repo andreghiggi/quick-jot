@@ -24,8 +24,19 @@ export async function persistFastSale(draft: FastSaleDraft): Promise<string> {
     .eq('id', draft.sale.id).eq('company_id', draft.sale.company_id)
     .eq('cash_register_id', draft.sale.cash_register_id).single();
   if (readError || !data) throw readError || new Error('Venda não confirmada. Não cobre novamente.');
+  // Persist only table fields, including when retrying legacy drafts from storage.
+  // Keep IDs and monetary values unchanged; never mutate the retained draft.
+  const saleItems = draft.items.map(item => ({
+    id: item.id,
+    sale_id: item.sale_id,
+    product_id: item.product_id,
+    product_name: item.product_name,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    total_price: item.total_price,
+  }));
   const { error: itemsError } = await supabase.from('pdv_sale_items')
-    .upsert(draft.items, { onConflict: 'id', ignoreDuplicates: true });
+    .upsert(saleItems, { onConflict: 'id', ignoreDuplicates: true });
   if (itemsError) throw itemsError;
   return data.id;
 }

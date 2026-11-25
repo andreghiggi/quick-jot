@@ -1,5 +1,10 @@
 # Roadmap — Retomada ComandaTech
 
+## Correção de gravação dos itens — autorizada (24/11)
+- [x] Mapear somente campos persistidos na criação dos itens e limpar rascunhos antigos no envio, mantendo IDs, valores, vínculos e regras TEF.
+- [x] 32 testes de regressão aprovados: campos auxiliares descartados, rascunho antigo carregado do cache e retomado pelo botão, falha parcial com IDs preservados e regressões Express/Venda Rápida; build OK. Sem cobrança, emissão real ou publicação.
+- [ ] Conferir tentativa pendente real da Bon Appetit — depende de implantação autorizada na VPS e acesso ao navegador da loja.
+
 ## Cobrança e finalização — pacote autorizado (24/11)
 - [x] Fechar mesas quitadas (várias formas, pessoas e itens) antes de aguardar NFC-e/impressão; manter saldos pendentes abertos, confirmar outras comandas antes de liberar mesa e retomar venda/baixas incertas sem recobrança.
 - [x] Venda Rápida: encaminhar somente integrações TEF cadastradas à cobrança, reutilizar aprovação e finalizar carrinho antes do retorno fiscal.
