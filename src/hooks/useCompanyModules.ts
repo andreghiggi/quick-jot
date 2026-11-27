@@ -32,6 +32,8 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
   const { companyId } = options;
   const [modules, setModules] = useState<CompanyModule[]>([]);
   const [loading, setLoading] = useState(true);
+  // Empresa cujos módulos já foram respondidos (não altera `loading`).
+  const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (companyId) {
@@ -65,6 +67,7 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
       console.error('Error fetching modules:', error);
     } finally {
       setLoading(false);
+      setResolvedCompanyId(companyId);
     }
   }
 
@@ -125,6 +128,7 @@ export function useCompanyModules(options: UseCompanyModulesOptions = {}) {
   return {
     modules,
     loading,
+    resolved: !!companyId && resolvedCompanyId === companyId,
     toggleModule,
     isModuleEnabled,
     refetch: () => fetchModules(true)

@@ -82,7 +82,7 @@ export function PDVV2TopBar({
       setTotalsLoading(false);
     }
   }
-  const { isFlorist } = useCompanyProfile(companyId);
+  const { floristLook: isFlorist } = useCompanyProfile(companyId);
   const newOrderLabel = 'Pedido Express';
   const newOrderBtn = (
     <Button

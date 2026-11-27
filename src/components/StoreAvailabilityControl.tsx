@@ -15,12 +15,13 @@ function ProfileDeliveryControl({ companyId }: { companyId: string }) {
 export function StoreAvailabilityControl({ companyId }: { companyId?: string | null }) {
   const { user, roles, company } = useAuthContext();
   const { isCurrentlyOpen, loading, availabilityError, availability } = useBusinessHours({ companyId });
+  const { floristLook } = useCompanyProfile(companyId);
   if (!companyId || !user || company?.id !== companyId || !roles.some(role => ['company_admin', 'company_user', 'super_admin', 'reseller'].includes(role))) return null;
   const open = isCurrentlyOpen();
   const busy = loading || availability.saving;
   return (
     <div className="flex max-w-full items-center gap-1.5">
-    <Button type="button" size="sm" variant={availabilityError ? 'outline' : open ? 'success' : 'destructive'}
+    <Button type="button" size="sm" variant={availabilityError || (busy && floristLook) ? 'outline' : open ? 'success' : 'destructive'}
       className="h-7 w-36 justify-start px-2 text-xs"
       disabled={busy}
       aria-label={availabilityError ? 'Consultar estado da loja' : open ? 'Fechar loja' : 'Abrir loja'}

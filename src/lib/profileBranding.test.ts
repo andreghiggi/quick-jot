@@ -79,3 +79,17 @@ describe('isolamento da indicação temporária de floricultura', () => {
     expect(boot('/floricultura', '', undefined, true).api.initialIsFlorist()).toBe(true);
   });
 });
+import { resolveFloristLook } from './profileBranding';
+
+describe('florist look while modules load', () => {
+  it('keeps the florist look only for the company this tab already confirmed', () => {
+    expect(resolveFloristLook(false, true, 'florist-company', 'florist-company')).toBe(true);
+    expect(resolveFloristLook(false, true, 'restaurant-company', 'florist-company')).toBe(false);
+    expect(resolveFloristLook(false, true, 'restaurant-company', null)).toBe(false);
+  });
+
+  it('follows the confirmed profile once modules answered', () => {
+    expect(resolveFloristLook(false, false, 'florist-company', 'florist-company')).toBe(false);
+    expect(resolveFloristLook(true, false, 'florist-company', null)).toBe(true);
+  });
+});

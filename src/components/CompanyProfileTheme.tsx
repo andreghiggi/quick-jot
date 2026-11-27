@@ -1,9 +1,9 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { getCompanyModules } from '@/lib/companyModulesCache';
-import { applyProfileBranding } from '@/lib/profileBranding';
+import { applyProfileBranding, tabHintCompanyId } from '@/lib/profileBranding';
 import { supabase } from '@/integrations/supabase/client';
 import {
   clearLegacyLoginProfile,
@@ -33,10 +33,15 @@ export function CompanyProfileTheme({ children }: { children: ReactNode }) {
   const { company, user, loading: authLoading, userDataReady } = useAuthContext();
   const { pathname, search } = useLocation();
   // Sem empresa logada não consulta nada: o perfil vem só do link.
-  const { isFlorist: companyIsFlorist } = useCompanyProfile(company?.id ?? null);
+  const { isFlorist: companyIsFlorist, floristLook } = useCompanyProfile(company?.id ?? null);
+  // Recarregamento: enquanto a sessão ainda identifica a empresa, a indicação da aba
+  // mantém o verde; fora disso vale o perfil confirmado (ou o link, no login).
+  const sessionPending = authLoading || (!!user && !userDataReady);
   const isFlorist = company?.id
-    ? companyIsFlorist
-    : pathname === '/auth' && getLoginIsFlorist(search);
+    ? floristLook
+    : pathname === '/auth'
+      ? getLoginIsFlorist(search)
+      : sessionPending && !!tabHintCompanyId();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -45,7 +50,7 @@ export function CompanyProfileTheme({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isFlorist) return;
     const root = document.documentElement;
     const previous = new Map<string, string>();

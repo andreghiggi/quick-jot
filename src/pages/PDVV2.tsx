@@ -77,7 +77,7 @@ export default function PDVV2() {
   const { company, user } = useAuthContext();
   const companyId = company?.id;
   // Perfil floricultura: troca só a área de pedidos pela agenda floral.
-  const { isFlorist } = useCompanyProfile(companyId);
+  const { floristLook } = useCompanyProfile(companyId);
   // Hide delivered orders from PDV V2 dashboard — aplicado a todas as lojas com PDV V2 ativo.
   // Pedidos entregues continuam disponíveis em Pedidos / Relatórios; aqui apenas saem do grid
   // para manter o painel operacional limpo.
@@ -1524,7 +1524,7 @@ export default function PDVV2() {
             </div>
 
             <TabsContent value="orders" className="mt-3 hidden min-h-0 flex-1 flex-col overflow-hidden data-[state=active]:flex">
-              {isFlorist ? floristView : (<>
+              {floristLook ? floristView : (<>
               <PDVV2SummaryCards
                 pending={counts.pending}
                 preparing={counts.preparing}
@@ -1632,7 +1632,7 @@ export default function PDVV2() {
             </TabsContent>
           </Tabs>
           )
-        ) : isFlorist ? (
+        ) : floristLook ? (
           floristView
         ) : (
           <>

@@ -73,7 +73,7 @@ export function PDVV2Sidebar() {
   const { enabled: fiscalTokensEnabled } = useFiscalEnabled(company?.id);
   const { enabled: tefTokensEnabled } = useTefEnabled(company?.id);
   const { settings: storeSettings } = useStoreSettings({ companyId: company?.id });
-  const { terminology, isFlorist } = useCompanyProfile(company?.id);
+  const { terminology, floristLook: isFlorist } = useCompanyProfile(company?.id);
   const tableService = usesTableService(isFlorist);
   const logoIcon = getBrandLogo(isFlorist);
   const financeiroActive = financeiroEnabled || isModuleEnabled('financeiro');
