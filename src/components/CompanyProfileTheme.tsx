@@ -2,13 +2,12 @@ import { useEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
-import { getBrandFavicon } from '@/lib/brandLogo';
+import { getCompanyModules } from '@/lib/companyModulesCache';
+import { applyProfileBranding } from '@/lib/profileBranding';
+import { supabase } from '@/integrations/supabase/client';
 import {
   clearLegacyLoginProfile,
-  FLORIST_PRIMARY_HEX,
   getLoginIsFlorist,
-  getProductDescription,
-  getProductTagline,
 } from '@/lib/companyProfile';
 
 const FLORIST_THEME: Record<string, string> = {
@@ -31,13 +30,20 @@ const FLORIST_THEME: Record<string, string> = {
 clearLegacyLoginProfile();
 
 export function CompanyProfileTheme({ children }: { children: ReactNode }) {
-  const { company } = useAuthContext();
+  const { company, user, loading: authLoading, userDataReady } = useAuthContext();
   const { pathname, search } = useLocation();
   // Sem empresa logada não consulta nada: o perfil vem só do link.
   const { isFlorist: companyIsFlorist } = useCompanyProfile(company?.id ?? null);
   const isFlorist = company?.id
     ? companyIsFlorist
     : pathname === '/auth' && getLoginIsFlorist(search);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') applyProfileBranding(false);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!isFlorist) return;
@@ -60,43 +66,28 @@ export function CompanyProfileTheme({ children }: { children: ReactNode }) {
   }, [isFlorist]);
 
   useEffect(() => {
-    if (!isFlorist) return;
-
-    const descriptionMeta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    const favicon = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
-    const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-    const previous = {
-      title: document.title,
-      description: descriptionMeta?.content,
-      faviconHref: favicon?.getAttribute('href'),
-      faviconType: favicon?.getAttribute('type'),
-      themeColor: themeColor?.content,
-    };
-
-    document.title = `ComandaTech - ${getProductTagline(true)}`;
-    if (descriptionMeta) descriptionMeta.content = getProductDescription(true);
-    if (favicon) {
-      favicon.type = 'image/png';
-      favicon.href = getBrandFavicon(true);
+    if (!company?.id) {
+      if (pathname === '/auth' || pathname === '/floricultura') {
+        applyProfileBranding(pathname === '/floricultura' || getLoginIsFlorist(search));
+      } else if (!authLoading && (!user || userDataReady)) {
+        applyProfileBranding(false);
+      }
+      return;
     }
-    if (themeColor) themeColor.content = FLORIST_PRIMARY_HEX;
 
-    return () => {
-      document.title = previous.title;
-      if (descriptionMeta && previous.description !== undefined) {
-        descriptionMeta.content = previous.description;
-      }
-      if (favicon) {
-        if (previous.faviconHref) favicon.setAttribute('href', previous.faviconHref);
-        else favicon.removeAttribute('href');
-        if (previous.faviconType) favicon.setAttribute('type', previous.faviconType);
-        else favicon.removeAttribute('type');
-      }
-      if (themeColor && previous.themeColor !== undefined) {
-        themeColor.content = previous.themeColor;
-      }
-    };
-  }, [isFlorist]);
+    // Keep the synchronous bootstrap while the company's modules are loading.
+    // Ignore late results from a company that is no longer active.
+    let cancelled = false;
+    const companyId = company.id;
+    void getCompanyModules(companyId).then((modules) => {
+      if (cancelled) return;
+      const florist = modules.some((module) => module.module_name === 'floricultura' && module.enabled);
+      applyProfileBranding(florist, companyId);
+    }).catch(() => {
+      if (!cancelled) applyProfileBranding(false);
+    });
+    return () => { cancelled = true; };
+  }, [company?.id, pathname, search, authLoading, user?.id, userDataReady, companyIsFlorist]);
 
   return <>{children}</>;
 }

@@ -15,6 +15,12 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: '27/11/2026',
+    version: '1.76.0-beta',
+    type: 'fix',
+    description: 'Floricultura: título e ícone verdes da aba são definidos antes do carregamento do sistema, inclusive ao recarregar a última tela da loja. A identificação é temporária e exclusiva da aba, removida ao sair ou identificar restaurante; o login tradicional mantém a marca vermelha. Sem alterações em pedidos, cobranças, TEF ou emissão fiscal.',
+  },
+  {
     date: '24/11/2026',
     version: '1.76.0-beta',
     type: 'fix',

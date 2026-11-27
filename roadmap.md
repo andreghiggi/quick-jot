@@ -153,6 +153,9 @@
 - [ ] Validar operação real na floricultura da VPS — depende de implantação autorizada e acesso à loja.
 
 ## Floricultura — identidade visual de acesso e PDV (27/11)
+- [x] Aplicar identificação síncrona no recarregamento, limitada à aba/empresa/rota, com limpeza ao sair e isolamento de restaurantes.
+- [x] Validar recarregamento antes de carregar o aplicativo e retorno ao login tradicional; 324 testes aprovados.
+- [ ] Conferir F5 no PDV floral real — acesso disponível abre somente o painel do revendedor; bootstrap e links de login conferidos no navegador.
 - [x] Pedido Express em verde escuro somente no perfil floricultura; restaurantes mantêm o botão atual.
 - [x] Título, descrição, cor do navegador e favicon florais no link de floricultura e nas empresas reconhecidas pelo módulo; logo e subtítulo centralizados reutilizados.
 - [x] Links floral e tradicional conferidos no navegador; 317 testes e build aprovados, sem publicação.

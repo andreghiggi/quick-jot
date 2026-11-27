@@ -7,5 +7,5 @@ export function getBrandLogo(isFlorist: boolean): string {
 
 /** Mantém o favicon tradicional dos restaurantes e usa a marca verde só no perfil floral. */
 export function getBrandFavicon(isFlorist: boolean): string {
-  return isFlorist ? floristLogo : '/favicon.png';
+  return isFlorist ? '/favicon-florist.png' : '/favicon.png';
 }
