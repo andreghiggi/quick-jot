@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
 
-import { parseFloristStockConfig, planStockAdjustments } from './floristStock';
+import { findStockShortages, parseFloristStockConfig, planStockAdjustments, stockShortageMessage } from './floristStock';
 
 const items = [
   { productId: 'rosa', quantity: 2 },
@@ -51,5 +51,29 @@ describe('baixa de estoque dos pedidos florais', () => {
     expect(parseFloristStockConfig(null).deductOnOrders).toBe(false);
     expect(parseFloristStockConfig('{}').deductOnOrders).toBe(false);
     expect(parseFloristStockConfig('{"deductOnOrders":true}').deductOnOrders).toBe(true);
+  });
+
+  it('vender com estoque zerado continua permitido até a loja desligar', () => {
+    expect(parseFloristStockConfig(null).allowZeroStockSale).toBe(true);
+    expect(parseFloristStockConfig('{"deductOnOrders":true}').allowZeroStockSale).toBe(true);
+    expect(parseFloristStockConfig('{"allowZeroStockSale":false}').allowZeroStockSale).toBe(false);
+  });
+
+  it('com a venda sem saldo desligada, bloqueia só o que passa do estoque controlado', () => {
+    const rosa = { id: 'rosa', name: 'Rosa', trackStock: true, stockQuantity: 2 };
+    const vaso = { id: 'vaso', name: 'Vaso', trackStock: true, stockQuantity: 0 };
+    const cartao = { id: 'cartao', name: 'Cartão', trackStock: false, stockQuantity: 0 };
+    const blocked = { deductOnOrders: true, allowZeroStockSale: false };
+    expect(findStockShortages([{ product: rosa, quantity: 2 }, { product: cartao, quantity: 5 }], blocked)).toEqual([]);
+    const shortages = findStockShortages(
+      [{ product: rosa, quantity: 2 }, { product: rosa, quantity: 1 }, { product: vaso, quantity: 1 }], blocked);
+    expect(shortages.map((s) => [s.productId, s.available, s.requested])).toEqual([['rosa', 2, 3], ['vaso', 0, 1]]);
+    expect(stockShortageMessage(shortages[0])).toBe('"Rosa" tem só 2 em estoque.');
+    expect(stockShortageMessage(shortages[1])).toBe('"Vaso" está sem estoque.');
+  });
+
+  it('com a venda sem saldo permitida, nada é bloqueado', () => {
+    const vaso = { id: 'vaso', name: 'Vaso', trackStock: true, stockQuantity: 0 };
+    expect(findStockShortages([{ product: vaso, quantity: 3 }], { deductOnOrders: true, allowZeroStockSale: true })).toEqual([]);
   });
 });

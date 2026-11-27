@@ -33,6 +33,7 @@ import iniciarImpressaoCmd from '../../scripts/iniciar_impressao.cmd?raw';
 import verificarPywin32Py from '../../scripts/verificar_pywin32.py?raw';
 import { usePrintStations } from '@/hooks/usePrintStations';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { FLORIST_PRIMARY_HEX } from '@/lib/companyProfile';
 
 const escapePythonString = (value: string) => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -58,6 +59,8 @@ export default function Settings() {
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
   const { stations, addStation, deleteStation, updateStationPrinter } = usePrintStations(company?.id);
   const { isFlorist, terminology, profileText, productionText } = useCompanyProfile(company?.id);
+  // Com Frente de Caixa, as regras de estoque da floricultura ficam na aba Estoque de lá.
+  const { enabled: frenteCaixaEnabled, loading: frenteCaixaLoading } = useMercadoEnabled(company?.id);
   const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
@@ -1240,7 +1243,7 @@ if errorlevel 1 (
 
         {/* Tab Dashboard */}
         <TabsContent value="dashboard" className="space-y-6">
-          {isFlorist && <FloristStockSettings companyId={company?.id} />}
+          {isFlorist && !frenteCaixaLoading && !frenteCaixaEnabled && <FloristStockSettings companyId={company?.id} />}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

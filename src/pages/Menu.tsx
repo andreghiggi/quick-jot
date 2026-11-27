@@ -52,6 +52,8 @@ import { validateGift, normalizePhone, GiftInput } from '@/lib/floristGift';
 import { DeliveryShift, fetchDeliveryShifts, getSlotsForDate } from '@/lib/floristShifts';
 import { acceptsDeliveryToday, fetchSameDayConfig, pickupNotice, selectableSlots } from '@/lib/floristSameDay';
 import { useFloristSameDay } from '@/hooks/useFloristSameDay';
+import { useFloristStock } from '@/hooks/useFloristStock';
+import { findStockShortages, stockShortageMessage } from '@/lib/floristStock';
 const todaySP = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 import { computeCouponDiscount, type Coupon } from '@/hooks/useCoupons';
 import { Ticket, X as XIcon } from 'lucide-react';
@@ -195,6 +197,15 @@ export default function Menu() {
   const [itemDestination, setItemDestination] = useState<Partial<FloristDestination>>({});
   const [deliveryShifts, setDeliveryShifts] = useState<DeliveryShift[]>([]);
   const { config: sameDay, now: sameDayNow } = useFloristSameDay(company?.id, isFlorist);
+  const floristStock = useFloristStock(company?.id, isFlorist);
+  /** Floricultura com venda sem saldo desligada: avisa e devolve true quando faltar estoque. */
+  function stockBlocked(lines: { product: Product; quantity: number }[]) {
+    if (!isFlorist) return false;
+    const fresh = lines.map((l) => ({ ...l, product: products.find((p) => p.id === l.product.id) ?? l.product }));
+    const shortage = findStockShortages(fresh, floristStock)[0];
+    if (shortage) toast.error(stockShortageMessage(shortage));
+    return !!shortage;
+  }
   const [showNewCustomerPopup, setShowNewCustomerPopup] = useState(false);
   const [newCustomerPromptedFor, setNewCustomerPromptedFor] = useState<string | null>(null);
   const customerNameRef = useRef<HTMLInputElement>(null);
@@ -1043,6 +1054,8 @@ export default function Menu() {
       return;
     }
 
+    if (stockBlocked([...cart, { product: selectedProduct, quantity: times }])) return;
+
     let floristDestination: FloristDestination | undefined;
     if (isFlorist) {
       const errs = itemDestinationErrors;
@@ -1090,6 +1103,7 @@ export default function Menu() {
     // (o novo item será adicionado como linha separada no carrinho).
     if (delta > 0) {
       const item = cart[index];
+      if (item && stockBlocked([...cart, { product: item.product, quantity: delta }])) return;
       if (item) {
         const groupsForItem = getGroupsForProduct(item.product.id, item.product.category);
         const hasOptionals = groupsForItem.length > 0 ||
@@ -1118,6 +1132,7 @@ export default function Menu() {
   }
 
   function duplicateCartItem(index: number) {
+    if (cart[index] && stockBlocked([...cart, { product: cart[index].product, quantity: 1 }])) return;
     setCart((prev) => {
       const item = prev[index];
       if (!item) return prev;
@@ -1270,6 +1285,7 @@ export default function Menu() {
       toast.error('Estabelecimento fechado no momento');
       return;
     }
+    if (stockBlocked(cart)) return;
 
     // Collect all field errors at once
     const errors = new Set<string>();

@@ -10,9 +10,11 @@ export const FLORIST_STOCK_REFERENCE = 'florist_order';
 export interface FloristStockConfig {
   /** Pedidos confirmados (Catálogo) e criados no Balcão baixam o estoque. */
   deductOnOrders: boolean;
+  /** Desligado: produto com estoque controlado não pode ser vendido além do saldo. */
+  allowZeroStockSale: boolean;
 }
-// Começa desligada: nada muda no estoque até a loja ligar nas Configurações.
-export const DEFAULT_FLORIST_STOCK: FloristStockConfig = { deductOnOrders: false };
+// Baixa começa desligada e a venda sem saldo continua permitida: nada muda até a loja mexer nas Configurações.
+export const DEFAULT_FLORIST_STOCK: FloristStockConfig = { deductOnOrders: false, allowZeroStockSale: true };
 
 export function parseFloristStockConfig(value: unknown): FloristStockConfig {
   let raw: any = value;
@@ -20,7 +22,38 @@ export function parseFloristStockConfig(value: unknown): FloristStockConfig {
     try { raw = JSON.parse(raw); } catch { raw = null; }
   }
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_FLORIST_STOCK };
-  return { deductOnOrders: raw.deductOnOrders === true };
+  return { deductOnOrders: raw.deductOnOrders === true, allowZeroStockSale: raw.allowZeroStockSale !== false };
+}
+
+export interface StockSaleLine {
+  product: { id?: string | null; name: string; trackStock?: boolean; stockQuantity?: number };
+  quantity: number;
+}
+export interface StockShortage { productId: string; name: string; available: number; requested: number }
+
+/**
+ * Itens pedidos além do saldo. Só vale com "permitir venda com estoque zerado" desligado
+ * e para produtos com controle de estoque ligado no cadastro.
+ */
+export function findStockShortages(lines: StockSaleLine[], config: FloristStockConfig): StockShortage[] {
+  if (config.allowZeroStockSale) return [];
+  const byProduct = new Map<string, StockShortage>();
+  for (const line of lines) {
+    const qty = Number(line.quantity);
+    const id = line.product?.id;
+    if (!id || !line.product.trackStock || !Number.isFinite(qty) || qty <= 0) continue;
+    const entry = byProduct.get(id)
+      ?? { productId: id, name: line.product.name, available: Math.max(0, Number(line.product.stockQuantity) || 0), requested: 0 };
+    entry.requested = round(entry.requested + qty);
+    byProduct.set(id, entry);
+  }
+  return [...byProduct.values()].filter((entry) => entry.requested > entry.available);
+}
+
+export function stockShortageMessage(shortage: StockShortage): string {
+  return shortage.available <= 0
+    ? `"${shortage.name}" está sem estoque.`
+    : `"${shortage.name}" tem só ${shortage.available} em estoque.`;
 }
 
 export interface StockLine { productId?: string | null; quantity: number }
@@ -63,7 +96,9 @@ export async function fetchFloristStockConfig(companyId: string): Promise<Floris
   return parseFloristStockConfig(data?.value);
 }
 
-export async function saveFloristStockConfig(companyId: string, config: FloristStockConfig): Promise<FloristStockConfig> {
+/** Relê antes de gravar para não apagar o outro interruptor. */
+export async function saveFloristStockConfig(companyId: string, patch: Partial<FloristStockConfig>): Promise<FloristStockConfig> {
+  const config = { ...(await fetchFloristStockConfig(companyId)), ...patch };
   const { data, error } = await supabase.from('store_settings').upsert({
     company_id: companyId, key: FLORIST_STOCK_KEY, value: JSON.stringify(config), updated_at: new Date().toISOString(),
   }, { onConflict: 'key,company_id' }).select('value').single();

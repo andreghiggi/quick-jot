@@ -21,6 +21,8 @@ import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { useFloristStock } from '@/hooks/useFloristStock';
+import { findStockShortages, stockShortageMessage } from '@/lib/floristStock';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { OrderItem } from '@/types/order';
 import { Product, ProductOptional, CartItem } from '@/types/product';
@@ -77,6 +79,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   const { company } = useAuthContext();
   // Floricultura: textos falam em produção, não em cozinha (só apresentação).
   const { isFlorist, productionText, sendToProductionLabel } = useCompanyProfile(company?.id);
+  const floristStock = useFloristStock(company?.id, isFlorist);
   const { products, loading: productsLoading, getCategories, getActiveProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
@@ -793,6 +796,8 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
       groupedOptionalNames.push(`Adicionais: ${oldStyleStr}`);
     }
 
+    if (stockBlocked([...cart, { product: selectedProduct, quantity: times }])) return;
+
     const newItems = Array.from({ length: times }, (_, i): CartItem => {
       const perNote = (notesList?.[i] ?? itemNotes ?? '').trim();
       return {
@@ -810,11 +815,21 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
     setItemNotes('');
   }
 
+  /** Floricultura com venda sem saldo desligada: avisa e devolve true quando faltar estoque. */
+  function stockBlocked(lines: { product: Product; quantity: number }[]) {
+    if (!isFlorist) return false;
+    const fresh = lines.map((l) => ({ ...l, product: products.find((p) => p.id === l.product.id) ?? l.product }));
+    const shortage = findStockShortages(fresh, floristStock)[0];
+    if (shortage) toast.error(stockShortageMessage(shortage));
+    return !!shortage;
+  }
+
   function removeCartItem(index: number) {
     setCart(prev => prev.filter((_, i) => i !== index));
   }
 
   function duplicateCartItem(index: number) {
+    if (cart[index] && stockBlocked([...cart, { product: cart[index].product, quantity: 1 }])) return;
     setCart(prev => {
       const item = prev[index];
       if (!item) return prev;
@@ -831,6 +846,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
   }
 
   function updateCartQuantity(index: number, delta: number) {
+    if (delta > 0 && cart[index] && stockBlocked([...cart, { product: cart[index].product, quantity: delta }])) return;
     setCart(prev =>
       prev.map((item, i) =>
         i === index ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item

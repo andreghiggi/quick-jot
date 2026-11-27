@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2, Save, CreditCard, Printer, Settings, Receipt, Wallet, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -17,6 +17,9 @@ import { useMercadoEnabled } from '@/hooks/useMercadoEnabled';
 import { useFinanceiroEnabled } from '@/hooks/useFinanceiroEnabled';
 import { usePdvSettings, type PdvSettings } from '@/hooks/usePdvSettings';
 import { useTaxRules } from '@/hooks/useTaxRules';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FloristStockSettings } from '@/components/settings/FloristStockSettings';
 
 /**
  * Configurações consolidadas da Frente de Caixa.
@@ -35,6 +38,10 @@ export default function FrenteCaixaConfiguracoes() {
   const [form, setForm] = useState<PdvSettings>(settings);
   const [dirty, setDirty] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
+  // Aba Estoque: somente perfil floricultura; as demais lojas veem a tela como sempre foi.
+  const { isFlorist } = useCompanyProfile(company?.id);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stockTab = isFlorist && searchParams.get('aba') === 'estoque';
 
   useEffect(() => {
     setForm(settings);
@@ -142,6 +149,23 @@ export default function FrenteCaixaConfiguracoes() {
         </Button>
       </div>
 
+      {isFlorist && (
+        <Tabs
+          value={stockTab ? 'estoque' : 'geral'}
+          onValueChange={(value) => setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            if (value === 'estoque') next.set('aba', 'estoque'); else next.delete('aba');
+            return next;
+          }, { replace: true })}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="geral">Geral</TabsTrigger>
+            <TabsTrigger value="estoque">Estoque</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
+      {stockTab ? <FloristStockSettings companyId={company?.id} /> : (<>
       {/* Mensagem promocional */}
       <Card>
         <CardHeader>
@@ -551,6 +575,7 @@ export default function FrenteCaixaConfiguracoes() {
           </Button>
         </CardContent>
       </Card>
+      </>)}
     </div>
   );
 }

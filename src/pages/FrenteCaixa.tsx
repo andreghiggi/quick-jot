@@ -107,6 +107,8 @@ import { buildPagamentosSplit } from '@/utils/pdvV2MultiPayment';
 import { resolveFrenteCaixaFiscalMode } from '@/lib/frenteCaixaFiscalRules';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
+import { useFloristStock } from '@/hooks/useFloristStock';
+import { findStockShortages, stockShortageMessage } from '@/lib/floristStock';
 import { FrenteCaixaCashIndicator } from '@/components/frente-caixa/FrenteCaixaCashIndicator';
 import { nonFiscalPrintAction, printNonFiscalSale } from '@/utils/frenteCaixaNonFiscalPrint';
 
@@ -272,6 +274,18 @@ export default function FrenteCaixa() {
     isOpening,
   } = useCashRegister({ companyId: company?.id });
   const { isFlorist } = useCompanyProfile(company?.id);
+  const floristStock = useFloristStock(company?.id, isFlorist);
+  /** Floricultura com venda sem saldo desligada: avisa e devolve true quando faltar estoque. Itens importados de pedido já foram vendidos. */
+  function stockBlocked(extra?: { product: Product; quantity: number }) {
+    if (!isFlorist) return false;
+    const sold = lines.filter((l) => !l.imported && l.product_id).flatMap((l) => {
+      const product = products.find((p) => p.id === l.product_id);
+      return product ? [{ product, quantity: l.quantity }] : [];
+    });
+    const shortage = findStockShortages(extra ? [...sold, extra] : sold, floristStock)[0];
+    if (shortage) { toast.error(stockShortageMessage(shortage)); beep(false); }
+    return !!shortage;
+  }
 
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
@@ -634,6 +648,7 @@ export default function FrenteCaixa() {
       beep(false);
       return;
     }
+    if (!(p as any).sellByWeight && stockBlocked({ product: p, quantity: qty })) return;
     // Produto vendido por peso (KG): abrir modal de peso. O preço é por kg.
     if ((p as any).sellByWeight) {
       setWeightPrompt(p);
@@ -802,6 +817,7 @@ export default function FrenteCaixa() {
       toast.error('Abra um caixa antes de vender');
       return;
     }
+    if (stockBlocked()) return;
     setPaymentOpen(true);
   }
 
