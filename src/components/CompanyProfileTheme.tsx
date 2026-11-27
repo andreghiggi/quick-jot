@@ -2,7 +2,14 @@ import { useEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
-import { clearLegacyLoginProfile, getLoginIsFlorist } from '@/lib/companyProfile';
+import { getBrandFavicon } from '@/lib/brandLogo';
+import {
+  clearLegacyLoginProfile,
+  FLORIST_PRIMARY_HEX,
+  getLoginIsFlorist,
+  getProductDescription,
+  getProductTagline,
+} from '@/lib/companyProfile';
 
 const FLORIST_THEME: Record<string, string> = {
   '--primary': '145 94% 12%',
@@ -49,6 +56,45 @@ export function CompanyProfileTheme({ children }: { children: ReactNode }) {
         else root.style.removeProperty(property);
       });
       delete root.dataset.companyProfile;
+    };
+  }, [isFlorist]);
+
+  useEffect(() => {
+    if (!isFlorist) return;
+
+    const descriptionMeta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    const favicon = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+    const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const previous = {
+      title: document.title,
+      description: descriptionMeta?.content,
+      faviconHref: favicon?.getAttribute('href'),
+      faviconType: favicon?.getAttribute('type'),
+      themeColor: themeColor?.content,
+    };
+
+    document.title = `ComandaTech - ${getProductTagline(true)}`;
+    if (descriptionMeta) descriptionMeta.content = getProductDescription(true);
+    if (favicon) {
+      favicon.type = 'image/png';
+      favicon.href = getBrandFavicon(true);
+    }
+    if (themeColor) themeColor.content = FLORIST_PRIMARY_HEX;
+
+    return () => {
+      document.title = previous.title;
+      if (descriptionMeta && previous.description !== undefined) {
+        descriptionMeta.content = previous.description;
+      }
+      if (favicon) {
+        if (previous.faviconHref) favicon.setAttribute('href', previous.faviconHref);
+        else favicon.removeAttribute('href');
+        if (previous.faviconType) favicon.setAttribute('type', previous.faviconType);
+        else favicon.removeAttribute('type');
+      }
+      if (themeColor && previous.themeColor !== undefined) {
+        themeColor.content = previous.themeColor;
+      }
     };
   }, [isFlorist]);
 

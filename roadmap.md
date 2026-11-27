@@ -151,3 +151,9 @@
 - [x] Compartilhar a configuração existente com Horários e catálogo; preservar retirada, prazos, agendamentos futuros e retorno no dia seguinte.
 - [x] 50 testes de regras/regressão/persistência; PDV real com dados isolados conferido em computador/celular: encerrar, recarregar, reabrir em Horários, filtrar turnos, atualizar outra sessão, falha de gravação e isolamento de restaurantes. Sem alterar lojas reais.
 - [ ] Validar operação real na floricultura da VPS — depende de implantação autorizada e acesso à loja.
+
+## Floricultura — identidade visual de acesso e PDV (27/11)
+- [x] Pedido Express em verde escuro somente no perfil floricultura; restaurantes mantêm o botão atual.
+- [x] Título, descrição, cor do navegador e favicon florais no link de floricultura e nas empresas reconhecidas pelo módulo; logo e subtítulo centralizados reutilizados.
+- [x] Links floral e tradicional conferidos no navegador; 317 testes e build aprovados, sem publicação.
+- [ ] Conferir o botão no PDV de uma floricultura real — a sessão disponível é de revendedor e não abriu uma loja floral.

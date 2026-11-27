@@ -15,6 +15,7 @@ import { loadCashClosingSales } from '@/utils/cashClosingSales';
 import { FrenteCaixaCashMovementDialog, type CashMovementType } from '@/components/frente-caixa/FrenteCaixaCashMovementDialog';
 import { brl as formatPrice } from './_format';
 import { StoreAvailabilityControl } from '@/components/StoreAvailabilityControl';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 interface PDVV2TopBarProps {
   storeName: string;
@@ -81,13 +82,16 @@ export function PDVV2TopBar({
       setTotalsLoading(false);
     }
   }
+  const { isFlorist } = useCompanyProfile(companyId);
   const newOrderLabel = 'Pedido Express';
   const newOrderBtn = (
     <Button
       size="sm"
       onClick={onNewOrder}
       disabled={!cashOpen}
-      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground disabled:opacity-50"
+      className={isFlorist
+        ? 'bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50'
+        : 'bg-destructive hover:bg-destructive/90 text-destructive-foreground disabled:opacity-50'}
     >
       <Plus className="h-4 w-4 mr-2" />
       {newOrderLabel}

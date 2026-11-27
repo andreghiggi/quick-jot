@@ -66,6 +66,12 @@ export function getProductTagline(isFlorist: boolean): string {
   return isFlorist ? 'Software para Floriculturas' : 'Software para Restaurantes';
 }
 
+export function getProductDescription(isFlorist: boolean): string {
+  return isFlorist
+    ? 'ComandaTech - Software simples e eficiente para gerenciar pedidos da sua floricultura. Controle pedidos, acompanhe o status e aumente suas vendas.'
+    : 'ComandaTech - Software simples e eficiente para gerenciar pedidos do seu restaurante. Controle pedidos, acompanhe o status e aumente suas vendas.';
+}
+
 /** Floriculturas não usam comandas, mesas nem garçons. */
 export function usesTableService(isFlorist: boolean): boolean {
   return !isFlorist;
