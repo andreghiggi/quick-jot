@@ -38,6 +38,18 @@ export function getCompanyProfileText(isFlorist: boolean, text: string): string 
   );
 }
 
+/** Floricultura não tem cozinha: os textos de tela falam em produção. Só apresentação. */
+export function getProductionText(isFlorist: boolean, text: string): string {
+  if (!isFlorist) return text;
+  return text.replace(/cozinha/gi, (word) =>
+    word === word.toUpperCase() ? 'PRODUÇÃO' : word[0] === 'C' ? 'Produção' : 'produção',
+  );
+}
+
+export function getSendToProductionLabel(isFlorist: boolean): string {
+  return isFlorist ? '🌿 Enviar para Produção' : '👨‍🍳 Enviar para Cozinha';
+}
+
 export function getCompanyOrderOrigins(isFlorist: boolean) {
   return isFlorist
     ? (['cardapio', 'balcao'] as const)

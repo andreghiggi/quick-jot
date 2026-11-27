@@ -33,6 +33,7 @@ import {
 } from '@/utils/tefOrderActions';
 import { getNFCeRecordByOrderId, printDanfeFromRecord, type NFCeRecord } from '@/services/nfceService';
 import { OrderCardChargeDialog } from '@/components/OrderCardChargeDialog';
+import { floristCanCharge } from '@/lib/floristCharge';
 import { OrderEditDialog } from '@/components/OrderEditDialog';
 import { usePdvV2Enabled } from '@/hooks/usePdvV2Enabled';
 import { useCompanyProfile } from '@/hooks/useCompanyProfile';
@@ -255,13 +256,23 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
   const isFullyPaidByStatus =
     (order as any).paymentStatus === 'paid' ||
     (Number(order.paidAmount || 0) >= order.total - 0.009 && Number(order.paidAmount || 0) > 0);
-  const alreadyCharged = hasChargedMarker && (isFullyPaidByStatus || !hasPendingItemPayment);
-  const showChargeButton =
-    chargeButtonEnabled &&
-    (isCardapioOrder || isBalcaoOrder) &&
-    isRetirada &&
-    (order.status === 'ready' ||
-      (isClienteLojaExpress && order.status === 'pending'));
+  // Floricultura: pedido quitado conta como cobrado mesmo sem o marcador, para não cobrar duas vezes.
+  const alreadyCharged = (hasChargedMarker && (isFullyPaidByStatus || !hasPendingItemPayment)) ||
+    (isFlorist && isFullyPaidByStatus);
+  // Floricultura: Cobrar liberado para entrega e retirada, em qualquer etapa.
+  // Restaurantes: regra de sempre (retirada, com o pedido pronto).
+  const showChargeButton = isFlorist
+    ? floristCanCharge({
+        chargeEnabled: chargeButtonEnabled,
+        origin: order.origin,
+        status: order.status,
+        cancelled: !!order.notes?.includes('[CANCELADA]'),
+      })
+    : chargeButtonEnabled &&
+      (isCardapioOrder || isBalcaoOrder) &&
+      isRetirada &&
+      (order.status === 'ready' ||
+        (isClienteLojaExpress && order.status === 'pending'));
 
   // Detecta se é pagamento TEF e se já foi estornado
   const tefInfo = useMemo(() => parseTefDataFromNotes(order.notes), [order.notes]);
@@ -998,8 +1009,9 @@ export function OrderCard({ order, paperSize = '58mm', storeName = 'Comanda Tech
       </div>
 
       {isFlorist && <FloristOrderStages order={order}
-        disableCompletion={disableAdvance || (showChargeButton && !alreadyCharged)}
-        disableReason={disableAdvanceReason || 'Conclua a cobrança antes de finalizar a retirada.'} />}
+        disableCompletion={disableAdvance}
+        disableReason={disableAdvanceReason}
+        unpaid={showChargeButton && !alreadyCharged} />}
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <div className="shrink-0">

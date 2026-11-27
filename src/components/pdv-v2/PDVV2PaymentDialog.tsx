@@ -22,6 +22,7 @@ import { ComandaNumberInput } from '@/components/comanda/ComandaNumberInput';
 import { formatComandaNumber } from '@/utils/comandaCode';
 import { COMANDA_ALLOWED_FRACTION_DENS } from '@/utils/comandaIndividualAllowList';
 import type { SplitTabPaymentDraft } from '@/utils/tabPaymentRules';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 
 type CheckoutItem = { name: string; quantity: number; unit_price: number; notes?: string | null; id?: string; paid?: boolean; paidQty?: number };
 
@@ -214,6 +215,8 @@ export function PDVV2PaymentDialog({
   onImportedFractionsChange,
 }: PDVV2PaymentDialogProps) {
   const effectiveTefFirstFlow = tefFirstFlow ?? chargeTefBeforePopups;
+  // Floricultura não usa mesas nem comandas: sem "Dividir por pessoas" e sem importar comanda.
+  const { isFlorist } = useCompanyProfile(companyId);
   // I9: advanced charge mode (selected items or split by people)
   const [i9Mode, setI9Mode] = useState<'' | 'items' | 'split'>('');
   // I9: importar fração de produto de outra comanda ainda aberta.
@@ -939,7 +942,7 @@ export function PDVV2PaymentDialog({
           {/* I9: importar fração de produto de outra comanda ainda aberta.
               Só no modo de cobrança padrão — o total importado entra em
               `grossTotal`/`finalTotal`, que não é usado nos modos split/items. */}
-          {advancedComandaCharge && currentTabId && !activeSplit && i9Mode === '' && (
+          {advancedComandaCharge && !isFlorist && currentTabId && !activeSplit && i9Mode === '' && (
             <div className="space-y-2">
               {importFractions.length > 0 && (
                 <div className="border rounded-md p-3 space-y-1">
@@ -1010,7 +1013,7 @@ export function PDVV2PaymentDialog({
           {advancedComandaCharge && checkoutItems && checkoutItems.length > 0 && !activeSplit && (
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Modo de cobrança</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className={isFlorist ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-1 sm:grid-cols-2 gap-2'}>
                 <Button
                   type="button"
                   size="sm"
@@ -1027,7 +1030,7 @@ export function PDVV2PaymentDialog({
                   <ListChecks className="w-4 h-4" />
                   <span className="truncate">Itens selecionados</span>
                 </Button>
-                <Button
+                {!isFlorist && <Button
                   type="button"
                   size="sm"
                   variant={i9Mode === 'split' ? 'default' : 'outline'}
@@ -1041,7 +1044,7 @@ export function PDVV2PaymentDialog({
                 >
                   <Users className="w-4 h-4" />
                   <span className="truncate">Dividir por pessoas</span>
-                </Button>
+                </Button>}
               </div>
 
               {/* Opção A — selecionar itens */}

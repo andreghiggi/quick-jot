@@ -6,19 +6,22 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { supabase } from '@/integrations/supabase/client';
-import { buildFloralStages, nextStageStatus, isStageComplete, floralOrderAction, type FloralNotice } from '@/lib/floristFulfillment';
+import { buildFloralStages, nextStageStatus, isStageComplete, floralOrderAction, type FloralNotice, type StageStatus } from '@/lib/floristFulfillment';
+import { floristUnpaidDeliveryWarning } from '@/lib/floristCharge';
 import type { Order } from '@/types/order';
 import { toast } from 'sonner';
 
 const labels = { pending:'Pendente',ready_for_pickup:'Pronto para retirada',out_for_delivery:'Saiu para entrega',delivered:'Entregue',picked_up:'Retirado' };
 const actions = { pending:'',ready_for_pickup:'Avisar retirada pronta',out_for_delivery:'Saiu para entrega',delivered:'Marcar entregue',picked_up:'Marcar retirado' };
 const noticeLabels: Record<string,string> = {received:'Recebimento',confirmed:'Confirmação',ready_for_pickup:'Retirada pronta',out_for_delivery:'Saiu para entrega',delivered:'Entregue',completed:'Conclusão'};
-export function FloristOrderStages({order,disableCompletion=false,disableReason}: {order:Order;disableCompletion?:boolean;disableReason?:string}) {
+const PICKUP_UNPAID_REASON = 'Conclua a cobrança antes de finalizar a retirada.';
+export function FloristOrderStages({order,disableCompletion=false,disableReason,unpaid=false}: {order:Order;disableCompletion?:boolean;disableReason?:string;/** Pedido ainda não cobrado: retirada só conclui depois de cobrar; entrega pede confirmação. */unpaid?:boolean}) {
   const { advanceFloristStage } = useOrderContext();
   const client = useQueryClient();
   const [busy,setBusy] = useState<string | null>(null);
   const busyRef = useRef(false);
   const [uncertain,setUncertain] = useState<FloralNotice | null>(null);
+  const [unpaidStep,setUnpaidStep] = useState<{stageId:string;target:StageStatus} | null>(null);
   const queryKey = ['florist-notices',order.companyId,order.id];
   const {data:notices=[],isError,refetch} = useQuery({queryKey,enabled:!!order.companyId,staleTime:30000,queryFn:async()=>{
     const {data,error} = await supabase.from('florist_notifications').select('id,stage_id,event,status,detail,created_at,lease_until').eq('company_id',order.companyId || '').eq('order_id',order.id).order('created_at');
@@ -44,12 +47,18 @@ export function FloristOrderStages({order,disableCompletion=false,disableReason}
     }catch(error){toast.error(error instanceof Error?error.message:'Não foi possível reenviar');}
     finally{busyRef.current=false;setBusy(null);setUncertain(null);void client.invalidateQueries({queryKey});}
   }
+  async function advance(stageId:string,target:StageStatus) {
+    if(busyRef.current)return;busyRef.current=true;setBusy(stageId);
+    try{await advanceFloristStage(order.id,stageId,target);}
+    finally{busyRef.current=false;setBusy(null);setUnpaidStep(null);void client.invalidateQueries({queryKey});}
+  }
   return <section className="my-3 min-w-0 border-t border-border pt-3" aria-label={`Remessas do pedido ${order.shortCode || ''}`}>
     <div className="space-y-3">
       {stages.map((stage)=>{
         const next=nextStageStatus(stage);
         const terminal=next==='picked_up'||next==='delivered';
-        const blocked=!!cancelled||!confirmed||order.status==='delivered'||(terminal&&disableCompletion);
+        const pickupUnpaid=unpaid&&stage.mode==='pickup';
+        const blocked=!!cancelled||!confirmed||order.status==='delivered'||(terminal&&(disableCompletion||pickupUnpaid));
         return <div key={stage.id} className="min-w-0 border-l-2 border-primary pl-3">
           <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
             {stage.mode==='delivery'?<Truck className="h-4 w-4 shrink-0 text-primary"/>:<Store className="h-4 w-4 shrink-0 text-primary"/>}
@@ -59,10 +68,9 @@ export function FloristOrderStages({order,disableCompletion=false,disableReason}
           {stage.mode==='delivery'&&<p className="mt-1 break-words text-xs text-muted-foreground">{stage.date.split('-').reverse().join('/')} · {stage.slot || 'Horário a combinar'}{stage.recipientName?` · Para: ${stage.recipientName}`:''}</p>}
           <ul className="my-2 text-sm">{stage.items.map(item=><li key={item.id} className="break-words">{item.quantity}x {item.name}</li>)}</ul>
           {next&&<Button size="sm" variant="outline" className="h-auto min-h-9 max-w-full gap-2 whitespace-normal text-left" disabled={blocked||!!busy}
-            title={terminal&&disableCompletion?disableReason:undefined} onClick={async()=>{
-              if(busyRef.current)return;busyRef.current=true;setBusy(stage.id);
-              try{await advanceFloristStage(order.id,stage.id,next);}
-              finally{busyRef.current=false;setBusy(null);void client.invalidateQueries({queryKey});}
+            title={terminal&&disableCompletion?disableReason:terminal&&pickupUnpaid?PICKUP_UNPAID_REASON:undefined} onClick={()=>{
+              if(floristUnpaidDeliveryWarning({mode:stage.mode,target:next,unpaid})) setUnpaidStep({stageId:stage.id,target:next});
+              else void advance(stage.id,next);
             }}>
             {busy===stage.id?<Loader2 className="h-4 w-4 shrink-0 animate-spin"/>:<Check className="h-4 w-4 shrink-0"/>}{actions[next]}
           </Button>}
@@ -80,6 +88,9 @@ export function FloristOrderStages({order,disableCompletion=false,disableReason}
       {pendingNotices.some(n=>n.status==='queued')&&!pendingNotices.some(n=>['failed','uncertain','sending'].includes(n.status))&&!cancelled&&<Button variant="ghost" size="sm" disabled={!!busy} className="mt-1 h-7 gap-1 px-2 text-xs" onClick={()=>void retry()}><RefreshCw className="h-3 w-3"/>Retomar envios</Button>}
       {staleSending&&!cancelled&&<Button variant="ghost" size="sm" disabled={!!busy} className="mt-1 h-7 gap-1 px-2 text-xs" onClick={()=>void retry()}><RefreshCw className="h-3 w-3"/>Conferir envio interrompido</Button>}
     </div>}
+    <AlertDialog open={!!unpaidStep} onOpenChange={open=>{if(!open&&!busy)setUnpaidStep(null);}}>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Este pedido ainda não foi cobrado</AlertDialogTitle><AlertDialogDescription>{unpaidStep?.target==='delivered'?'Você está marcando a entrega como concluída sem cobrança registrada.':'A entrega vai sair sem cobrança registrada.'} Se o pagamento for na entrega ou já foi combinado, pode continuar e cobrar depois pelo botão Cobrar.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={!!busy}>Voltar e cobrar</AlertDialogCancel><AlertDialogAction disabled={!!busy} onClick={e=>{e.preventDefault();if(unpaidStep)void advance(unpaidStep.stageId,unpaidStep.target);}}>Continuar sem cobrar</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+    </AlertDialog>
     <AlertDialog open={!!uncertain} onOpenChange={open=>{if(!open)setUncertain(null);}}>
       <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Reenviar mensagem com resultado incerto?</AlertDialogTitle><AlertDialogDescription>A mensagem pode ter sido enviada antes da conexão falhar. Confira a conversa do comprador no WhatsApp para evitar repetição.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={!!busy}>Voltar</AlertDialogCancel><AlertDialogAction disabled={!!busy} onClick={e=>{e.preventDefault();if(uncertain)void retry(uncertain,true);}}>Conferi, reenviar</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
     </AlertDialog>

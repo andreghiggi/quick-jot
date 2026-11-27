@@ -9,6 +9,7 @@ import { useOrderNotificationSound } from '@/hooks/useOrderNotificationSound';
 import { buildMenuLink } from '@/utils/menuLink';
 import { useAutoConfirmOrders } from '@/hooks/useAutoConfirmOrders';
 import { checkFloralProfile, floralOrderAction, type StageStatus } from '@/lib/floristFulfillment';
+import { syncFloristOrderStock, type StockLine } from '@/lib/floristStock';
 
 interface UseOrdersOptions {
   companyId?: string | null;
@@ -288,6 +289,22 @@ export function useOrders(options: UseOrdersOptions = {}) {
     };
   }, [companyId]);
 
+  // Estoque dos pedidos — SOMENTE perfil floricultura. Nunca interrompe o pedido:
+  // se o estoque não puder ser ajustado, o operador é avisado.
+  async function syncFloristStock(orderId: string, items: StockLine[], active: boolean, label?: string, storeId = companyId) {
+    if (!storeId) return;
+    try {
+      if (!(await checkFloralProfile(storeId))) return;
+      const result = await syncFloristOrderStock({ companyId: storeId, orderId, items, active, label });
+      if (result.failed) toast.warning('Não foi possível atualizar o estoque de todos os itens deste pedido. Confira o estoque.');
+    } catch (error) {
+      console.error('[Orders] estoque floral', error);
+      toast.warning('Não foi possível atualizar o estoque deste pedido. Confira o estoque.');
+    }
+  }
+  const stockLabel = (o?: { shortCode?: string; orderCode?: string; dailyNumber?: number } | null) =>
+    o ? `#${o.shortCode || o.orderCode || o.dailyNumber || ''}` : '';
+
   async function addOrder(
     orderData: Omit<Order, 'id' | 'createdAt' | 'dailyNumber' | 'orderCode'>
   ): Promise<{ id: string; shortCode?: string; orderCode?: string; dailyNumber?: number } | null> {
@@ -324,6 +341,13 @@ export function useOrders(options: UseOrdersOptions = {}) {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Floricultura: pedido criado no Balcão já sai do estoque (não segura o fechamento).
+      if (orderData.origin === 'balcao' && orderData.status !== 'canceled') {
+        void syncFloristStock(newOrder.id, orderData.items, true,
+          stockLabel({ shortCode: (newOrder as any).short_code, orderCode: (newOrder as any).order_code, dailyNumber: (newOrder as any).daily_number }),
+          orderData.companyId || companyId);
+      }
 
       // Atualiza a lista em segundo plano — não segura o fechamento do Pedido Express.
       void fetchOrders();
@@ -362,6 +386,11 @@ export function useOrders(options: UseOrdersOptions = {}) {
         // Revert on error
         await fetchOrders();
         throw error;
+      }
+
+      if (status === 'canceled') {
+        const cancelledOrder = ordersRef.current.find((o) => o.id === orderId);
+        if (cancelledOrder) void syncFloristStock(orderId, cancelledOrder.items, false, stockLabel(cancelledOrder));
       }
 
       // Auto-register to cash register when order is delivered
@@ -578,6 +607,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
       const order = ordersRef.current.find((o) => o.id === orderId);
       if (order && companyId && await checkFloralProfile(companyId)) {
         const result = await floralOrderAction({companyId,orderId,action:'confirm'});
+        // Pedido confirmado sai do estoque; repetir a confirmação não baixa de novo.
+        await syncFloristStock(orderId, order.items, true, stockLabel(order));
         await fetchOrders();
         const pending = result.notices.some(n => !['accepted','skipped'].includes(n.status));
         if (pending) toast.warning('Pedido confirmado; há mensagem pendente. Confira o WhatsApp no pedido.');
@@ -771,6 +802,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
 
   async function deleteOrder(orderId: string): Promise<boolean> {
     try {
+      const deletedOrder = ordersRef.current.find((o) => o.id === orderId);
       // Optimistically remove from local state for instant UI feedback
       setOrders(prev => prev.filter(o => o.id !== orderId));
       // Invalidate dedupe cache so the next fetch always re-renders
@@ -796,6 +828,9 @@ export function useOrders(options: UseOrdersOptions = {}) {
         await fetchOrders(); // revert
         throw orderError;
       }
+
+      // Floricultura: pedido excluído devolve ao estoque o que tinha saído.
+      if (deletedOrder) void syncFloristStock(orderId, deletedOrder.items, false, stockLabel(deletedOrder));
 
       // Background sync (no need to await for UI feedback)
       fetchOrders();
@@ -832,6 +867,11 @@ export function useOrders(options: UseOrdersOptions = {}) {
   // fluxos que já gravaram a mudança direto no Supabase (ex.: cancelamento),
   // para o card sair da tela na hora, sem esperar o aviso de tempo real.
   function applyLocalOrderStatus(orderId: string, status: OrderStatus, notes?: string) {
+    if (status === 'canceled') {
+      // O cancelamento já foi gravado por quem chamou; floricultura devolve o estoque.
+      const cancelledOrder = ordersRef.current.find((o) => o.id === orderId);
+      if (cancelledOrder) void syncFloristStock(orderId, cancelledOrder.items, false, stockLabel(cancelledOrder));
+    }
     prevOrdersJsonRef.current = '';
     setOrders(prev =>
       prev.map(o =>

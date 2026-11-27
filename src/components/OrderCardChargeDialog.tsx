@@ -56,7 +56,7 @@ interface OrderCardChargeDialogProps {
 const AMORE_MIO_ID = 'f5f9eec3-67bc-497a-88a6-ce41d3b15df8';
 export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: OrderCardChargeDialogProps) {
   const { company } = useAuthContext();
-  const { terminology } = useCompanyProfile(order.companyId ?? company?.id);
+  const { terminology, isFlorist } = useCompanyProfile(order.companyId ?? company?.id);
   const { currentRegister, addSale } = useCashRegister({ companyId: company?.id });
   const { products } = useProducts({ companyId: company?.id });
   const { taxRules } = useTaxRules({ companyId: company?.id });
@@ -760,6 +760,9 @@ export function OrderCardChargeDialog({ order, open, onOpenChange, onCharged }: 
         total={chargeBaseTotal}
         fiscalEnabled={fiscalEnabled}
         contextKey={`order:${order.id}`}
+        // Floricultura: cada parte aprovada fica guardada; se a tela fechar ou faltar luz,
+        // a cobrança reabre com o que já foi pago e só o restante a cobrar.
+        cashRegisterId={isFlorist ? currentRegister?.id : undefined}
         contextLabel={`Pedido #${order.orderCode || order.dailyNumber}`}
         title={`Dividir formas — Pedido #${order.orderCode || order.dailyNumber}`}
         processingStatus={multiPayStatus}

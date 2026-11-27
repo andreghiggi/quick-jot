@@ -24,6 +24,7 @@ import { useDeliveryNeighborhoods } from '@/hooks/useDeliveryNeighborhoods';
 import { BusinessHoursSettings } from '@/components/settings/BusinessHoursSettings';
 import { FloristDeliveryShiftsSettings } from '@/components/settings/FloristDeliveryShiftsSettings';
 import { FloristSameDaySettings } from '@/components/settings/FloristSameDaySettings';
+import { FloristStockSettings } from '@/components/settings/FloristStockSettings';
 import { ButtonColorPicker } from '@/components/settings/ButtonColorPicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import autoPrinterTemplate from '../../scripts/auto_printer.py?raw';
@@ -56,7 +57,7 @@ export default function Settings() {
   const { toast } = useToast();
   const { settings: storeSettings, saveDeliveryFeeCity, saveDeliveryFeeInterior, saveCardVisibility, updateSetting, saveBannerUrl } = useStoreSettings({ companyId: company?.id });
   const { stations, addStation, deleteStation, updateStationPrinter } = usePrintStations(company?.id);
-  const { isFlorist, terminology, profileText } = useCompanyProfile(company?.id);
+  const { isFlorist, terminology, profileText, productionText } = useCompanyProfile(company?.id);
   const [newStationName, setNewStationName] = useState('');
   const [bannerUrl, setBannerUrl] = useState('');
   const [isBannerUploading, setIsBannerUploading] = useState(false);
@@ -1239,6 +1240,7 @@ if errorlevel 1 (
 
         {/* Tab Dashboard */}
         <TabsContent value="dashboard" className="space-y-6">
+          {isFlorist && <FloristStockSettings companyId={company?.id} />}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1570,7 +1572,7 @@ if errorlevel 1 (
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">Impressão Comanda Produção</p>
-                  <p className="text-sm text-muted-foreground">{profileText('Ao receber pedido do cardápio, imprime também a comanda para a cozinha')}</p>
+                  <p className="text-sm text-muted-foreground">{productionText(profileText('Ao receber pedido do cardápio, imprime também a comanda para a cozinha'))}</p>
                 </div>
                 <Switch
                   checked={storeSettings.autoPrintProductionTicket}

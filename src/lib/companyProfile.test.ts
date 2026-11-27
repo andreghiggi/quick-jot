@@ -37,3 +37,16 @@ describe('florist login and table service', () => {
     assert.equal(usesTableService(false), true);
   });
 });
+
+import { getProductionText, getSendToProductionLabel } from './companyProfile.ts';
+
+describe('textos de produção por perfil', () => {
+  test('floricultura fala em produção', () => {
+    assert.equal(getSendToProductionLabel(true), '🌿 Enviar para Produção');
+    assert.equal(getProductionText(true, 'envie o pedido para a cozinha'), 'envie o pedido para a produção');
+  });
+  test('restaurante mantém cozinha', () => {
+    assert.equal(getSendToProductionLabel(false), '👨‍🍳 Enviar para Cozinha');
+    assert.equal(getProductionText(false, 'envie o pedido para a cozinha'), 'envie o pedido para a cozinha');
+  });
+});

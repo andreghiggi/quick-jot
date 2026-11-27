@@ -20,6 +20,7 @@ import { buildNfceFiscalFields } from '@/utils/nfceItemFiscal';
 import { useCompanyModules } from '@/hooks/useCompanyModules';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useCompanyProfile } from '@/hooks/useCompanyProfile';
 import { useOrderContext } from '@/contexts/OrderContext';
 import { OrderItem } from '@/types/order';
 import { Product, ProductOptional, CartItem } from '@/types/product';
@@ -74,6 +75,8 @@ type Step = 1 | 2 | 3 | 4 | 5;
 export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogProps) {
   const { addOrder } = useOrderContext();
   const { company } = useAuthContext();
+  // Floricultura: textos falam em produção, não em cozinha (só apresentação).
+  const { isFlorist, productionText, sendToProductionLabel } = useCompanyProfile(company?.id);
   const { products, loading: productsLoading, getCategories, getActiveProducts } = useProducts({ companyId: company?.id });
   const { categories } = useCategories({ companyId: company?.id });
   const { groups: optionalGroups, loading: groupsLoading } = useOptionalGroups({ companyId: company?.id });
@@ -3389,7 +3392,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                 >
                   {isSubmitting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-                    : '👨‍🍳 Enviar para Cozinha'}
+                    : sendToProductionLabel}
                 </Button>
               )
             ) : isLancheriaI9 ? (
@@ -3414,12 +3417,12 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   title={preferFinalizeWithTef
                     ? 'Use somente se for cobrar depois (Cobrar no card)'
                     : deliveryType === 'entrega' && !paymentMethod
-                      ? 'Selecione a forma de pagamento antes de enviar para a cozinha'
+                      ? productionText('Selecione a forma de pagamento antes de enviar para a cozinha')
                       : 'Cria pedido pendente e imprime comanda de produção (pagamento depois)'}
                 >
                   {isSubmitting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-                    : '👨‍🍳 Enviar para Cozinha'}
+                    : sendToProductionLabel}
                 </Button>
               </>
             ) : (
@@ -3428,7 +3431,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> {tefStatus || 'TEF...'}</>
                   : isSubmitting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</>
-                    : '✅ Confirmar Pedido'}
+                    : isFlorist ? sendToProductionLabel : '✅ Confirmar Pedido'}
               </Button>
             )}
           </div>
@@ -3751,7 +3754,7 @@ export function PedidoExpressDialog({ open, onOpenChange }: PedidoExpressDialogP
               extraItems,
             });
             setPickupChargeOpen(false);
-            toast.success('Pagamento registrado — agora envie o pedido para a cozinha.');
+            toast.success(productionText('Pagamento registrado — agora envie o pedido para a cozinha.'));
             return;
           }
           // Se chamado a partir da etapa 5 (I9 = "Finalizar Pedido"), cria pedido já entregue
