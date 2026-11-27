@@ -236,8 +236,30 @@ Deno.serve(async (req) => {
           .select('id')
           .single()
 
-        if (persistenceError || !inserted) return jsonResponse({ error: 'O retorno fiscal não pôde ser salvo. Consulte a nota; não repita a transmissão.' }, 409)
-        return new Response(JSON.stringify({ ok: authorized, pending: !authorized && !rejected, recordId: inserted?.id, result, error: rejected ? insertPayload.motivo_rejeicao : undefined }), {
+        let finalRecordId = inserted?.id
+        let finalStatus = insertPayload.status
+        let finalMotivo = insertPayload.motivo_rejeicao
+
+        if (persistenceError || !inserted) {
+          // A gravacao perdeu a corrida pro nfe-webhook, que pode ter atualizado
+          // esse mesmo registro em paralelo (a Fiscal Flow as vezes responde o
+          // POST e dispara o webhook quase ao mesmo tempo). Antes de alarmar o
+          // usuario com um erro de persistencia, confere se o registro ja foi
+          // resolvido de verdade por aquele outro caminho.
+          const { data: current } = await supabase.from('nfe_records')
+            .select('id, status, motivo_rejeicao, nfe_id')
+            .eq('id', recordId).eq('company_id', companyId).maybeSingle()
+          const jaResolvido = current && ['autorizada', 'rejeitada', 'cancelada', 'denegada'].includes(current.status)
+            && (!d?.id || current.nfe_id === String(d.id))
+          if (!jaResolvido) return jsonResponse({ error: 'O retorno fiscal não pôde ser salvo. Consulte a nota; não repita a transmissão.' }, 409)
+          finalRecordId = current!.id
+          finalStatus = current!.status
+          finalMotivo = current!.motivo_rejeicao
+        }
+
+        const finalAuthorized = finalStatus === 'autorizada'
+        const finalRejected = ['rejeitada', 'denegada'].includes(finalStatus)
+        return new Response(JSON.stringify({ ok: finalAuthorized, pending: !finalAuthorized && !finalRejected, recordId: finalRecordId, result, error: finalRejected ? finalMotivo : undefined }), {
           // Fiscal rejection is a domain result; auth/configuration errors keep their HTTP status.
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

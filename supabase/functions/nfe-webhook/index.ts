@@ -21,6 +21,23 @@ function stripSigPrefix(s: string): string {
   return i > 0 && i <= 10 ? s.slice(i + 1) : s
 }
 
+// A Fiscal Flow as vezes manda motivo_retorno como uma string JSON bruta
+// (ex.: '{"sucesso":false,"erro":"[539] ...","cStat":"539","xMotivo":"..."}')
+// em vez de texto legivel. Extrai xMotivo/erro quando for o caso.
+function friendlyMotivo(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (!trimmed.startsWith('{')) return trimmed || null
+  try {
+    const parsed = JSON.parse(trimmed)
+    const texto = parsed?.xMotivo || parsed?.erro || parsed?.message
+    if (!texto) return trimmed
+    return parsed?.cStat ? `SEFAZ ${parsed.cStat}: ${texto}` : String(texto)
+  } catch {
+    return trimmed
+  }
+}
+
 async function validateSignature(payload: string, signature: string, secret: string): Promise<boolean> {
   if (!signature || !secret) return false
   try {
@@ -109,7 +126,7 @@ Deno.serve(async (req) => {
     }
 
     if (evento === 'nfe.rejeitada' || evento === 'nfe.denegada') {
-      updateData.motivo_rejeicao = dados?.motivo_retorno || dados?.motivo
+      updateData.motivo_rejeicao = friendlyMotivo(dados?.motivo_retorno) || friendlyMotivo(dados?.motivo) || dados?.motivo_retorno || dados?.motivo
     }
 
     // Mesma reconciliacao por external_id que o nfce-webhook ja faz: cobre
