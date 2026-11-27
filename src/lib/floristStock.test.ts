@@ -47,8 +47,9 @@ describe('baixa de estoque dos pedidos florais', () => {
     ]);
   });
 
-  it('a baixa vem ligada e só desliga quando a loja desligar', () => {
-    expect(parseFloristStockConfig(null).deductOnOrders).toBe(true);
-    expect(parseFloristStockConfig('{"deductOnOrders":false}').deductOnOrders).toBe(false);
+  it('a baixa começa desligada e só liga quando a loja ligar', () => {
+    expect(parseFloristStockConfig(null).deductOnOrders).toBe(false);
+    expect(parseFloristStockConfig('{}').deductOnOrders).toBe(false);
+    expect(parseFloristStockConfig('{"deductOnOrders":true}').deductOnOrders).toBe(true);
   });
 });

@@ -11,7 +11,8 @@ export interface FloristStockConfig {
   /** Pedidos confirmados (Catálogo) e criados no Balcão baixam o estoque. */
   deductOnOrders: boolean;
 }
-export const DEFAULT_FLORIST_STOCK: FloristStockConfig = { deductOnOrders: true };
+// Começa desligada: nada muda no estoque até a loja ligar nas Configurações.
+export const DEFAULT_FLORIST_STOCK: FloristStockConfig = { deductOnOrders: false };
 
 export function parseFloristStockConfig(value: unknown): FloristStockConfig {
   let raw: any = value;
@@ -19,7 +20,7 @@ export function parseFloristStockConfig(value: unknown): FloristStockConfig {
     try { raw = JSON.parse(raw); } catch { raw = null; }
   }
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_FLORIST_STOCK };
-  return { deductOnOrders: raw.deductOnOrders !== false };
+  return { deductOnOrders: raw.deductOnOrders === true };
 }
 
 export interface StockLine { productId?: string | null; quantity: number }
